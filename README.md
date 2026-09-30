@@ -1,6 +1,4 @@
-# Halo: Combat Evolved for Linux, Windows and Android
-
-[![Join our Discord](https://invidget.switchblade.xyz/9gqcHyr5km)](https://discord.gg/9gqcHyr5km)
+# Halo: Combat Evolved for Android
 
 This project is a port of the Halo: Combat Evolved decompilation to Linux,
 Windows and Android. The decompilation is of the Xbox build 2342
@@ -11,21 +9,6 @@ Windows and Android. The decompilation is of the Xbox build 2342
 
 The port starts from the decompilation of [bnunu/halo-1](https://github.com/bnunu/halo-1).
 That project is a fork of [punpckhdq/halo](https://github.com/punpckhdq/halo).
-
-## Download
-
-GitHub Actions builds the game for each commit. These links download the
-builds of the latest release:
-
-| Platform | Release | Debug |
-| --- | --- | --- |
-| Linux | [halo-linux-release.zip](https://github.com/cybersecurity/halo-ce-universal/releases/latest/download/halo-linux-release.zip) | [halo-linux-debug.zip](https://github.com/cybersecurity/halo-ce-universal/releases/latest/download/halo-linux-debug.zip) |
-| Windows | [halo-windows-release.zip](https://github.com/cybersecurity/halo-ce-universal/releases/latest/download/halo-windows-release.zip) | [halo-windows-debug.zip](https://github.com/cybersecurity/halo-ce-universal/releases/latest/download/halo-windows-debug.zip) |
-| Android | [halo-android-release.zip](https://github.com/cybersecurity/halo-ce-universal/releases/latest/download/halo-android-release.zip) | [halo-android-debug.zip](https://github.com/cybersecurity/halo-ce-universal/releases/latest/download/halo-android-debug.zip) |
-
-Use the release build to play. The debug build stops at the first failed
-assertion and writes it to the log. Use the debug build to find and report
-problems.
 
 The game updates itself. At start-up it looks for a newer release, and asks
 if you want to install it. Refer to "Updates" in
