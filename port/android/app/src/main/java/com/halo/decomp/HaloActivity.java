@@ -18,7 +18,6 @@ public class HaloActivity extends SDLActivity {
     private WifiManager.MulticastLock multicastLock;
 
     private HaloPort haloPort;
-    private GraphicsDiagnostics graphicsDiagnostics;
     @Override
     protected String[] getLibraries() {
         return new String[] { "SDL3", "main" };
@@ -30,7 +29,6 @@ public class HaloActivity extends SDLActivity {
         super.onCreate(savedInstanceState);
         StartDiagnostics.connect(this);
         haloPort = new HaloPort(this, mLayout);
-        graphicsDiagnostics = new GraphicsDiagnostics(this, mLayout);
         restoreFullscreen();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (!Fullscreen.isAutomotive(this)) preferHighestRefreshRate();
@@ -74,7 +72,6 @@ public class HaloActivity extends SDLActivity {
     protected void onDestroy() {
         if (multicastLock != null && multicastLock.isHeld()) multicastLock.release();
         multicastLock = null;
-        if (graphicsDiagnostics != null) graphicsDiagnostics.close();
         if (haloPort != null) haloPort.suspend();
         super.onDestroy();
     }
@@ -97,11 +94,6 @@ public class HaloActivity extends SDLActivity {
 
     @Override
     public boolean dispatchKeyEvent(android.view.KeyEvent event) {
-        if (event.getKeyCode() == android.view.KeyEvent.KEYCODE_F10 && graphicsDiagnostics != null) {
-            if (event.getAction() == android.view.KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0)
-                graphicsDiagnostics.capture();
-            return true;
-        }
         if (haloPort != null && event.getAction() == android.view.KeyEvent.ACTION_DOWN &&
                 (event.isFromSource(android.view.InputDevice.SOURCE_GAMEPAD) ||
                  event.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK))) {
