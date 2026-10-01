@@ -35,7 +35,6 @@ import java.nio.channels.FileChannel;
  */
 public class LauncherActivity extends Activity {
     private static final int PICK_IMAGE = 1;
-    private static final int EXPORT_DIAGNOSTIC = 2;
 
     private File dataRoot;
     private TextView status;
@@ -55,7 +54,6 @@ public class LauncherActivity extends Activity {
         passOnHardwareId();
         passOnInvite(getIntent());
         if (haveData()) {
-            if (StartDiagnostics.interrupted(this)) { showDiagnostics(); return; }
             startGame();
             return;
         }
@@ -132,32 +130,6 @@ public class LauncherActivity extends Activity {
         }
         startActivity(new Intent(this, HaloActivity.class));
         finish();
-    }
-
-    private void showDiagnostics() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(dp(16),dp(12),dp(16),dp(12));
-        TextView title = new TextView(this);
-        title.setText("Halo – Diagnose / Diagnostics");
-        title.setTextSize(22);layout.addView(title);
-        TextView text = new TextView(this);
-        text.setText(StartDiagnostics.read(this));text.setTextSize(14);text.setTextIsSelectable(true);
-        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
-        scroll.addView(text);layout.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        Button export = new Button(this);export.setText("Diagnose exportieren / Export diagnostic");
-        export.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("text/plain");
-            intent.putExtra(Intent.EXTRA_TITLE,"halo-diagnostic.txt");
-            try { startActivityForResult(intent,EXPORT_DIAGNOSTIC); }
-            catch (android.content.ActivityNotFoundException e) {
-                android.widget.Toast.makeText(this,"No file picker. Diagnostic remains in Android/media/com.halo.decomp/",android.widget.Toast.LENGTH_LONG).show();
-            }
-        });layout.addView(export);
-        Button retry = new Button(this);retry.setText("Spiel erneut starten / Retry game");
-        retry.setOnClickListener(v -> startGame());layout.addView(retry);
-        setContentView(layout);Fullscreen.apply(this);
     }
 
     private int dp(float value) {
@@ -240,20 +212,6 @@ public class LauncherActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == EXPORT_DIAGNOSTIC) {
-            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
-                try (FileInputStream in = new FileInputStream(StartDiagnostics.log(this));
-                     OutputStream out = getContentResolver().openOutputStream(data.getData())) {
-                    if (out == null) throw new java.io.IOException("Cannot open destination");
-                    byte[] buffer = new byte[8192];int count;
-                    while ((count=in.read(buffer))!=-1) out.write(buffer,0,count);
-                    android.widget.Toast.makeText(this,"Diagnostic exported",android.widget.Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    android.widget.Toast.makeText(this,"Export failed: "+e.getMessage(),android.widget.Toast.LENGTH_LONG).show();
-                }
-            }
-            return;
-        }
         if (requestCode != PICK_IMAGE || resultCode != RESULT_OK || data == null || data.getData() == null)
             return;
         Uri image = data.getData();
