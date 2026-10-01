@@ -1,0 +1,24 @@
+Patch24 – init.txt und cheats.txt automatisch installieren
+
+Basis: vollständiger Android-/AAOS-Port Patch23.
+Die enthaltenen vollständigen Dateien über den Projektordner Halo-CE-Android
+kopieren. APK/AAB neu bauen und mit derselben Signatur aktualisieren.
+ACHTUNG: port/android/app/build.gradle ist enthalten, da der Assets-Pfad ergänzt
+wurde. Deine lokalen versionCode-/versionName- und Signierungseinstellungen
+vorher sichern und nach dem Kopieren wieder übernehmen.
+
+Vor jedem Spielstart über den Launcher werden fehlende init.txt und cheats.txt
+nach getExternalFilesDir(null) kopiert, direkt neben maps/.
+Normaler Pfad: Android/data/com.halo.decomp/files/.
+Das gilt nach dem ISO-Import sowie beim Start mit bestehenden Spieldaten.
+Vorhandene Dateien bleiben unangetastet. Bei Kopierfehlern startet das Spiel
+nicht; der Dialog bietet Wiederholen an. Kopien werden erst nach vollständigem
+Schreiben veröffentlicht, unvollständige temporäre Dateien entfernt.
+
+Die beiden beigefügten Originaldateien wurden unverändert als Assets übernommen.
+init.txt aktiviert cheat_controller; cheats.txt enthält die vier gelieferten
+Befehle. Der bestehende Controller-Cheatmechanismus führt sie aus.
+
+Kein nativer Neubau notwendig. Grafikfix und 30-FPS-Modus bleiben unverändert.
+Java-Kompilierung und Funktionstest für Neuinstallation, Bestandsschutz,
+Kopierfehler und Wiederholung bestanden. Gerätetest/Gradle-Build noch ausstehend.

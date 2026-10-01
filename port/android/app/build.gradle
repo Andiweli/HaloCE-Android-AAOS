@@ -50,7 +50,7 @@ android {
         main {
             java.srcDirs += new File(staged, "sdl-java")
             jniLibs.srcDirs = [new File(staged, "jniLibs")]
-            assets.srcDirs = [new File(staged, "assets")]
+            assets.srcDirs = [new File(staged, "assets"), file("src/main/assets")]
         }
     }
 

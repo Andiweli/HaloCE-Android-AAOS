@@ -1,0 +1,4 @@
+(set cheat_deathless_player (not cheat_deathless_player))
+(set cheat_infinite_ammo (not cheat_infinite_ammo))
+(set cheat_bottomless_clip (not cheat_bottomless_clip))
+(cheat_active_camouflage)

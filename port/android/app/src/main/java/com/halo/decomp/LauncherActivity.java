@@ -119,6 +119,17 @@ public class LauncherActivity extends Activity {
     }
 
     private void startGame() {
+        try {
+            GameDataDefaults.install(dataRoot, name -> getAssets().open(name));
+        } catch (java.io.IOException e) {
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Game data setup")
+                .setMessage("Cannot install startup files: " + e.getMessage())
+                .setPositiveButton("Retry", (dialog, which) -> startGame())
+                .setNegativeButton("Close", (dialog, which) -> finish())
+                .show();
+            return;
+        }
         startActivity(new Intent(this, HaloActivity.class));
         finish();
     }
