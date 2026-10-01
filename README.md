@@ -13,12 +13,21 @@ An unofficial **Halo: Combat Evolved** port for Android phones, handhelds and
 [thelinkin3000/halo-ce-universal](https://github.com/thelinkin3000/halo-ce-universal)
 and the Halo Xbox decompilation projects credited upstream.
 
+<p align=center>
+<img width="854" height="480" alt="image" src="https://github.com/user-attachments/assets/7a56c91c-f4c2-4c7e-84ee-76058461b73c" />
+<img width="854" height="480" alt="image" src="https://github.com/user-attachments/assets/5699972f-36bb-4524-8aa8-006063af9982" />
+</p>
+
 This fork adds controller-aware [RetroTouch](https://github.com/Andiweli/RetroTouch),
 profile volume controls, cleaned-up menus, immersive mobile display and an AAOS
 build that respects the vehicle's available screen area. AAOS audio buffering
 and Android memory-layout fallbacks are included. The game uses the original
 **30 FPS mode**, with a corrected geometry-upload path tested on Retroid.
 Use the AAOS build while parked.
+
+<p align=center>
+<img width="854" height="480" alt="image" src="https://github.com/user-attachments/assets/b8a476e3-f6a5-40bf-98e1-138493be4c47" />
+</p>
 
 Requires **ARM64**, Android **9+** for mobile or **10+** for AAOS, and a compatible
 OpenGL ES 3 GPU. The Android badge describes the current build target (API 35),
