@@ -1,84 +1,73 @@
-# Halo: Combat Evolved for Android and AAOS
+# Halo: Combat Evolved — Android & AAOS
 
-## Android Studio builds
+![Android](https://img.shields.io/badge/up%20to-Android%2015%20%28build%20target%29-green)
+![Architecture](https://img.shields.io/badge/architecture-ARM64%20%2864--bit%29-orange)
+![AI](https://img.shields.io/badge/AI-assisted%20coding-6e7781)
+![Controls](https://img.shields.io/badge/Controls-Gamepad%20%2F%20RetroTouch%20%2F%20Keyboard-blueviolet)
+![Multiplayer](https://img.shields.io/badge/Multiplayer-System%20Link%20%2F%20Online-blueviolet)
 
-Open the repository root in Android Studio. The project includes a matching
-ARM64 native payload, so building an APK or AAB does not require compiling the
-native engine first. Select `mobileDebug` / `mobileRelease` for phones and
-handhelds, or `aaosDebug` / `aaosRelease` for Android Automotive.
+## 🎮 Introduction
 
-The Android port includes controller-aware RetroTouch, profile volume controls,
-localized menu adjustments, mobile immersive mode and AAOS inset-aware rendering.
-The Android updater uses this fork. Game data must be supplied separately.
+An unofficial **Halo: Combat Evolved** port for Android phones, handhelds and
+**Android Automotive OS (AAOS)**. Based on
+[thelinkin3000/halo-ce-universal](https://github.com/thelinkin3000/halo-ce-universal)
+and the Halo Xbox decompilation projects credited upstream.
 
-After changing native sources, run `ninja android` following the toolchain setup
-in [port/android/README.md](port/android/README.md). The build stages the matching
-native payload and SDL Java sources, including the AAOS surface-size adjustment.
-Do not mix a new engine with old guest images. Keep your own signing key and
-increase `versionCode` when uploading an update to Google Play.
+This fork adds controller-aware [RetroTouch](https://github.com/Andiweli/RetroTouch),
+profile volume controls, cleaned-up menus, immersive mobile display and an AAOS
+build that respects the vehicle's available screen area. AAOS audio buffering
+and Android memory-layout fallbacks are included. The game uses the original
+**30 FPS mode**, with a corrected geometry-upload path tested on Retroid.
+Use the AAOS build while parked.
 
-This integration includes upstream through `66f2a112` (2026-10-01) and restores
-the normal geometry cache/upload paths after the slow Patch17 diagnostic test.
-Native builds, Java compilation and targeted tests passed; remaining gameplay
-rendering issues still require validation on physical Android/AAOS devices.
+Requires **ARM64**, Android **9+** for mobile or **10+** for AAOS, and a compatible
+OpenGL ES 3 GPU. The Android badge describes the current build target (API 35),
+not device-wide certification; the recent rendering fixes were tested on
+Android 13. This is not Android Auto phone projection.
 
+Open the **repository root in Android Studio**. Choose `mobileDebug` /
+`mobileRelease` or `aaosDebug` / `aaosRelease`. Matching native binaries are
+included. See [Android build instructions](port/android/README.md) for native
+rebuilds. Keep your signing key and increase `versionCode` for published updates.
 
-This project is a port of the Halo: Combat Evolved decompilation to Linux,
-Windows and Android. The decompilation is of the Xbox build 2342
-(`cachebeta.exe`, SHA-256
-`4cc87b45f721270392a96f1674ed2b5cd4a7bb4355faeab4531d1cf1884d9520`).
+## 💾 Game data
 
-<img width="1289" height="995" alt="The game on Linux" src="https://github.com/user-attachments/assets/0d3ad50f-f8b8-46cf-aef8-e3661da2a7d7" />
+**No commercial game data is included.** Supply an Xbox Halo: Combat Evolved
+`.iso` / `.xiso` image from your own legally obtained copy; PC and Custom Edition
+data are not substitutes for the Xbox maps.
 
-The port starts from the decompilation of [bnunu/halo-1](https://github.com/bnunu/halo-1).
-That project is a fork of [punpckhdq/halo](https://github.com/punpckhdq/halo).
+1. Copy the disc image to your Android device.
+2. Start the app and select the image in the installer.
+3. Let the app extract the game data, then start Halo.
 
-The game updates itself. At start-up it looks for a newer release, and asks
-if you want to install it. Refer to "Updates" in
-[port/linux/README.md](port/linux/README.md#updates).
+The imported maps determine the available localized text and speech. For German
+menus and voices, use a compatible German-language Xbox release. The port
+supports PAL map timing conversion. The installer uses app-specific storage;
+you do not need to modify `ui.map` manually. Diagnostic exports, when requested,
+are written to `Android/media/com.halo.decomp/`.
 
-Each build of the `main` branch that passes on all three platforms is a new
-release. The [Releases](https://github.com/cybersecurity/halo-ce-universal/releases)
-page keeps the last five releases. If the latest build has a problem, get
-an older build from that page.
+## 🌐 Multiplayer
 
-## Game data
+The upstream port provides **System Link over LAN** and **online play through
+invite links**, including cross-platform sessions with compatible Linux,
+Windows and Android builds. For LAN play, connect devices to the same network
+and avoid Wi-Fi client isolation. Use matching port versions and compatible
+game data on all participants.
 
-The port does not include the game data. Download an Xbox disc image
-(`.xiso` or `.iso`) of Halo: Combat Evolved. All versions of the game
-operate. The maps of the European (PAL) version were made for a slower
-console. The port changes them to play as the North American (NTSC) maps do,
-so players of the two versions can play together.
+Online connectivity depends on the network and upstream networking support;
+it is not an official Xbox Live service. See the
+[multiplayer documentation](port/linux/README.md) and
+[netcode notes](port/linux/NETCODE.md). Multiplayer has not been revalidated by
+the recent single-player rendering tests.
 
-1. Start the game.
-2. At the first start, the game asks for the disc image. Select it.
-3. The game extracts the `maps/` folder. Then the game starts.
+## ⚖️ Legal
 
-On Linux and Windows, the game puts `maps/` next to the executable. On
-Android, copy the disc image to the phone first. The app puts `maps/` in its
-data folder. Refer to [port/android/README.md](port/android/README.md).
+Halo, Halo: Combat Evolved, Xbox and their associated assets and trademarks
+belong to their respective owners, including Microsoft. This community project
+is not affiliated with or endorsed by Microsoft or Bungie.
 
-## Platforms
-
-Each platform has its own instructions:
-
-| Platform | Instructions |
-| --- | --- |
-| Linux (32-bit x86 executable, OpenGL 4.5, SDL3) | [port/linux/README.md](port/linux/README.md) |
-| Windows (32-bit x86 executable, OpenGL 4.5, SDL3) | [port/windows/README.md](port/windows/README.md) |
-| Android (arm64 app, OpenGL ES 3, SDL3) | [port/android/README.md](port/android/README.md) |
-
-The Linux README also gives the controls, the settings and the multiplayer
-functions. These are almost the same on all platforms.
-
-## Multiplayer
-
-The game can play system link games on a local network and on the internet:
-
-- A system link game can have up to 128 players on up to 128 machines.
-- Linux, Windows and Android machines can play in the same game.
-- An invite link lets a machine join a game on the internet. No server of
-  this project is necessary.
-- The netcode is new. Each machine moves its own player at once,
-  and the host makes the decisions for the game. Refer to
-  [port/linux/NETCODE.md](port/linux/NETCODE.md).
+See [LICENSE.md](LICENSE.md) for the repository's license notice. Third-party
+components retain their own licenses, including
+[SDL](port/android/native/SDL-LICENSE.txt) and
+[musl](port/android/native/MUSL-COPYRIGHT.txt). These notices do not grant rights
+to the original game's commercial assets. You must supply your own game data.

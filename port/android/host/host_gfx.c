@@ -11,6 +11,9 @@
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 
 #define MAX_DRAWS 2048
 #define MAX_PROGRAMS 128
@@ -229,6 +232,108 @@ static void texture_details(void)
     }
     glActiveTexture((GLenum)active);
 }
+
+/* Only persistent 4 MiB mirror buffers are tracked. Never retain pointers
+ * into transient upload allocations. Metadata is render-thread owned. */
+#define MIRROR_BYTES 0x400000u
+struct source_buffer {
+    GLuint id;
+    uintptr_t base;
+    uint32_t generation[1024];
+    unsigned char uploaded[1024];
+};
+static struct source_buffer sources[32];
+static unsigned upload_unmap_failures;
+uint32_t host_memory_watch_generation(uint32_t address, uint32_t size);
+static struct source_buffer *source_find(GLuint id) {
+    for(unsigned i=0;i<32;i++)if(sources[i].id==id && id)return &sources[i];
+    return NULL;
+}
+static void source_forget(GLuint id) {
+    struct source_buffer *s=source_find(id);if(s)memset(s,0,sizeof(*s));
+}
+void host_gfx_upload(uint32_t target,uint32_t offset,uint32_t size,const void *data) {
+    if(target!=GL_COPY_WRITE_BUFFER || !size || offset%4096 || size%4096 ||
+       offset>=MIRROR_BYTES || size>MIRROR_BYTES-offset)return;
+    uintptr_t address=(uintptr_t)data,window=host_memory_window_base();
+    if(!window || address<window || address-window>=0x8000000u ||
+       size>0x8000000u-(address-window) || address<offset)return;
+    uintptr_t base=address-offset;
+    if(base<window || (base-window)%MIRROR_BYTES)return;
+    GLuint id=(GLuint)value(GL_COPY_WRITE_BUFFER_BINDING);
+    struct source_buffer *s=source_find(id);
+    if(!s)for(unsigned i=0;i<32;i++)if(!sources[i].id){s=&sources[i];break;}
+    if(!s || !id)return;
+    if(s->base!=base){memset(s,0,sizeof(*s));s->id=id;s->base=base;}
+    for(unsigned p=offset/4096;p<(offset+size)/4096;p++) {
+        s->generation[p]=host_memory_watch_generation((uint32_t)(base+p*4096),4096);
+        s->uploaded[p]=1;
+    }
+}
+void host_gfx_upload_result(int success) {if(!success)upload_unmap_failures++;}
+static void compare_source(GLuint id,uint64_t offset,uint64_t length,const unsigned char *gpu,const char *name) {
+    struct source_buffer *s=source_find(id);
+    if(!s || offset>=MIRROR_BYTES || length>MIRROR_BYTES-offset) {
+        note("  CPU_COMPARE unavailable: buffer=%u is not a tracked persistent mirror\n",id);return;
+    }
+    /* Copy only our validated mirror range through an anonymous nonblocking
+     * pipe. Kernel copy_from_user returns EFAULT for inaccessible source
+     * pages; no procfs access or signal-handler changes are needed.
+     * Each transfer is at most PIPE_BUF (4096 on Android/Linux), with an
+     * empty pipe, so a full write is atomic and cannot block the renderer. */
+    int transfer[2];
+    if(pipe2(transfer,O_CLOEXEC|O_NONBLOCK)<0) {
+        note("  CPU_COMPARE unavailable: pipe errno=%d\n",errno);return;
+    }
+    unsigned char *cpu=malloc((size_t)length);
+    if(!cpu){close(transfer[0]);close(transfer[1]);return;}
+    int complete=1;
+    for(uint64_t pos=0;pos<length;) {
+        uint64_t off=offset+pos;unsigned page=(unsigned)(off/4096);
+        size_t n=4096-(size_t)(off%4096);if(n>length-pos)n=(size_t)(length-pos);
+        uint32_t before=host_memory_watch_generation((uint32_t)(s->base+page*4096),4096);
+        ssize_t sent;
+        do {sent=write(transfer[1],(const void *)(s->base+off),n);} while(sent<0 && errno==EINTR);
+        ssize_t got=sent;
+        if(sent==(ssize_t)n) {
+            do {got=read(transfer[0],cpu+pos,n);} while(got<0 && errno==EINTR);
+        }
+        uint32_t after=host_memory_watch_generation((uint32_t)(s->base+page*4096),4096);
+        if(got!=(ssize_t)n){note("  CPU_PAGE unreadable offset=%llu got=%lld errno=%d\n",(unsigned long long)off,(long long)got,errno);complete=0;break;}
+        size_t different=0,cz=0,gz=0,first=n;
+        for(size_t j=0;j<n;j++){
+            cz+=cpu[pos+j]==0;gz+=gpu[pos+j]==0;
+            if(cpu[pos+j]!=gpu[pos+j]){different++;if(first==n)first=j;}
+        }
+        note("  CPU_PAGE buffer=%u offset=%llu source=%llx bytes=%zu uploaded=%u generation_upload=%u generation_before=%u generation_after=%u different=%zu first_difference=%lld cpu_zero=%zu gpu_zero=%zu\n",
+            id,(unsigned long long)off,(unsigned long long)(s->base+off),n,s->uploaded[page],s->generation[page],before,after,different,first==n?-1LL:(long long)(off+first),cz,gz);
+        pos+=n;
+    }
+    close(transfer[0]);close(transfer[1]);
+    if(complete) {
+        char path[1200];snprintf(path,sizeof(path),"%s/cpu-%s",directory,name);
+        FILE *f=fopen(path,"wb");if(!f)report_failed=1;
+        else{if(fwrite(cpu,1,(size_t)length,f)!=(size_t)length)report_failed=1;if(fclose(f))report_failed=1;}
+        note("  CPU_BUFFER file=cpu-%s source=%llx bytes=%llu\n",name,(unsigned long long)(s->base+offset),(unsigned long long)length);
+    }
+    free(cpu);
+}
+static void (*real_buffer_data)(GLenum,GLsizeiptr,const void*,GLenum);
+static void (*real_buffer_sub_data)(GLenum,GLintptr,GLsizeiptr,const void*);
+static void (*real_delete_buffers)(GLsizei,const GLuint*);
+static void buffer_data(GLenum t,GLsizeiptr n,const void *p,GLenum usage) {
+    /* BufferData replaces storage even if a name is reused. */
+    GLenum binding=t==GL_ARRAY_BUFFER?GL_ARRAY_BUFFER_BINDING:t==GL_ELEMENT_ARRAY_BUFFER?GL_ELEMENT_ARRAY_BUFFER_BINDING:t==GL_COPY_WRITE_BUFFER?GL_COPY_WRITE_BUFFER_BINDING:0;
+    if(binding)source_forget((GLuint)value(binding));
+    real_buffer_data(t,n,p,usage);
+}
+static void buffer_sub_data(GLenum t,GLintptr off,GLsizeiptr n,const void *p) {
+    if(off>=0 && n>0 && (uint64_t)off<=UINT32_MAX && (uint64_t)n<=UINT32_MAX)host_gfx_upload(t,(uint32_t)off,(uint32_t)n,p);
+    real_buffer_sub_data(t,off,n,p);
+}
+static void delete_buffers(GLsizei n,const GLuint *ids) {
+    for(GLsizei i=0;i<n;i++)source_forget(ids[i]);real_delete_buffers(n,ids);
+}
 /* Copy only the byte ranges referenced by this draw, through COPY_READ so
  * neither the VAO nor the game's ARRAY/ELEMENT bindings are disturbed. */
 static unsigned char *buffer_range(GLuint buffer,uint64_t offset,uint64_t length,const char *name)
@@ -256,6 +361,7 @@ static unsigned char *buffer_range(GLuint buffer,uint64_t offset,uint64_t length
     glBindBuffer(GL_COPY_READ_BUFFER,(GLuint)previous);
     if(copy) {
         geometry_bytes+=(unsigned)length;
+        compare_source(buffer,offset,length,copy,name);
         char path[1200];snprintf(path,sizeof(path),"%s/%s",directory,name);
         FILE *file=fopen(path,"wb");
         if(file){if(fwrite(copy,1,(size_t)length,file)!=(size_t)length)report_failed=1;if(fclose(file))report_failed=1;}
@@ -359,6 +465,9 @@ static void base_elements(GLenum m,GLsizei count,GLenum type,const void *p,GLint
 void *host_gfx_wrap(const char *name,void *function)
 {
     if(!function)return NULL;
+    if(!strcmp(name,"glBufferData")){real_buffer_data=function;return buffer_data;}
+    if(!strcmp(name,"glBufferSubData")){real_buffer_sub_data=function;return buffer_sub_data;}
+    if(!strcmp(name,"glDeleteBuffers")){real_delete_buffers=function;return delete_buffers;}
     if(!strcmp(name,"glClear")){real_clear=function;return clear_frame;}
     if(!strcmp(name,"glBlitFramebuffer")){real_blit=function;return blit_frame;}
     if(!strcmp(name,"glDrawArrays")){real_arrays=function;return arrays;}
@@ -389,9 +498,11 @@ void host_gfx_swap(int width,int height)
     if(!report){atomic_store(&state,-1);return;}
     draws=program_count=texture_count=image_bytes=geometry_bytes=0;report_bytes=0;report_failed=timed_out=0;detailed_draws=0;detailed_draw=0;
     clock_gettime(CLOCK_MONOTONIC,&started);
-    note("Halo GFX Patch16: full-frame brief trace plus triangle geometry\nGL_VENDOR=%s\nGL_RENDERER=%s\nGL_VERSION=%s\nGLSL=%s\nSurface=%dx%d guest=%08x-%08x\n",
+    note("Halo GFX Patch23 Android/AAOS: CPU/GPU mirror comparison\nGL_VENDOR=%s\nGL_RENDERER=%s\nGL_VERSION=%s\nGLSL=%s\nSurface=%dx%d guest=%08x-%08x\n",
          glGetString(GL_VENDOR),glGetString(GL_RENDERER),glGetString(GL_VERSION),glGetString(GL_SHADING_LANGUAGE_VERSION),width,height,host_image.base,host_image.end);
     note("No per-draw pixel reads or texture images: use Patch15 images as reference.\nAll draws get a brief trace; triangle draws get position/index bytes and selected uniforms until the detail budget.\nTriangle topology is a selection heuristic, not a material classification. No CPU visibility/material-name trace.\n");
+    note("UPLOAD_UNMAP_FAILURES lifetime=%u\n",upload_unmap_failures);
+    note("CPU_READ_METHOD=anonymous-pipe\nMIRROR_UPLOAD_POLICY=ordered-buffer-sub-data\nFRAME_POLICY=original-30fps-no-interpolation\nCPU comparison is a live observation, not an atomic snapshot. Equal generations do not exclude a concurrent write to an already writable page.\n");
     errors("pending-before-capture");
     atomic_store(&state,2);
 }

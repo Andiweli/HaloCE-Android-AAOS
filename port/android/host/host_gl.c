@@ -24,7 +24,7 @@ void *host_gl_resolve(const char *name)
 		function = dlsym(library, name);
 	if (!function)
 		function = (void *)eglGetProcAddress(name);
-	return host_gfx_wrap(name, function);
+	return host_gfx_wrap(name,function);
 }
 
 void host_gl_get_string(uint32_t name, int index, char *buffer, uint32_t size)
@@ -123,6 +123,19 @@ makes still holds: the renderer only writes ranges that no queued draw reads,
 because host_gl_wait_frame releases the ring slot first. */
 void host_gl_buffer_write(uint32_t target, uint32_t offset, uint32_t size, const void *data)
 {
+	host_gfx_upload(target,offset,size,data);
+	/* Persistent mirror buffers are filled incrementally while earlier
+	 * ranges may still be in use. Patch20 captured nonzero CPU geometry
+	 * paired with zero GPU pages at unchanged write generations. Use the
+	 * ordered update path for this buffer class, including first uploads.
+	 * Keep unsynchronized mapping for the fence-managed streaming ring.
+	 * GL_COPY_WRITE_BUFFER is used only by mirror_refresh at this call site.
+	 * No glFinish, per-draw readback, or whole-buffer reallocation is needed. */
+	if (target == GL_COPY_WRITE_BUFFER)
+	{
+		glBufferSubData(target, offset, size, data);
+		return;
+	}
 	void *mapping = glMapBufferRange(target, offset, size,
 		GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
 
@@ -132,5 +145,5 @@ void host_gl_buffer_write(uint32_t target, uint32_t offset, uint32_t size, const
 		return;
 	}
 	memcpy(mapping, data, size);
-	glUnmapBuffer(target);
+	host_gfx_upload_result(glUnmapBuffer(target));
 }

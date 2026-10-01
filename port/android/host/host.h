@@ -108,3 +108,7 @@ void *host_gfx_wrap(const char *name, void *function);
 void host_gfx_swap(int width, int height);
 
 #endif
+
+/* Diagnostic mirror-upload metadata, render-thread only. */
+void host_gfx_upload(uint32_t target,uint32_t offset,uint32_t size,const void *data);
+void host_gfx_upload_result(int success);

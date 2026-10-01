@@ -1,0 +1,51 @@
+Halo CE Android / AAOS – Patch23: integrierter Stand
+
+VOLLSTÄNDIGES PROJEKT
+Dieses Paket führt den integrierten Android-/AAOS-Port mit den auf Retroid
+bestätigten Korrekturen aus Patch21 und Patch22 zusammen.
+In einen frischen Ordner Halo-CE-Android entpacken; nicht mit dem Clean-Testprojekt
+vermischen. Vorhandenes Projekt zur Sicherheit separat behalten.
+
+ANDROID STUDIO
+Den obersten Ordner Halo-CE-Android öffnen (dort liegen settings.gradle und gradlew).
+Varianten: mobileDebug/mobileRelease und aaosDebug/aaosRelease.
+Native ARM64-Bibliotheken, vier alternative Guest-Images, SDL-Java und RetroTouch
+sind enthalten. Kein eigener nativer Build zum Erstellen einer APK erforderlich.
+Deine Signierung wie zuvor einrichten. Vor Installation/Play-Upload versionCode
+in port/android/app/build.gradle auf einen passenden höheren Wert als deine
+installierte/veröffentlichte Version setzen. Die Repository-Versionslogik blieb
+unverändert; persönliche lokale versionCode-Anpassungen liegen uns nicht vor.
+App-Daten und Spieldaten nicht löschen.
+
+ENTHALTEN
+- Vollständiger zuvor integrierter Upstream-Stand 66f2a112.
+- Geometrie-Mirror: geordnete glBufferSubData-Uploads aus Patch21.
+- Globaler originaler 30-FPS-Modus ohne zusätzliche Interpolation aus Patch22.
+  HALO_INTERPOLATION=false hat Vorrang vor config.toml; Datei bleibt unverändert.
+- RetroTouch mit vorbelegtem Layout und Controller-Erkennung.
+- Profil-Lautstärken, lokale Menütexte, bereinigte =-Beschriftungen und Schriftfixes.
+- Kein EXIT-Hauptmenüpunkt; B/BACK beendet nur auf oberster Hauptmenüebene.
+- Vorhandene Controller-Cheats bleiben erhalten.
+- Mobile Fullscreen; AAOS nutzt die inset-sichere Fläche, mit angepasstem Icon,
+  eigener Build-Variante, Lifecycle- und Audio-Puffer-Anpassung.
+- Sichere Speicherplatzierung mit vier Guest-Image-Adressen, Startdiagnose und
+  GFX-Snapshots mit CPU/GPU-Vergleich unter Android/media/com.halo.decomp.
+- Updater zeigt auf Andiweli/HaloCE-Android-AAOS; AAOS hat keinen APK-Self-Updater.
+- Neues englisches README: Einleitung, Game Data, Multiplayer, Legal; ohne Bild.
+
+PRÜFUNGEN
+Native Engine und alle vier Guest-Images neu gebaut; native SHA256-Liste aktualisiert.
+Java-Kompilierung für mobile und aaos gegen Android API35 erfolgreich.
+Native Tests: Lautstärken/Navigation/Wraparound, Hauptmenü-BACK, UI-Beschriftungen,
+Startdiagnose, Schriftgrafik und echte ELF-Loader-Fallbacks erfolgreich.
+Linux-Port-Tests: 6 bestanden, 2 übersprungen.
+Der GLES-Test prüft den integrierten Mirror-Upload und CPU/GPU-Diagnosepfad.
+Kein vollständiger Gradle-APK/AAB-Build und kein Gerätetest des zusammengeführten
+Pakets hier. Die Grafik-/30-FPS-Korrekturen wurden separat auf Retroid bestätigt;
+das Gesamtpaket bitte auf Retroid und AAOS nochmals testen.
+
+TESTREIHENFOLGE
+1. Retroid: Spielstart, Lautstärken, Controller-Menüs, Fluchtsequenz und längeres Spiel.
+2. Touch ohne Controller; nach Controllerverbindung muss RetroTouch verschwinden.
+3. AAOS: Icon, freie Bildschirmfläche ohne seitliche Balken, Ton, Pause/Fortsetzen.
+4. Bei Grafikauffälligkeiten GFX-Snapshot exportieren.

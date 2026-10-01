@@ -18,7 +18,7 @@ import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/** Temporary Patch18 UI. Captures one frame only when explicitly requested. */
+/** Temporary Patch23 UI. Captures one frame only when explicitly requested. */
 final class GraphicsDiagnostics {
     private final Activity activity;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -57,7 +57,7 @@ final class GraphicsDiagnostics {
             if (!capture.mkdir()) throw new IOException("Cannot create " + capture);
             try (Writer out = new OutputStreamWriter(new FileOutputStream(new File(capture,"device.txt")),StandardCharsets.UTF_8)) {
                 android.content.pm.PackageInfo info = activity.getPackageManager().getPackageInfo(activity.getPackageName(),0);
-                out.write("Halo GFX Patch18\nTime: " + new Date()
+                out.write("Halo GFX Patch23\nTime: " + new Date()
                     + "\nApp: " + info.versionName + " (" + info.getLongVersionCode() + ")"
                     + "\nFlavor: " + (BuildConfig.IS_AAOS ? "AAOS" : "mobile")
                     + "\nDevice: " + Build.MANUFACTURER + " " + Build.MODEL + " / " + Build.DEVICE

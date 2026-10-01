@@ -307,6 +307,9 @@ static void *game_main(void *unused)
 	environment_set(&environment, "HOME", save_root);
 	environment_set(&environment, "HALO_DATA_ROOT", data_root);
 	environment_set(&environment, "HALO_SAVE_ROOT", save_root);
+	/* Retroid-verified original 30 FPS mode; override existing config without rewriting it. */
+	environment_set(&environment, "HALO_INTERPOLATION", "false");
+	host_logf(HOST_LOG_INFO, "Patch23: global original 30 FPS mode; interpolation disabled");
 	time_zone(zone, sizeof(zone));
 	environment_set(&environment, "TZ", zone);
 	snprintf(path, sizeof(path), "%s/config.toml", data_root);
