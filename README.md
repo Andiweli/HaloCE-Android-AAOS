@@ -39,6 +39,13 @@ Open the **repository root in Android Studio**. Choose `mobileDebug` /
 included. See [Android build instructions](port/android/README.md) for native
 rebuilds. Keep your signing key and increase `versionCode` for published updates.
 
+## 🚗 What is AAOS?
+
+**Android Automotive OS (AAOS)** is Android running directly on a vehicle's
+infotainment system. Apps are installed on the vehicle itself. It is different
+from **Android Auto**, which projects supported phone apps onto the car's screen.
+This project's AAOS build is intended for compatible vehicles while parked.
+
 ## 💾 Game data
 
 **No commercial game data is included.** Supply an Xbox Halo: Combat Evolved

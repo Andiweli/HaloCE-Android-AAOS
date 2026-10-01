@@ -68,11 +68,20 @@ def main() -> int:
         # same name: release is signed with the debug key, not debuggable)
         run(["ninja", "android"])
         run([sys.executable, "tools/android_studio_stage.py"])
+        # Direct APK releases must carry the bundled components' notices.
+        notices = ROOT / "port/android/app/src/main/assets/licenses"
+        notices.mkdir(parents=True, exist_ok=True)
+        for source, name in [
+            ("port/third_party/extract-xiso/LICENSE.TXT", "extract-xiso-LICENSE.txt"),
+            ("port/third_party/miniupnpc/LICENSE", "miniupnpc-LICENSE.txt"),
+            ("port/android/native/SDL-LICENSE.txt", "SDL-LICENSE.txt"),
+            ("port/android/native/MUSL-COPYRIGHT.txt", "MUSL-COPYRIGHT.txt"),
+        ]:
+            shutil.copy2(ROOT / source, notices / name)
         gradlew = "gradlew.bat" if os.name == "nt" else "./gradlew"
-        run([gradlew, "--console=plain", "-q", f"assembleMobile{args.config.capitalize()}", f"assembleAaos{args.config.capitalize()}", f"bundleAaos{args.config.capitalize()}"], cwd=ROOT / "port/android")
+        run([gradlew, "--console=plain", "-q", f"assembleMobile{args.config.capitalize()}", f"assembleAaos{args.config.capitalize()}"], cwd=ROOT / "port/android")
         outputs = [APKS[args.config],
-                   f"port/android/app/build/outputs/apk/aaos/{args.config}/app-aaos-{args.config}.apk",
-                   f"port/android/app/build/outputs/bundle/aaos{args.config.capitalize()}/app-aaos-{args.config}.aab"]
+                   f"port/android/app/build/outputs/apk/aaos/{args.config}/app-aaos-{args.config}.apk"]
     else:
         run(["ninja", args.platform])
         outputs = OUTPUTS[args.platform]

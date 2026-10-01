@@ -36,7 +36,7 @@ import java.util.zip.ZipInputStream;
  * the latest release when it starts, on a thread of its own, and if it is
  * newer asks the player whether to update:
  *
- * - Yes: the release's app (halo-android-release.zip or -debug.zip) is
+ * - Yes: the release's app (app-mobile-release.apk) is
  *   downloaded and handed to Android's package installer, which replaces the
  *   game (closing it) and offers to open the new version.
  * - No: nothing, until the next start.
@@ -230,7 +230,7 @@ final class Updater {
     /* ---------- updating */
 
     private static void update(Activity activity, int latest) {
-        String asset = "halo-android-" + (BuildConfig.DEBUG ? "debug" : "release") + ".zip";
+        String asset = "app-mobile-release.apk";
         File directory = new File(activity.getCacheDir(), UpdateProvider.DIRECTORY);
         LinearLayout layout = new LinearLayout(activity);
         TextView status = new TextView(activity);
@@ -253,17 +253,14 @@ final class Updater {
         new Thread(() -> {
             try {
                 directory.mkdirs();
-                File zip = new File(directory, "update.zip");
                 File apk = new File(directory, UpdateProvider.APK);
 
-                download("https://github.com/" + REPOSITORY + "/releases/download/build-" + latest + "/" + asset, zip,
+                download("https://github.com/" + REPOSITORY + "/releases/download/build-" + latest + "/" + asset, apk,
                     (received, total) -> activity.runOnUiThread(() -> {
                         bar.setProgress(total > 0 ? (int) (received * 1000 / total) : 0);
                         status.setText("Downloading build " + latest + "... (" + (received >> 20) + " of "
                             + (total >> 20) + " MB)");
                     }));
-                extractApk(zip, apk);
-                zip.delete();
                 activity.runOnUiThread(() -> {
                     progress.dismiss();
                     install(activity);
