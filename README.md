@@ -11,7 +11,7 @@
 An unofficial **Halo: Combat Evolved** port for Android phones, handhelds and
 **Android Automotive OS (AAOS)**. Based on
 [thelinkin3000/halo-ce-universal](https://github.com/thelinkin3000/halo-ce-universal)
-and the Halo Xbox decompilation projects credited upstream.
+and the Halo Xbox decompilation projects credited upstream. [Take a short preview](https://github.com/user-attachments/assets/f327569b-4370-45c4-a937-2cc7ec899b11).
 
 <p align=center>
 <img width="854" height="480" alt="image" src="https://github.com/user-attachments/assets/7a56c91c-f4c2-4c7e-84ee-76058461b73c" />
