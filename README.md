@@ -1,5 +1,28 @@
 # Halo: Combat Evolved for Android and AAOS
 
+## Android Studio builds
+
+Open the repository root in Android Studio. The project includes a matching
+ARM64 native payload, so building an APK or AAB does not require compiling the
+native engine first. Select `mobileDebug` / `mobileRelease` for phones and
+handhelds, or `aaosDebug` / `aaosRelease` for Android Automotive.
+
+The Android port includes controller-aware RetroTouch, profile volume controls,
+localized menu adjustments, mobile immersive mode and AAOS inset-aware rendering.
+The Android updater uses this fork. Game data must be supplied separately.
+
+After changing native sources, run `ninja android` following the toolchain setup
+in [port/android/README.md](port/android/README.md). The build stages the matching
+native payload and SDL Java sources, including the AAOS surface-size adjustment.
+Do not mix a new engine with old guest images. Keep your own signing key and
+increase `versionCode` when uploading an update to Google Play.
+
+This integration includes upstream through `66f2a112` (2026-10-01) and restores
+the normal geometry cache/upload paths after the slow Patch17 diagnostic test.
+Native builds, Java compilation and targeted tests passed; remaining gameplay
+rendering issues still require validation on physical Android/AAOS devices.
+
+
 This project is a port of the Halo: Combat Evolved decompilation to Linux,
 Windows and Android. The decompilation is of the Xbox build 2342
 (`cachebeta.exe`, SHA-256

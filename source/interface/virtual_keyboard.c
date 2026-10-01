@@ -661,7 +661,12 @@ static void virtual_keyboard_render_internal(
 			"c:\\halo\\SOURCE\\interface\\virtual_keyboard.c",
 			1046,
 			bitmap);
+#ifdef HALO_ANDROID
+        {extern void android_draw_keyboard_background(struct bitmap_data *bitmap);
+         android_draw_keyboard_background(bitmap);}
+#else
 		draw_bitmap_in_rect(bitmap, &bounds, &bounds, NULL, 0xffffffff, NULL, FALSE);
+#endif
 	}
 
 	draw_string_set_draw_mode(virtual_keyboard_globals.keyboard->font_tag.index, NONE, 0, 0, &caption_color);

@@ -509,6 +509,7 @@ void render_debug_box_outline(
 void render_debug(
 	void)
 {
+#ifndef HALO_ANDROID
 	short entry_index;
 
 	ai_debug_render();
@@ -631,6 +632,8 @@ void render_debug(
 		}
 	}
 
+#endif
+	/* Keep the cache lifecycle even when Android suppresses debug drawing. */
 	if (render_debug_globals.game_time != (short)game_time_get() - 1)
 	{
 		render_debug_globals.game_time = (short)game_time_get();

@@ -674,6 +674,9 @@ struct widget_instance;
 #include "tag_files/tag_files.h"
 #include "tag_files/tag_groups.h"
 #include "text/draw_string.h"
+#ifdef HALO_ANDROID
+#include "android_ui_labels.h"
+#endif
 #include "text/text_group.h"
 #include "text/unicode.h"
 #include "ui_widget.h"
@@ -1369,6 +1372,8 @@ static void widget_instance_initialize(
 	short widget_stack);
 static __inline real widget_instance_get_cumulative_alpha_modifier(
 	struct widget_instance *widget);
+static short ui_mouse_key_button(struct widget_instance *widget);
+
 static boolean widget_instance_text_box_is_focused(
 	struct widget_instance *widget);
 static boolean string_has_icons_to_draw(
@@ -1557,6 +1562,11 @@ static real global_ui_white_red = 0.8f;
 static real global_ui_white_green = 0.8f;
 static real global_ui_white_blue = 0.8f;
 
+
+#ifdef HALO_ANDROID
+#include "android_volume_menu.inc"
+static void av_caption_dispose(void);
+#endif
 
 /* ---------- public code */
 
@@ -1781,6 +1791,10 @@ void draw_bitmap_in_rect(
 	return;
 }
 
+#ifdef HALO_ANDROID
+#include "android_keyboard_background.inc"
+#endif
+
 void ui_widgets_set_fade_value(
 	real value)
 {
@@ -1792,7 +1806,11 @@ void ui_widgets_set_fade_value(
 void ui_widget_debug_show_path(
 	boolean show)
 {
+#ifdef HALO_ANDROID
+	widget_globals.debug_show_path = FALSE;
+#else
 	widget_globals.debug_show_path = show;
+#endif
 
 	return;
 }
@@ -2072,6 +2090,10 @@ static void pool_free(
 void ui_widgets_initialize(
 	void)
 {
+#ifdef HALO_ANDROID
+    av_count=0;av_source=av_button=NONE;av_source_address=NULL;av_description_text=NULL;
+#endif
+
 	boolean success = TRUE;
 	byte *base_address;
 	long local_player_index;
@@ -2108,6 +2130,9 @@ void ui_widgets_dispose(
 	void)
 {
 	ui_widgets_close_all();
+#ifdef HALO_ANDROID
+    av_caption_dispose();
+#endif
 	if (widget_memory_pool->base_address)
 		pool_free(widget_memory_pool->base_address);
 	widget_memory_pool->base_address = NULL;
@@ -2163,6 +2188,9 @@ void ui_widget_delete(
 	if (widget->delete_recursion_lock)
 		return;
 	widget->delete_recursion_lock = TRUE;
+#ifdef HALO_ANDROID
+    if(widget==av_description_text) av_description_text=NULL;
+#endif
 	if (widget->local_player_index != NONE && !widget->parent)
 		player_control_inhibit_buttons(
 			widget->local_player_index,
@@ -2312,11 +2340,12 @@ static struct widget_instance *ui_widget_launch_widget(
 	struct widget_instance *new_widget;
 	short local_player_index;
 
-	/* port: the multiplayer menus open only on maps of a build that plays
-	multiplayer with the others (cache_files.c, cache_files_multiplayer_region);
-	otherwise the player is told why, and the main menu stays */
+	/* port: the menus of multiplayer with other machines (not split screen's
+	or co-op's) open only on maps of a build that plays multiplayer with the
+	others (cache_files.c, cache_files_multiplayer_region); otherwise the
+	player is told why, and the menu stays */
 	{
-		static char const multiplayer_menus[] = "ui\\shell\\main_menu\\multiplayer_type_select\\";
+		static char const multiplayer_menus[] = "ui\\shell\\main_menu\\multiplayer_type_select\\connected\\";
 		char const *name = tag_get_name(new_widget_tag_index);
 		char build[0x20];
 
@@ -2324,16 +2353,7 @@ static struct widget_instance *ui_widget_launch_widget(
 			!csstrncmp(name, multiplayer_menus, sizeof(multiplayer_menus) - 1) &&
 			!cache_files_multiplayer_region(build))
 		{
-			void platform_log(char const *format, ...);
-			void platform_show_message(char const *title, char const *message);
-			char message[256];
-
-			platform_log("multiplayer is unavailable: maps of build %s are not supported", build);
-			csprintf(
-				message,
-				"Your maps (build %s) aren't supported for multiplayer yet.\n\nAsk in the Discord to get them added.",
-				build);
-			platform_show_message("Halo: multiplayer unavailable", message);
+			cache_files_show_multiplayer_unavailable(NULL, build);
 
 			return NULL;
 		}
@@ -2533,6 +2553,10 @@ boolean widget_event_function_list_widget_goto_next_item(
 	struct event_record *event,
 	boolean *widget_deleted)
 {
+#ifdef HALO_ANDROID
+    if(av_adjust(widget,1)) return TRUE;
+#endif
+
 	struct ui_widget_definition *definition;
 	struct widget_instance *child;
 	long item_index;
@@ -2653,6 +2677,10 @@ boolean widget_event_function_list_widget_goto_previous_item(
 	struct event_record *event,
 	boolean *widget_deleted)
 {
+#ifdef HALO_ANDROID
+    if(av_adjust(widget,-1)) return TRUE;
+#endif
+
 	struct ui_widget_definition *definition;
 	struct widget_instance *child;
 	long item_index;
@@ -3654,6 +3682,11 @@ static void widget_instance_initialize(
 		}
 	}
 
+#ifdef HALO_ANDROID
+    av_initialize(widget);
+    if(!widget->parent) av_finish_layout(widget,widget);
+#endif
+
 	return;
 }
 
@@ -3858,7 +3891,8 @@ void draw_string_and_hack_in_icons(
 	wchar_t *current = string_data;
 	rectangle2d cursor_bounds = *bounds;
 
-	wcscpy(string_data, instring);
+	wcsncpy(string_data, instring, NUMBEROF(string_data) - 1);
+	string_data[NUMBEROF(string_data) - 1] = 0;
 	while (current)
 	{
 		wchar_t *icon_spec = wcschr(current, L'%');
@@ -3881,6 +3915,9 @@ void draw_string_and_hack_in_icons(
 			short icon_index;
 
 			current = icon_spec + wcslen(icon_names[icon_type]);
+#ifdef HALO_ANDROID
+			current = (wchar_t *)android_ui_after_button(current);
+#endif
 			remapped_icon_type = remap_sticks_for_local_player(
 				icon_type,
 				local_player_index_for_draw_string_and_hack_in_icons);
@@ -4855,6 +4892,40 @@ static long search_and_replace(
 	return replacements;
 }
 
+#ifdef HALO_ANDROID
+/* Some screen keys store the button icon and "= Action" in separate
+   siblings. Match their actual bounds rather than a language-specific label. */
+static boolean android_ui_label_follows_button(struct widget_instance *widget)
+{
+    char const *name=tag_get_name(widget->definition_tag_index);
+    char const *leaf=name?strrchr(name,'\\'):NULL;
+    if(leaf && leaf[1]=='=')return TRUE;
+	struct widget_instance *sibling;
+	rectangle2d label = ui_widget_definition_get(widget->definition_tag_index)->bounds;
+	label.x0 += widget->horizontal_offset;
+	label.y0 += widget->vertical_offset;
+	label.y1 += widget->vertical_offset;
+	for (sibling = widget->parent ? widget->parent->child : NULL; sibling; sibling = sibling->next)
+	{
+		rectangle2d icon;
+		long distance;
+		if (!sibling->visible || ui_mouse_key_button(sibling) == NONE) continue;
+		icon = ui_widget_definition_get(sibling->definition_tag_index)->bounds;
+		icon.x1 += sibling->horizontal_offset;
+		icon.y0 += sibling->vertical_offset;
+		icon.y1 += sibling->vertical_offset;
+		distance = label.x0 - icon.x1;
+		if (distance >= -8 && distance <= 32 && label.y0 < icon.y1 && label.y1 > icon.y0)
+			return TRUE;
+	}
+	return FALSE;
+}
+#endif
+
+#ifdef HALO_ANDROID
+#include "android_caption_render.inc"
+#endif
+
 static void widget_instance_render_text_box(
 	struct widget_instance *widget,
 	struct ui_widget_definition *definition,
@@ -4862,6 +4933,10 @@ static void widget_instance_render_text_box(
 	point2d offset,
 	boolean focus)
 {
+#ifdef HALO_ANDROID
+    if(av_render_caption(widget,definition,offset,focus))return;
+#endif
+
 	wchar_t **text;
 	long search_index;
 	long font_index;
@@ -4985,10 +5060,28 @@ static void widget_instance_render_text_box(
 				SECONDS_PER_MILLISECOND * 3.0f) + 1.5f) * 0.4f) * color.alpha;
 	}
 	draw_string_set_draw_mode(font_index, NONE, justification, 0, &color);
-	if (string_has_icons_to_draw(*text))
-		draw_string_and_hack_in_icons(&bounds, &clip, NULL, 0, *text, FALSE);
-	else
-		rasterizer_draw_unicode_string(&bounds, &clip, NULL, 0, *text);
+	{
+		wchar_t const *display_text = *text;
+#ifdef HALO_ANDROID
+		wchar_t label[1024];
+		/* No replacements/data callbacks: this is a static asset label,
+		   never a profile/server name populated by the game. */
+		if ((definition->text_label_string_list.index != NONE || av_index(widget->definition_tag_index)>=0) &&
+			definition->search_and_replace_functions.count == 0 &&
+			definition->game_data_inputs.count == 0)
+			display_text = android_ui_clean_label(*text, label, NUMBEROF(label),
+				android_ui_label_follows_button(widget));
+#endif
+#ifdef HALO_ANDROID
+        { static wchar_t description[512];
+          wchar_t const *custom=av_description(widget,description,NUMBEROF(description));
+          if(custom) {display_text=custom;bounds.x1-=10;clip.x1=MIN(clip.x1,bounds.x1);} }
+#endif
+		if (string_has_icons_to_draw((wchar_t *)display_text))
+			draw_string_and_hack_in_icons(&bounds, &clip, NULL, 0, display_text, FALSE);
+		else
+			rasterizer_draw_unicode_string(&bounds, &clip, NULL, 0, display_text);
+	}
 
 	return;
 }
@@ -5000,6 +5093,20 @@ static void widget_instance_render_spinner_list(
 	point2d offset,
 	boolean focus)
 {
+#ifdef HALO_ANDROID
+    av_spinner_text(widget);
+#endif
+
+#ifdef HALO_ANDROID
+    rectangle2d android_arrow_clip;
+    int android_spinner_index=av_index(widget->definition_tag_index);
+    if(android_spinner_index>=0 && av_nodes[android_spinner_index].category>=0 && clip_rect) {
+        android_arrow_clip=*clip_rect;
+        android_arrow_clip.x0=MIN(android_arrow_clip.x0,definition->list_header_bounds.x0+offset.x-2);
+        android_arrow_clip.x1=MAX(android_arrow_clip.x1,definition->list_footer_bounds.x1+offset.x+2);
+        clip_rect=&android_arrow_clip;
+    }
+#endif
 	long header_frame_index = 0;
 	long footer_frame_index = 0;
 	real alpha_modifier = widget_instance_get_cumulative_alpha_modifier(widget);
@@ -5045,7 +5152,11 @@ static void widget_instance_render_spinner_list(
 		draw_bitmap_in_rect(
 			bitmap,
 			&bounds,
-			&bounds,
+#ifdef HALO_ANDROID
+            &bounds,
+#else
+            &bounds,
+#endif
 			clip_rect,
 			(alpha << 24) | 0x00FFFFFF,
 			&parameters,
@@ -5069,7 +5180,11 @@ static void widget_instance_render_spinner_list(
 		draw_bitmap_in_rect(
 			bitmap,
 			&bounds,
-			&bounds,
+#ifdef HALO_ANDROID
+            &bounds,
+#else
+            &bounds,
+#endif
 			clip_rect,
 			(alpha << 24) | 0x00FFFFFF,
 			&parameters,
@@ -6169,6 +6284,7 @@ static void column_list_update(
 static void widget_instance_tab_to_next_valid_widget(
 	struct widget_instance *widget)
 {
+
 	struct widget_instance *child;
 
 	if (widget->focused_child && widget->focused_child->next)
@@ -6199,6 +6315,7 @@ static void widget_instance_tab_to_next_valid_widget(
 static void widget_instance_tab_to_previous_valid_widget(
 	struct widget_instance *widget)
 {
+
 	struct widget_instance *child;
 
 	if (widget->focused_child)
@@ -6265,6 +6382,17 @@ static void widget_instance_process_one_event_recursive(
 	{
 		event->data.button.value = 1;
 	}
+#ifdef HALO_ANDROID
+    /* Only the active main-menu root may exit. Submenu BACK continues through
+       the original widget stack; held buttons and releases never exit. */
+    if(event_for_this_widget && !widget->parent && av_kind(definition,3) &&
+       event->type==_event_type_button && event->data.button.value==1 &&
+       (event->data.button.index==_widget_event_b_button ||
+        event->data.button.index==_widget_event_back_button)) {
+        extern void main_android_request_exit(void);
+        main_android_request_exit();*return_widget_deleted=FALSE;return;
+    }
+#endif
 	if (widget->close_if_local_player_controller_present == TRUE)
 	{
 		if (widget->local_player_index >= 0 &&
@@ -6948,6 +7076,10 @@ void process_ui_widgets(
 		"c:\\halo\\SOURCE\\interface\\ui_widget.c",
 		644,
 		widget_globals.initialized);
+#ifdef HALO_ANDROID
+    { extern void host_touch_mode(int mode);
+      host_touch_mode((ui_widgets_active() || we_are_at_the_main_menu) ? 1 : 2); }
+#endif
 	widget_globals.current_system_milliseconds = system_milliseconds();
 	ui_widgets_process_mouse();
 	if (widget_globals.initialization_thread)

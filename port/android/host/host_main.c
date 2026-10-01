@@ -26,6 +26,8 @@ that runs here.
 #include <SDL3/SDL_main.h>
 #include <android/log.h>
 #include <errno.h>
+#include <jni.h>
+#include <pthread.h>
 #include <ftw.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -40,42 +42,85 @@ void host_install_signal_handlers(void);
 
 /* ---------- logging and termination */
 
+static FILE *diagnostic_file;
+static char diagnostic_path[1024], diagnostic_marker[1024], diagnostic_error[1024];
+static pthread_mutex_t diagnostic_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+JNIEXPORT void JNICALL Java_com_halo_decomp_StartDiagnostics_nativeOpen(
+    JNIEnv *env, jclass cls, jstring path, jstring marker)
+{
+    const char *p = (*env)->GetStringUTFChars(env, path, NULL);
+    const char *m = (*env)->GetStringUTFChars(env, marker, NULL);
+    (void)cls;
+    if (p && m) {
+        snprintf(diagnostic_path, sizeof(diagnostic_path), "%s", p);
+        snprintf(diagnostic_marker, sizeof(diagnostic_marker), "%s", m);
+        diagnostic_file = fopen(p, "a");
+        if (diagnostic_file) {
+            setvbuf(diagnostic_file, NULL, _IONBF, 0);
+            fprintf(diagnostic_file, "Native diagnostic revision: Patch18 (upstream + Android/AAOS); page size: %ld\n", sysconf(_SC_PAGESIZE));
+        }
+    }
+    if (p) (*env)->ReleaseStringUTFChars(env, path, p);
+    if (m) (*env)->ReleaseStringUTFChars(env, marker, m);
+}
+
+static void diagnostic_write(int priority, const char *text)
+{
+    int saved_errno = errno;
+    pthread_mutex_lock(&diagnostic_mutex);
+    if (priority >= ANDROID_LOG_ERROR)
+        snprintf(diagnostic_error, sizeof(diagnostic_error), "%s", text);
+    if (diagnostic_file && (priority >= ANDROID_LOG_ERROR || ftell(diagnostic_file) < 2*1024*1024))
+        fprintf(diagnostic_file, "%lld [%d] %s\n", (long long)time(NULL), priority, text);
+    pthread_mutex_unlock(&diagnostic_mutex);
+    errno = saved_errno;
+}
+
 void host_logf(int priority, const char *format, ...)
 {
-	va_list arguments;
-
-	va_start(arguments, format);
-	__android_log_vprint(priority, "halo", format, arguments);
-	va_end(arguments);
+    char text[4096];
+    va_list arguments;
+    va_start(arguments, format);
+    vsnprintf(text, sizeof(text), format, arguments);
+    va_end(arguments);
+    __android_log_write(priority, "halo", text);
+    diagnostic_write(priority, text);
 }
 
 void host_log(int priority, const char *text)
 {
-	__android_log_write(priority, "halo", text);
+    __android_log_write(priority, "halo", text);
+    diagnostic_write(priority, text);
 }
 
 void host_fatal(const char *format, ...)
 {
-	char message[1024];
-	va_list arguments;
-
-	va_start(arguments, format);
-	vsnprintf(message, sizeof(message), format, arguments);
-	va_end(arguments);
-	__android_log_write(ANDROID_LOG_FATAL, "halo", message);
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Halo", message, NULL);
-	_exit(1);
+    char message[1024], details[3200];
+    va_list arguments;
+    va_start(arguments, format);
+    vsnprintf(message, sizeof(message), format, arguments);
+    va_end(arguments);
+    pthread_mutex_lock(&diagnostic_mutex);
+    snprintf(details, sizeof(details), "%s\n\n%s\n\nDiagnostic file: %s",
+        message, diagnostic_error, diagnostic_file ? diagnostic_path : "unavailable");
+    pthread_mutex_unlock(&diagnostic_mutex);
+    host_log(ANDROID_LOG_FATAL, details);
+    if (diagnostic_file) fsync(fileno(diagnostic_file));
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Halo - start diagnostic", details, NULL);
+    _exit(1);
 }
 
 void host_abort(const char *reason)
 {
-	__android_log_print(ANDROID_LOG_FATAL, "halo", "guest abort: %s", reason);
+	host_logf(ANDROID_LOG_FATAL, "guest abort: %s", reason);
 	abort();
 }
 
 void host_exit(int code)
 {
 	host_logf(HOST_LOG_INFO, "the game exited (%d)", code);
+	if (code == 0 && diagnostic_marker[0]) unlink(diagnostic_marker);
 	/* the process ends with the game; Android restarts it from the
 	launcher next time */
 	_exit(code);
@@ -262,6 +307,32 @@ static void *game_main(void *unused)
 	environment_set(&environment, "HOME", save_root);
 	environment_set(&environment, "HALO_DATA_ROOT", data_root);
 	environment_set(&environment, "HALO_SAVE_ROOT", save_root);
+	time_zone(zone, sizeof(zone));
+	environment_set(&environment, "TZ", zone);
+	snprintf(path, sizeof(path), "%s/config.toml", data_root);
+
+    {
+        static const char *images[] = { "halo_guest.elf", "halo_guest_20000000.elf",
+            "halo_guest_60000000.elf", "halo_guest_a0000000.elf" };
+        unsigned int attempt;
+        for (attempt = 0; attempt < sizeof(images)/sizeof(images[0]); attempt++) {
+            int result;
+            host_logf(HOST_LOG_INFO, "trying linked guest image: %s", images[attempt]);
+            image = SDL_LoadFile(images[attempt], &image_size);
+            if (!image) host_fatal("cannot read %s from the APK: %s", images[attempt], SDL_GetError());
+            result = host_load_image(image, image_size);
+            SDL_free(image);
+            if (result == 0) break;
+            if (result != -2) host_fatal("cannot load %s; see diagnostic for details", images[attempt]);
+        }
+        if (attempt == sizeof(images)/sizeof(images[0]))
+            host_fatal("All four linked game-image addresses are occupied; see diagnostic for details");
+    }
+
+	/* only now that the image holds its address: bringing the display up
+	maps memory of its own, and on a device where one of those mappings
+	lands on the image's address there is nowhere else to put it, because
+	the image is an executable linked to run there (host_loader.c) */
 	{
 		/* the game renders 480 lines at the display's aspect ratio
 		(landscape) unless display.screen_width says otherwise (d3d8_gl.c) */
@@ -280,16 +351,6 @@ static void *game_main(void *unused)
 			host_logf(HOST_LOG_INFO, "display %dx%d: rendering %sx480", mode->w, mode->h, width);
 		}
 	}
-	time_zone(zone, sizeof(zone));
-	environment_set(&environment, "TZ", zone);
-	snprintf(path, sizeof(path), "%s/config.toml", data_root);
-
-	image = SDL_LoadFile("halo_guest.elf", &image_size);
-	if (!image)
-		host_fatal("cannot read the game image from the APK: %s", SDL_GetError());
-	if (host_load_image(image, image_size) != 0)
-		host_fatal("cannot load the game image; see logcat (tag \"halo\") for details");
-	SDL_free(image);
 
 	{
 		char seconds[32];

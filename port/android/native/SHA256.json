@@ -1,0 +1,22 @@
+{
+  "MUSL-COPYRIGHT.txt": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af",
+  "SDL-LICENSE.txt": "1c040b8271b37e5076359f8fd54240e371114112924d2df81ef87c7d6a1dfdfd",
+  "assets/halo_guest.elf": "91c287723ebc1e932f86fbdfb9ddbc05d831748ddf99c77c2693957708e12323",
+  "assets/halo_guest_20000000.elf": "4b00ae164a2820f97603f57ee511c163348e7a24ad3acbec74238bcb7234d78d",
+  "assets/halo_guest_60000000.elf": "174dc4948dd7bbff886f2c0f3f494ebee5084fb968974f1f5bc9c09bf8f737bf",
+  "assets/halo_guest_a0000000.elf": "934a31d4541c772c089aa404ef647f2ffc9da36d9c781a5ac39168e1d7b270f3",
+  "jniLibs/arm64-v8a/libSDL3.so": "f37716dc484506a74331426ac5a8a25c75b0ca2717f888aaca6f77d7f65dc09f",
+  "jniLibs/arm64-v8a/libmain.so": "998c739a787db1b8f98cc28922353e264d326c27e464250136b3b1e8248a4349",
+  "sdl-java/org/libsdl/app/HIDDevice.java": "afdeaf583f051583eff5cc9dcbfb983e3e8923e66d1130ff3e30c21afc8f87f1",
+  "sdl-java/org/libsdl/app/HIDDeviceBLESteamController.java": "2f88711d2c5bb2114be4273b6f3461b165cf19fcedae714d0c0105b2422a4c36",
+  "sdl-java/org/libsdl/app/HIDDeviceManager.java": "5bff9432726930a17cad9502191dd807da2e3cbcff2ad6990966b4b4bd9a7757",
+  "sdl-java/org/libsdl/app/HIDDeviceUSB.java": "2304ead390ae8839405f338866646fd7e12013732c5abe9339af60864626ddf4",
+  "sdl-java/org/libsdl/app/SDL.java": "49d13bd76b65b40bc13b8f4ff1333ecf9fc5473a57bb2d216e2a60dc2e5973a4",
+  "sdl-java/org/libsdl/app/SDLActivity.java": "6abe95f1a7e98fff492c34ff689b2b5d168f4ecddc72a80fc17a2af0813da0c5",
+  "sdl-java/org/libsdl/app/SDLAudioManager.java": "129990250d389bc6550c1a27a81ee9a4cc32a4d6e9080f2fe466480988f214eb",
+  "sdl-java/org/libsdl/app/SDLControllerManager.java": "3bb5d739727b72688cdfe4fe2a3dd6fd7005a2fd2aac311deeda1e53c23e3981",
+  "sdl-java/org/libsdl/app/SDLDummyEdit.java": "fb777fa4b4cce4d328229014acf156c2c2f47445dacccd5f74f876a64cdf502b",
+  "sdl-java/org/libsdl/app/SDLInputConnection.java": "7079f65944ce0f6e8e3ca0293fc79c1e4e050f3b4290c39990723e3a0e40bc9b",
+  "sdl-java/org/libsdl/app/SDLSensorManager.java": "3ffd781744c54e6809ad61515d254af366d34b44e086db90a296c8f159f13dd7",
+  "sdl-java/org/libsdl/app/SDLSurface.java": "f6b98b111ae97e735a4a1af88426d023d29e5f787a6ddfbae857af17d9a738ea"
+}

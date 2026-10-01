@@ -1119,6 +1119,11 @@ static real sound_manager_master_gain(
 	short class_index)
 {
 	real gain = sound_class_get_gain(class_index);
+#ifdef HALO_ANDROID
+    { extern float host_audio_gain(int category);
+      gain *= host_audio_gain(class_index == _sound_class_music ? 2 :
+          (sound_class_get(class_index)->speech ? 0 : 1)); }
+#endif
 
 	if (class_index != _sound_class_scripted_dialog_to_player &&
 		class_index != _sound_class_scripted_dialog_to_other &&

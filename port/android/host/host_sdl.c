@@ -158,7 +158,11 @@ int host_sdl_gl_swap_window(uint32_t window)
 {
 	SDL_Window *object = handle_get(window, _handle_window);
 
-	return object ? SDL_GL_SwapWindow(object) : 0;
+	if (!object) return 0;
+	int width = 0, height = 0;
+	SDL_GetWindowSizeInPixels(object, &width, &height);
+	host_gfx_swap(width, height);
+	return SDL_GL_SwapWindow(object);
 }
 
 /* ---------- events */

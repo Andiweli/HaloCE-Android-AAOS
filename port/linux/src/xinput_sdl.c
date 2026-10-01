@@ -33,6 +33,9 @@ drive the controller.
 */
 
 #include "platform.h"
+#ifdef HALO_ANDROID
+#include "halo_android_controls.h"
+#endif
 #include "sdl_platform.h"
 #include "port_config.h"
 
@@ -122,6 +125,9 @@ int halo_linux_mouse_look(short gamepad_index, float *yaw, float *pitch)
 	mouse_pending_y = 0.0f;
 	mouse_polls_unconsumed = 0;
 	pthread_mutex_unlock(&mouse_lock);
+#ifdef HALO_ANDROID
+    { float tx,ty;host_touch_look(&tx,&ty); x+=tx*1400.f; y+=ty*1400.f; }
+#endif
 	if (x == 0.0f && y == 0.0f)
 		return FALSE;
 	*yaw = -x * scale * mouse_sensitivity();
@@ -547,7 +553,26 @@ DWORD WINAPI XInputGetState(HANDLE device, PXINPUT_STATE state)
 			keyboard_gamepad(&input, &state->Gamepad);
 		if (count > 0)
 			sdl_gamepad_state(gamepads[0], &state->Gamepad);
+#ifdef HALO_ANDROID
+        {
+            unsigned int bits; float x,y;
+            static const int analog_buttons[8]={XINPUT_GAMEPAD_A,XINPUT_GAMEPAD_B,
+                XINPUT_GAMEPAD_X,XINPUT_GAMEPAD_Y,XINPUT_GAMEPAD_WHITE,XINPUT_GAMEPAD_BLACK,
+                XINPUT_GAMEPAD_LEFT_TRIGGER,XINPUT_GAMEPAD_RIGHT_TRIGGER};
+            static const unsigned short digital[8]={XINPUT_GAMEPAD_START,XINPUT_GAMEPAD_BACK,
+                XINPUT_GAMEPAD_LEFT_THUMB,XINPUT_GAMEPAD_RIGHT_THUMB,XINPUT_GAMEPAD_DPAD_UP,
+                XINPUT_GAMEPAD_DPAD_DOWN,XINPUT_GAMEPAD_DPAD_LEFT,XINPUT_GAMEPAD_DPAD_RIGHT};
+            int i; host_touch_read(&bits,&x,&y);
+            for(i=0;i<8;i++) {
+                if(bits & (1u<<i)) state->Gamepad.bAnalogButtons[analog_buttons[i]]=255;
+                if(bits & (1u<<(i+8))) state->Gamepad.wButtons|=digital[i];
+            }
+            if(x!=0 || y!=0) {state->Gamepad.sThumbLX=(short)(x*32767);state->Gamepad.sThumbLY=(short)(-y*32767);}
+        }
+#endif
+#ifndef HALO_ANDROID
 		test_input_gamepad(&state->Gamepad);
+#endif
 		if (abs(state->Gamepad.sThumbRX) > STICK_AIMING_DEFLECTION ||
 			abs(state->Gamepad.sThumbRY) > STICK_AIMING_DEFLECTION)
 		{

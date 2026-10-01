@@ -1,8 +1,58 @@
+## Android Studio variants
+
+Select `mobileDebug` / `mobileRelease` for phones and handhelds, or
+`aaosDebug` / `aaosRelease` for Android Automotive OS (parked game).
+Both variants keep the existing application ID and version, and therefore
+replace each other when installed with the same signing key.
+
+AAOS uses the available window area with dynamic system-bar, cutout and
+keyboard insets shared by SDL and RetroTouch. System bars remain accessible.
+The adaptive launcher icon stays within its safe zone and is also used as the
+round icon. The AAOS activities are resizable and do not request rotation.
+Native rendering/audio is paused at onPause, including when AAOS blocks the
+activity. The mobile self-updater is disabled in the AAOS variant.
+
+Build commands from this directory:
+
+```sh
+./gradlew :app:assembleAaosDebug
+./gradlew :app:assembleAaosRelease
+./gradlew :app:bundleAaosRelease
+```
+
+APK output: `app/build/outputs/apk/aaos/debug/app-aaos-debug.apk` (or release).
+AAB output: `app/build/outputs/bundle/aaosRelease/app-aaos-release.aab`.
+The native payload remains arm64-v8a only; x86_64 AAOS emulators are unsupported.
+Test on an ARM64 AAOS device, including side/bottom bars, resizing, portrait,
+controller/touch input, keyboard, and audio suspension when the OS blocks play.
+This variant targets native Android Automotive OS, not phone-projected Android Auto.
+
 # Android
+
+## Android Studio 2025 distribution (Android UI patch 01)
+
+Open the **repository root** (the folder with `settings.gradle`) in Android
+Studio 2025. The distribution includes a matching ARM64 engine payload in
+`port/android/native`, so building the APK needs no native compiler or WSL.
+Use JDK 17 (or the compatible bundled Studio JDK), Android SDK 35 and Build
+Tools 35.0.0. AGP is pinned to 8.9.2 and Gradle to 8.11.1.
+
+See `START-HIER.txt` in the repository root for the German quick start,
+validation results, signing and native-source rebuild instructions.
+
+Android UI patch 01 makes both activities immersive, hides on-screen engine
+diagnostics and build text, and removes the separator in controller labels.
+It does not add touch controls or change Android/ABI requirements. Native
+logging remains available. The native payload is a release engine in both
+Gradle variants; a debug APK still permits Java/Android debugging.
+
+The original command-line native build below remains available. `ninja
+android` now also copies its outputs and SDL Java sources into the portable
+`port/android/native` directory. Gradle always uses that directory.
 
 `ninja android` builds the game for 64-bit ARM Android (arm64-v8a).
 `ninja android_apk` makes an app from it:
-`port/android/app/build/outputs/apk/debug/app-debug.apk`.
+`port/android/app/build/outputs/apk/mobile/debug/app-mobile-debug.apk`.
 
 The game shows its graphics with OpenGL ES 3. It plays sound through SDL3
 (AAudio). It accepts input from game controllers, for example a PlayStation
@@ -34,7 +84,7 @@ ninja) and these items:
 2. Enter `python configure.py`.
 3. Enter `ninja android_apk`.
 4. Connect the device with adb.
-5. Enter `adb install -r port/android/app/build/outputs/apk/debug/app-debug.apk`.
+5. Enter `adb install -r port/android/app/build/outputs/apk/mobile/debug/app-mobile-debug.apk`.
 
 `ninja android` builds only the game image and the native libraries.
 
@@ -128,6 +178,17 @@ To join a game, do one of these steps:
   game does not operate, the app starts it. The app writes the link to
   `files/join_link.txt`, and the game reads it.
 - Copy the link and go to the game.
+
+On the local network:
+
+- The game uses the address of the Wi-Fi (or of the hotspot of the
+  phone), not the address of the mobile data.
+- The app holds a Wi-Fi multicast lock while the game operates. Some
+  phones otherwise drop the broadcasts that find system link games.
+
+Keep the game in the front during a network game. When the app goes to the
+background, Android stops the game. After 15 seconds the other machines
+drop it, and when it hosts, its players leave.
 
 ## Updates
 
@@ -295,9 +356,11 @@ assembly of the port is necessary:
 ## Limits
 
 - Bink video is not available. The game skips the movies.
-- The device must let the app reserve the fixed guest addresses, from
-  `0x80000000` to approximately `0x89000000`. If the addresses are not
-  available, the app shows a message.
+- The loader tries linked game images at `0x40000000`, `0x20000000`,
+  `0x60000000`, and `0xa0000000` when an image address is occupied.
+  The Xbox data window is separately placed in free low-address memory.
+  Existing Android mappings are never overwritten; startup fails with a
+  diagnostic if no suitable address is available.
 - The game does not accept touch input. Use a controller or a keyboard.
 - Kernels with 16 KB pages (a developer option of Android 15) do not
   operate. The Xbox memory uses 4 KB pages.

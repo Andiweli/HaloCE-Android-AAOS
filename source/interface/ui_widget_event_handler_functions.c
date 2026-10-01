@@ -908,6 +908,7 @@ symbols in this file:
 /* ---------- headers */
 
 #include "cseries.h"
+#include "cache/cache_files.h"
 #include "bungie_net/network/transport.h"
 #include "bungie_net/network/transport_endpoint_winsock.h"
 #include "cseries/errors.h"
@@ -3337,6 +3338,18 @@ static boolean multiplayer_profiles_list_initialize(
 	return TRUE;
 }
 
+#ifdef HALO_ANDROID
+/* Semantic identification works with every localized map; no English tag paths. */
+int android_ui_profile_handler_kind(short function)
+{
+    if(function < 0 || function >= 102) return 0;
+    if(event_handler_function_list.functions[function] == main_menu_initialize) return 3;
+    if(event_handler_function_list.functions[function] == player_profile_color_picker_menu_initialize) return 1;
+    if(event_handler_function_list.functions[function] == player_profile_initialize_advanced_controller_settings) return 2;
+    return 0;
+}
+#endif
+
 boolean ui_widget_event_handler_function_invoke(
 	struct widget_instance *widget,
 	struct event_record *event,
@@ -5544,6 +5557,18 @@ static boolean multiplayer_level_select(
 		strtok(automation_map_name, "\n\r \t");
 		map_name = automation_map_name;
 		fclose(file);
+	}
+	/* port: a map of a build this version does not play with others (its
+	objects would not be the same as theirs): said, and the list stays */
+	{
+		char build[0x20];
+
+		if (global_network_game_server_get() && !network_game_is_splitscreen_local() &&
+			!cache_files_map_plays_multiplayer(map_name, build))
+		{
+			cache_files_show_multiplayer_unavailable(map_name, build);
+			return FALSE;
+		}
 	}
 	main_set_multiplayer_map_name(map_name);
 	game_engine_override_map_name(map_name);

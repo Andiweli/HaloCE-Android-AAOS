@@ -38,6 +38,7 @@ mappings) from pools of address space it reserves below 4 GB on demand. */
 /* where the window was placed, for the guest's boot structure */
 uint32_t host_memory_window_base(void);
 
+/* -2: image address occupied, no mappings changed; -1: other failure. */
 int host_memory_initialize(uint32_t image_base, uint32_t image_size);
 /* starts the thread that reports the window's own contents (host_probe.c) */
 void host_probe_start(void);
@@ -69,7 +70,7 @@ struct host_guest_image
 
 extern struct host_guest_image host_image;
 
-/* maps the image from the ELF file in memory; returns 0 on success */
+/* Maps the linked ELF; 0 success, -2 image-address collision, -1 other error. */
 int host_load_image(const void *elf, size_t size);
 
 /* ---------- entering guest code (host_thread.c) */
@@ -103,5 +104,7 @@ void *host_resolve_import(const char *name);
 /* ---------- SDL / GL (host_sdl.c, host_gl.c) */
 
 void *host_gl_resolve(const char *name);
+void *host_gfx_wrap(const char *name, void *function);
+void host_gfx_swap(int width, int height);
 
 #endif

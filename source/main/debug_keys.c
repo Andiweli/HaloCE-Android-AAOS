@@ -81,6 +81,10 @@ void debug_keys_dispose(
 void debug_keys_update(
 	void)
 {
+#ifdef HALO_ANDROID
+    /* Android player build: no automatic developer commands or debug shortcuts. */
+    return;
+#endif
 	boolean modifier_down[NUMBER_OF_DEBUG_KEY_MODIFIERS];
 	long key_index;
 

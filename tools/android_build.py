@@ -29,6 +29,7 @@ from .linux_build import (LINUX_PROFILE, MINIUPNPC_DEFINES, MINIUPNPC_DIR, MUSL_
                           compile_launcher, game_defines_and_includes, game_sources, miniupnpc_sources,
                           musl_math_sources, pgo_mode, pgo_profile,
                           profile_use_flags, xdk_headers)
+from .embed_assets import hud_assets_build, hud_configure_inputs
 from .ninja_syntax import Writer
 
 PORT_DIR = Path("port/android")
@@ -193,7 +194,7 @@ def _musl_sources() -> List[Path]:
 
 
 def android_configure_inputs() -> List[Path]:
-    return [Path(__file__), PORT_DIR / "guest" / "runtime", PORT_DIR / "host", LINUX_DIR / "src"]
+    return [Path(__file__), PORT_DIR / "guest" / "runtime", PORT_DIR / "host", LINUX_DIR / "src", *hud_configure_inputs()]
 
 
 def generate_android_build(n: Writer, sln: Any) -> None:
@@ -408,6 +409,9 @@ def generate_android_build(n: Writer, sln: Any) -> None:
         if source.name.startswith("posix_") or source.name in guest_host_only:
             continue
         objects.append(guest_object(source, platform_cflags))
+    # the high-res HUD's textures (port/assets/hud; port/linux/src/hud_hires.c)
+    for source in hud_assets_build(n, "android", gen_dir / "hud_hires_assets.c"):
+        objects.append(guest_object(source, platform_cflags))
     # the settings file's parser (port/third_party/tomlc17)
     objects.append(guest_object(TOML_DIR / "tomlc17.c", platform_cflags))
     # internet play's reliable streams (port/third_party/kcp; p2p.c)
@@ -452,13 +456,21 @@ def generate_android_build(n: Writer, sln: Any) -> None:
     n.rule(
         name="android_guest_link",
         command=(f"$android_ndk_bin/ld.lld -m aarch64linux -static -nostdlib -T {linker_script} "
-                 f"-Map $out.map -o $out @$out.rsp {libguestc} "
+                 f"$image_address -Map $out.map -o $out @$out.rsp {libguestc} "
                  "$$($android_host_cc -print-libgcc-file-name)"),
         description="ANDROID LINK $out",
         rspfile="$out.rsp",
         rspfile_content="$in_newline",
     )
     n.build(outputs=image, rule="android_guest_link", inputs=objects, implicit=[libguestc, linker_script])
+    alternate_images = []
+    for address in ("20000000", "60000000", "a0000000"):
+        alternate = BUILD / f"halo_guest_{address}.elf"
+        n.build(outputs=alternate, rule="android_guest_link", inputs=objects,
+                implicit=[libguestc, linker_script],
+                variables={"image_address": f"--defsym=halo_image_base=0x{address}"})
+        alternate_images.append(alternate)
+
 
     # ---------- SDL3
 
@@ -530,17 +542,31 @@ def generate_android_build(n: Writer, sln: Any) -> None:
     n.rule(name="android_copy", command="cp $in $out", description="ANDROID STAGE $out")
     n.build(outputs=staged_sdl, rule="android_copy", inputs=libsdl)
     n.build(outputs=staged_image, rule="android_copy", inputs=image)
-    n.build(outputs="android", rule="phony", inputs=[libmain, staged_sdl, staged_image])
+    staged_alternates = []
+    for alternate in alternate_images:
+        staged_alternate = assets_dir / alternate.name
+        n.build(outputs=staged_alternate, rule="android_copy", inputs=alternate)
+        staged_alternates.append(staged_alternate)
 
-    apk = PORT_DIR / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
+    studio_manifest = PORT_DIR / "native" / "SHA256.json"
+    n.rule(name="android_studio_stage",
+           command=f"{python} tools/android_studio_stage.py",
+           description="ANDROID STUDIO PAYLOAD")
+    n.build(outputs=studio_manifest, rule="android_studio_stage",
+            inputs=[libmain, staged_sdl, staged_image] + staged_alternates,
+            implicit=[Path("tools/android_studio_stage.py"),
+                      SDL_DIR / "android-project/app/src/main/java/org/libsdl/app/SDLActivity.java"])
+    n.build(outputs="android", rule="phony", inputs=studio_manifest)
+
+    apk = PORT_DIR / "app" / "build" / "outputs" / "apk" / "mobile" / "debug" / "app-mobile-debug.apk"
     n.rule(
         name="android_gradle",
         # Gradle leaves the APK alone when its contents would not change
-        command=(f"cd {PORT_DIR} && ./gradlew --console=plain -q assembleDebug && "
-                 "touch app/build/outputs/apk/debug/app-debug.apk"),
+        command=(f"cd {PORT_DIR} && ./gradlew --console=plain -q assembleMobileDebug && "
+                 "touch app/build/outputs/apk/mobile/debug/app-mobile-debug.apk"),
         description="ANDROID GRADLE $out",
         pool="console",
     )
-    n.build(outputs=apk, rule="android_gradle", inputs=[libmain, staged_sdl, staged_image])
+    n.build(outputs=apk, rule="android_gradle", inputs=studio_manifest)
     n.build(outputs="android_apk", rule="phony", inputs=apk)
     n.newline()

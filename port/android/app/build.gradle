@@ -2,9 +2,9 @@ plugins {
     id "com.android.application"
 }
 
-// build/android in the repository root, where `ninja android` stages the
-// native libraries (jniLibs) and the guest image (assets)
-def staged = new File(rootDir, "../../build/android")
+// The distribution ships a matched native payload and SDL Java sources.
+// tools/android_studio_stage.py refreshes these after a native rebuild.
+def staged = new File(projectDir, "../native")
 
 // a build of main knows its number (tools/ci_build.py), which names its
 // release and which the self-updater (Updater.java) compares; others have
@@ -33,9 +33,22 @@ android {
         }
     }
 
+    flavorDimensions "device"
+    productFlavors {
+        mobile {
+            dimension "device"
+            buildConfigField "boolean", "IS_AAOS", "false"
+        }
+        aaos {
+            dimension "device"
+            minSdk 29
+            buildConfigField "boolean", "IS_AAOS", "true"
+        }
+    }
+
     sourceSets {
         main {
-            java.srcDirs += new File(staged, "third_party/SDL3/android-project/app/src/main/java")
+            java.srcDirs += new File(staged, "sdl-java")
             jniLibs.srcDirs = [new File(staged, "jniLibs")]
             assets.srcDirs = [new File(staged, "assets")]
         }
@@ -84,3 +97,18 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+dependencies { implementation files("libs/retrotouch.aar") }
+
+tasks.register("verifyNativePayload") {
+    doLast {
+        ["assets/halo_guest.elf", "jniLibs/arm64-v8a/libmain.so",
+         "jniLibs/arm64-v8a/libSDL3.so", "sdl-java/org/libsdl/app/SDLActivity.java"].each { path ->
+            if (!new File(staged, path).isFile()) {
+                throw new GradleException("Missing native payload: " + path
+                    + ". Run ninja android, then python3 tools/android_studio_stage.py from the repository root.")
+            }
+        }
+    }
+}
+tasks.named("preBuild").configure { dependsOn("verifyNativePayload") }

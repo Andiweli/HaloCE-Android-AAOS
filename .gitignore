@@ -24,7 +24,16 @@ xbox/
 
 # Locally extracted proprietary game data (never commit)
 assets/
+# (but the high-res assets, drawn for the port: tools/hud_assets.py)
+!port/assets/
 original/
 
 # CI build outputs (tools/ci_build.py)
 dist/
+
+# Android Studio local state (portable native payload is intentionally kept)
+.gradle/
+local.properties
+port/android/local.properties
+# Prebuilt guest images belong to the portable Android Studio project.
+!port/android/native/assets/

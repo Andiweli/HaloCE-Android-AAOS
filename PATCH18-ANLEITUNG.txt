@@ -1,0 +1,43 @@
+Halo-CE-Android – Patch18: Upstream + Android/AAOS
+
+Dieses Update ersetzt Patch17. ZIP neben Halo-CE-Android entpacken und die
+vollständigen enthaltenen Dateien ersetzen. Das Paket enthält ausschließlich
+neue/geänderte Dateien gegenüber dem zuvor gelieferten Patch17-Stand.
+
+Android Studio: den Projekt-Hauptordner öffnen; mobileDebug/mobileRelease oder
+aaosDebug/aaosRelease wählen. APK/AAB neu bauen und mit eigener bisheriger
+Signatur über die installierte App installieren. Keine Deinstallation nötig.
+Die vorhandene app/build.gradle wird im Update-ZIP nicht ersetzt: individuelle
+Versionsnummern bleiben erhalten. Für Play bei Bedarf versionCode erhöhen.
+
+NEU
+- Upstream bis 66f2a112 (01.10.2026): unter anderem Netzwerk-/Multiplayer-Fixes,
+  Waffenwechsel-Fix, Textkantenkorrektur, hochauflösendes HUD und verbesserte
+  Startreihenfolge. Bereits vorhandene Speicher-Fixes nicht doppelt angewendet.
+- Gesamten Android-/AAOS-Port integriert: RetroTouch bei fehlendem Controller,
+  Profil-Lautstärken, lokalisierte Menüs, Controller-Cheats, Hauptmenü-B/Zurück,
+  Fullscreen auf Mobile, AAOS-Inset-/Surface-Anpassung und Audio-Puffer.
+- Patch17-Geometriecache-Bypass und erzwungene GPU-Synchronisierung entfernt.
+  Normale schnellen Rendering-Pfade sind wieder aktiv.
+- Neue Startreihenfolge reserviert das Spielmodul vor der Displayinitialisierung;
+  vier Ausweichadressen und /Android/media-Diagnose bleiben erhalten.
+- Alle vier Guest-ELFs, libmain.so und libSDL3.so neu gebaut und abgestimmt.
+  Keine punktuellen Binärpatches in den mitgelieferten Spielmodulen.
+- Updater auf Andiweli/Halo-CE-Android umgestellt; AAOS nutzt ihn weiterhin nicht.
+- CI erstellt nun Mobile-APK, AAOS-APK und AAOS-AAB nach dem Native-Staging.
+
+PRÜFUNG
+Vollständiger nativer ARM64-Build erfolgreich (NDK r29, Release, PGO aus).
+Alle Java-Quellen für beide Varianten gegen Android API35 kompiliert.
+Lautstärke-Navigation, Menü-B/Zurück, Beschriftungen, Caption-Grafiken,
+Diagnosedatei und tatsächlicher ELF-Loader mit allen Ausweichadressen getestet.
+Linux-Buildwerkzeugtests: 6 bestanden, 2 ohne erforderliche Host-Compiler übersprungen.
+Kein vollständiger Gradle/APK-Gerätetest hier. Native Payload SHA256 geprüft.
+
+GERÄTETEST
+Bitte den bisherigen Weg auf Retroid erneut spielen und Geschwindigkeit,
+fehlende/einfarbige Flächen sowie Animation des Fluchtschiffs vergleichen.
+GFX erst bei auftretendem Fehler betätigen und ZIP samt Startup-Log senden.
+Patch18 kennzeichnet beide Diagnosen. Das Update ist KEINE bestätigte Behebung
+aller Grafikfehler: Patch17 zeigte nur eine Veränderung, keine klare Ursache.
+ISO, ui.map, Profile und Spieldaten werden durch dieses Paket nicht verändert.

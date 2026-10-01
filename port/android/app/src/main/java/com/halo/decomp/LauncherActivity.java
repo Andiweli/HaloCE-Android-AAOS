@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
+import android.provider.Settings;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -34,6 +35,7 @@ import java.nio.channels.FileChannel;
  */
 public class LauncherActivity extends Activity {
     private static final int PICK_IMAGE = 1;
+    private static final int EXPORT_DIAGNOSTIC = 2;
 
     private File dataRoot;
     private TextView status;
@@ -44,13 +46,16 @@ public class LauncherActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Fullscreen.apply(this);
         dataRoot = getExternalFilesDir(null);
         // created by the app, so that files pushed into it with adb stay
         // readable (a directory adb creates there belongs to the shell user)
         if (dataRoot != null)
             new File(dataRoot, "maps").mkdirs();
+        passOnHardwareId();
         passOnInvite(getIntent());
         if (haveData()) {
+            if (StartDiagnostics.interrupted(this)) { showDiagnostics(); return; }
             startGame();
             return;
         }
@@ -66,11 +71,47 @@ public class LauncherActivity extends Activity {
         if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction()) || intent.getData() == null
             || dataRoot == null)
             return;
-        try (OutputStream out = new FileOutputStream(new File(dataRoot, "join_link.txt"))) {
+        // written whole under another name, then renamed: the game never
+        // reads it half written
+        File partial = new File(dataRoot, "join_link.txt.tmp");
+        try (OutputStream out = new FileOutputStream(partial)) {
             out.write(intent.getData().toString().getBytes("UTF-8"));
         } catch (java.io.IOException e) {
             // the link is lost; the player can copy it instead
+            partial.delete();
+            return;
         }
+        if (!partial.renameTo(new File(dataRoot, "join_link.txt")))
+            partial.delete();
+    }
+
+    /**
+     * This device's ANDROID_ID (the app's own: one per app signing key and
+     * user, until a factory reset), which native code cannot read: the game
+     * (port/linux/src/p2p.c) hashes it from hardware_id.txt into the
+     * hardware id a host it joins is told.
+     */
+    private void passOnHardwareId() {
+        String id;
+
+        if (dataRoot == null)
+            return;
+        try {
+            id = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        } catch (RuntimeException e) {
+            return;
+        }
+        if (id == null || id.isEmpty())
+            return;
+        File partial = new File(dataRoot, "hardware_id.txt.tmp");
+        try (OutputStream out = new FileOutputStream(partial)) {
+            out.write(id.getBytes("UTF-8"));
+        } catch (java.io.IOException e) {
+            partial.delete();
+            return;
+        }
+        if (!partial.renameTo(new File(dataRoot, "hardware_id.txt")))
+            partial.delete();
     }
 
     private boolean haveData() {
@@ -80,6 +121,32 @@ public class LauncherActivity extends Activity {
     private void startGame() {
         startActivity(new Intent(this, HaloActivity.class));
         finish();
+    }
+
+    private void showDiagnostics() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(16),dp(12),dp(16),dp(12));
+        TextView title = new TextView(this);
+        title.setText("Halo – Diagnose / Diagnostics");
+        title.setTextSize(22);layout.addView(title);
+        TextView text = new TextView(this);
+        text.setText(StartDiagnostics.read(this));text.setTextSize(14);text.setTextIsSelectable(true);
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(text);layout.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        Button export = new Button(this);export.setText("Diagnose exportieren / Export diagnostic");
+        export.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("text/plain");
+            intent.putExtra(Intent.EXTRA_TITLE,"halo-diagnostic.txt");
+            try { startActivityForResult(intent,EXPORT_DIAGNOSTIC); }
+            catch (android.content.ActivityNotFoundException e) {
+                android.widget.Toast.makeText(this,"No file picker. Diagnostic remains in Android/media/com.halo.decomp/",android.widget.Toast.LENGTH_LONG).show();
+            }
+        });layout.addView(export);
+        Button retry = new Button(this);retry.setText("Spiel erneut starten / Retry game");
+        retry.setOnClickListener(v -> startGame());layout.addView(retry);
+        setContentView(layout);Fullscreen.apply(this);
     }
 
     private int dp(float value) {
@@ -147,14 +214,35 @@ public class LauncherActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        Fullscreen.apply(this);
         // data pushed with adb while this screen was open
         if (pick != null && pick.isEnabled() && haveData())
             startGame();
     }
 
     @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) Fullscreen.apply(this);
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == EXPORT_DIAGNOSTIC) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                try (FileInputStream in = new FileInputStream(StartDiagnostics.log(this));
+                     OutputStream out = getContentResolver().openOutputStream(data.getData())) {
+                    if (out == null) throw new java.io.IOException("Cannot open destination");
+                    byte[] buffer = new byte[8192];int count;
+                    while ((count=in.read(buffer))!=-1) out.write(buffer,0,count);
+                    android.widget.Toast.makeText(this,"Diagnostic exported",android.widget.Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    android.widget.Toast.makeText(this,"Export failed: "+e.getMessage(),android.widget.Toast.LENGTH_LONG).show();
+                }
+            }
+            return;
+        }
         if (requestCode != PICK_IMAGE || resultCode != RESULT_OK || data == null || data.getData() == null)
             return;
         Uri image = data.getData();

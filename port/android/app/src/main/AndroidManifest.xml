@@ -24,7 +24,7 @@
         android:allowBackup="false"
         android:isGame="true"
         android:appCategory="game"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
+        android:theme="@style/HaloFullscreen"
         android:hardwareAccelerated="true">
 
         <!-- a game, for the system (isGame and appCategory above; the game

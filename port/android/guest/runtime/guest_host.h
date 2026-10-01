@@ -103,4 +103,13 @@ void host_gl_wait_frame(unsigned int slot);
 /* the storage directories the port uses, copied into buffer */
 void host_android_path(int which, char *buffer, unsigned int size);
 
+void host_touch_read(unsigned int *buttons, float *x, float *y);
+void host_touch_look(float *x, float *y);
+void host_touch_mode(int mode);
+float host_audio_gain(int category);
+
+void host_audio_profile(const char *key);
+int host_audio_level(int category);
+int host_audio_set_level(int category, int value);
+
 #endif

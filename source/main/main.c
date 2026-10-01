@@ -2919,6 +2919,7 @@ void halt_and_catch_fire(
 					global_real_argb_white);
 				draw_string_set_tab_stops(NULL, 0);
 				draw_string_set_color(global_real_argb_white);
+#ifndef HALO_ANDROID
 				rasterizer_draw_string(
 					&bounds,
 					NULL,
@@ -2926,6 +2927,7 @@ void halt_and_catch_fire(
 					-4,
 					"halobeta xbox 01.01.14.2342 built at: Jan 14 2002 12:49:20");
 				bounds.y0 = cursor.y - 1;
+#endif
 				rasterizer_draw_string(
 					&bounds,
 					NULL,
@@ -3066,6 +3068,11 @@ static void main_game_render(
 	return;
 }
 
+#ifdef HALO_ANDROID
+static boolean android_exit_requested=FALSE;
+void main_android_request_exit(void) {android_exit_requested=TRUE;}
+#endif
+
 void main_loop(
 	void)
 {
@@ -3091,6 +3098,9 @@ void main_loop(
 
 	while (TRUE)
 	{
+#ifdef HALO_ANDROID
+        if(android_exit_requested)break;
+#endif
 		if (!game_in_editor())
 		{
 			if (main_globals.switch_to_structure_bsp_index!=NONE)
@@ -3313,6 +3323,9 @@ void main_loop(
 
 	error(_error_silent, "end of saved film");
 	main_exit();
+#ifdef HALO_ANDROID
+    if(android_exit_requested) exit(0);
+#endif
 
 	return;
 }

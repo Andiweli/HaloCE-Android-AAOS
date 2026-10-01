@@ -31,8 +31,8 @@ OUTPUTS = {
     "android": [],  # the APK, below
 }
 APKS = {
-    "debug": "port/android/app/build/outputs/apk/debug/app-debug.apk",
-    "release": "port/android/app/build/outputs/apk/release/app-release.apk",
+    "debug": "port/android/app/build/outputs/apk/mobile/debug/app-mobile-debug.apk",
+    "release": "port/android/app/build/outputs/apk/mobile/release/app-mobile-release.apk",
 }
 
 
@@ -67,9 +67,12 @@ def main() -> int:
         # the native part, then the app around it (Gradle's variant of the
         # same name: release is signed with the debug key, not debuggable)
         run(["ninja", "android"])
+        run([sys.executable, "tools/android_studio_stage.py"])
         gradlew = "gradlew.bat" if os.name == "nt" else "./gradlew"
-        run([gradlew, "--console=plain", "-q", f"assemble{args.config.capitalize()}"], cwd=ROOT / "port/android")
-        outputs = [APKS[args.config]]
+        run([gradlew, "--console=plain", "-q", f"assembleMobile{args.config.capitalize()}", f"assembleAaos{args.config.capitalize()}", f"bundleAaos{args.config.capitalize()}"], cwd=ROOT / "port/android")
+        outputs = [APKS[args.config],
+                   f"port/android/app/build/outputs/apk/aaos/{args.config}/app-aaos-{args.config}.apk",
+                   f"port/android/app/build/outputs/bundle/aaos{args.config.capitalize()}/app-aaos-{args.config}.aab"]
     else:
         run(["ninja", args.platform])
         outputs = OUTPUTS[args.platform]

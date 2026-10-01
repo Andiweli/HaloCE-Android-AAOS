@@ -24,7 +24,7 @@ void *host_gl_resolve(const char *name)
 		function = dlsym(library, name);
 	if (!function)
 		function = (void *)eglGetProcAddress(name);
-	return function;
+	return host_gfx_wrap(name, function);
 }
 
 void host_gl_get_string(uint32_t name, int index, char *buffer, uint32_t size)

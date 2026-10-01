@@ -381,9 +381,11 @@ void interface_draw_fullscreen_overlays(
 	cinematic_render();
 	interface_splitscreen_render();
 	hud_render_timer();
+#ifndef HALO_ANDROID
 	terminal_draw();
 	main_framerate_render();
 	render_debug_profile();
+#endif
 
 	return;
 }

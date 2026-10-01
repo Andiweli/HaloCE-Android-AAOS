@@ -2017,6 +2017,7 @@ static void set_textbox_to_build_number(
 	   the function is unattested. January corroborates: .bss +0x28, referenced only here. */
 	static wchar_t build_number_string[64];
 
+#ifndef HALO_ANDROID
 	if (!build_number_string[0])
 	{
 		ascii_to_wide(
@@ -2024,6 +2025,8 @@ static void set_textbox_to_build_number(
 			build_number_string,
 			sizeof(build_number_string));
 	}
+
+#endif
 
 	if (!widget->parameters.text_box.text)
 	{
@@ -2243,6 +2246,11 @@ static void player_profile_edit_select_menu_update_extended_description(
 		child = child->next;
 		index++;
 	}
+
+#ifdef HALO_ANDROID
+    { extern int android_volume_description_index(struct widget_instance *,int);
+      index=(short)android_volume_description_index(list_widget,index); }
+#endif
 
 	if (index != NONE)
 	{

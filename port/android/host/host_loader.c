@@ -124,13 +124,16 @@ int host_load_image(const void *file, size_t size)
 	}
 	low &= ~0xfffULL;
 	high = (high + 0xfff) & ~0xfffULL;
-	if (low != HALO_GUEST_IMAGE_BASE || high > 0x100000000ULL)
+	if ((low != HALO_GUEST_IMAGE_BASE && low != 0x20000000ULL &&
+		low != 0x60000000ULL && low != 0xa0000000ULL) || high > 0x100000000ULL)
 	{
 		host_logf(HOST_LOG_ERROR, "the guest image spans %llx-%llx", (unsigned long long)low, (unsigned long long)high);
 		return -1;
 	}
-	if (host_memory_initialize((uint32_t)low, (uint32_t)(high - low)) != 0)
-		return -1;
+	{
+		int result = host_memory_initialize((uint32_t)low, (uint32_t)(high - low));
+		if (result != 0) return result;
+	}
 	if (mmap((void *)low, high - low, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) != (void *)low)
 		return -1;
 	for (index = 0; index < elf->e_phnum; index++)
