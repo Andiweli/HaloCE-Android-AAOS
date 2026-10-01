@@ -46,6 +46,8 @@ infotainment system. Apps are installed on the vehicle itself. It is different
 from **Android Auto**, which projects supported phone apps onto the car's screen.
 This project's AAOS build is intended for compatible vehicles while parked to be playable with a connected Bluetooth Controller.
 
+In most cases, AAOS builds can only be installed via the Play Store, unless you have root access to your vehicle (you do this at your own risk).
+
 <img width="1080" height="810" alt="image" src="https://github.com/user-attachments/assets/c8a02b2f-5525-433e-afe7-2f4446cf64d2" />
 
 
