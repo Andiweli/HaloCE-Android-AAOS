@@ -1,4 +1,4 @@
-# Halo: Combat Evolved for Android
+# Halo: Combat Evolved for Android and AAOS
 
 This project is a port of the Halo: Combat Evolved decompilation to Linux,
 Windows and Android. The decompilation is of the Xbox build 2342
