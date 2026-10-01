@@ -317,13 +317,14 @@ final class Updater {
         }
     }
 
-    /** the zip's app (its one .apk) to apk */
+    /** Select the mobile APK explicitly: CI archives also contain the AAOS app. */
     private static void extractApk(File zip, File apk) throws IOException {
         try (ZipInputStream in = new ZipInputStream(new FileInputStream(zip))) {
             ZipEntry entry;
 
             while ((entry = in.getNextEntry()) != null) {
-                if (entry.isDirectory() || !entry.getName().endsWith(".apk"))
+                if (entry.isDirectory() || !new File(entry.getName()).getName().equals(
+                        "app-mobile-" + (BuildConfig.DEBUG ? "debug" : "release") + ".apk"))
                     continue;
                 try (OutputStream out = new FileOutputStream(apk)) {
                     byte[] buffer = new byte[65536];
@@ -335,7 +336,7 @@ final class Updater {
                 return;
             }
         }
-        throw new IOException("the download has no app in it");
+        throw new IOException("the download has no matching mobile APK");
     }
 
     /**
