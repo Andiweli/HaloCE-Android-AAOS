@@ -50,6 +50,8 @@ In most cases, AAOS builds can only be installed via the Play Store, unless you 
 
 <img width="1080" height="810" alt="image" src="https://github.com/user-attachments/assets/c8a02b2f-5525-433e-afe7-2f4446cf64d2" />
 
+> [!NOTE]
+> If you are interested in testing the AAOS version, contact me.
 
 ## 💾 Game data
 
