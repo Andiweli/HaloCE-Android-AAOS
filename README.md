@@ -27,6 +27,7 @@ Use the AAOS build while parked.
 
 <p align=center>
 <img width="854" height="480" alt="image" src="https://github.com/user-attachments/assets/b8a476e3-f6a5-40bf-98e1-138493be4c47" />
+<img width="854" height="480" alt="image" src="https://github.com/user-attachments/assets/82f6c01d-a7ec-46b8-9cb5-31c2850523ff" />
 </p>
 
 Requires **ARM64**, Android **9+** for mobile or **10+** for AAOS, and a compatible
