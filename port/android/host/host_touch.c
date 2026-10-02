@@ -13,6 +13,7 @@ static unsigned int held;
 static unsigned long long until[20];
 static float move_x, move_y, look_x, look_y;
 static int mode;
+extern int host_bink_active(void);
 static float volumes[3] = {1, 1, 1};
 static float default_volumes[3] = {1, 1, 1};
 static char audio_profile[512], audio_file[1024];
@@ -43,7 +44,7 @@ JNIEXPORT void JNICALL Java_com_halo_decomp_HaloPort_nativeLook(JNIEnv *e,jclass
     pthread_mutex_unlock(&lock);
 }
 JNIEXPORT jint JNICALL Java_com_halo_decomp_HaloPort_nativeMode(JNIEnv *e,jclass c) {
-    pthread_mutex_lock(&lock); int result=mode; pthread_mutex_unlock(&lock);return result;
+    pthread_mutex_lock(&lock); int result=host_bink_active()?0:mode; pthread_mutex_unlock(&lock);return result;
 }
 JNIEXPORT void JNICALL Java_com_halo_decomp_HaloPort_nativeVolumes(JNIEnv *e,jclass c,jint master,jint effects,jint music) {
     int v[3]={master,effects,music};pthread_mutex_lock(&lock);
@@ -119,4 +120,23 @@ int host_audio_set_level(int category,int value) {
     }
     if(!ok)volumes[category]=previous;
     pthread_mutex_unlock(&lock);return ok;
+}
+
+/* UI thread writes, render/input threads read; never enter guest code from JNI. */
+static int settings_open;
+static float settings_brightness=0.0f, settings_gamma=1.0f;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeOpen(JNIEnv *e,jclass c,jboolean open) {
+    pthread_mutex_lock(&lock); settings_open=open; reset(); pthread_mutex_unlock(&lock);
+}
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeDisplay(JNIEnv *e,jclass c,jint brightness,jint gamma) {
+    pthread_mutex_lock(&lock);
+    settings_brightness=(fmaxf(50,fminf(150,brightness))-100.f)/100.f;
+    settings_gamma=fmaxf(50,fminf(200,gamma))/100.f;
+    pthread_mutex_unlock(&lock);
+}
+int host_settings_active(void) {
+    pthread_mutex_lock(&lock); int open=settings_open; pthread_mutex_unlock(&lock); return open;
+}
+void host_settings_display(float *brightness,float *gamma) {
+    pthread_mutex_lock(&lock); *brightness=settings_brightness; *gamma=settings_gamma; pthread_mutex_unlock(&lock);
 }

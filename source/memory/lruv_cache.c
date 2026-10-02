@@ -211,7 +211,11 @@ void lruv_delete(
 	struct lruv_cache *cache)
 {
 	lruv_cache_verify(cache, TRUE);
-	data_dispose(cache->blocks);
+	/* lruv_new allocates the cache and its data array as one block.
+	   lruv_initialize places blocks at cache + 1, so data_dispose would
+	   free an interior pointer (and corrupt the debug allocator list).
+	   Verification above already checks the embedded array. Only the
+	   owning cache allocation is released below. */
 	csmemset(cache, 0, sizeof(*cache));
 	match_free("c:\\halo\\SOURCE\\memory\\lruv_cache.c", 163, cache);
 

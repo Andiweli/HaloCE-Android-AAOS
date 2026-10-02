@@ -126,6 +126,7 @@ int halo_linux_mouse_look(short gamepad_index, float *yaw, float *pitch)
 	mouse_polls_unconsumed = 0;
 	pthread_mutex_unlock(&mouse_lock);
 #ifdef HALO_ANDROID
+    { extern int host_settings_active(void); if(host_settings_active()) return FALSE; }
     { float tx,ty;host_touch_look(&tx,&ty); x+=tx*1400.f; y+=ty*1400.f; }
 #endif
 	if (x == 0.0f && y == 0.0f)
@@ -586,6 +587,10 @@ DWORD WINAPI XInputGetState(HANDLE device, PXINPUT_STATE state)
 		sdl_gamepad_state(gamepads[port], &state->Gamepad);
 	}
 
+#ifdef HALO_ANDROID
+    { extern int host_settings_active(void);
+      if (host_settings_active()) memset(&state->Gamepad,0,sizeof(state->Gamepad)); }
+#endif
 	if (memcmp(&state->Gamepad, &controllers[port].previous, sizeof(state->Gamepad)))
 	{
 		controllers[port].packet_number++;

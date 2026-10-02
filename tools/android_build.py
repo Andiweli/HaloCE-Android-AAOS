@@ -488,6 +488,14 @@ def generate_android_build(n: Writer, sln: Any) -> None:
     )
     n.build(outputs=libsdl, rule="android_sdl3", implicit=[SDL_DIR / "CMakeLists.txt"])
 
+    bink_root = BUILD / "bink" / "install"
+    bink_libs = [bink_root / "lib" / ("lib" + name + ".a")
+                 for name in ("avformat", "avcodec", "swscale", "avutil")]
+    n.rule(name="android_bink", command=f"{python} tools/android_bink_build.py {ndk}",
+           description="ANDROID BINK DECODER")
+    n.build(outputs=bink_libs, rule="android_bink",
+            inputs=[Path("tools/android_bink_build.py"), Path("port/third_party/bink/ffmpeg-7.1.1.tar.xz")])
+
     # ---------- the host library
 
     host_objects: List[Path] = []
@@ -502,7 +510,7 @@ def generate_android_build(n: Writer, sln: Any) -> None:
     host_cflags = " ".join([
         "-O2", "-g", "-fPIC", "-Wall", "-Wno-unused-function", "-D_GNU_SOURCE",
         f"-I{PORT_DIR}/include", f"-I{PORT_DIR}/host", f"-I{SDL_DIR}/include", f"-I{LINUX_DIR}/src",
-        f"-I{TOML_DIR}",
+        f"-I{TOML_DIR}", f"-I{bink_root}/include",
     ])
     host_sources = sorted((PORT_DIR / "host").glob("*.c")) + [
         LINUX_DIR / "src" / "posix_files.c", LINUX_DIR / "src" / "posix_net.c",
@@ -511,7 +519,7 @@ def generate_android_build(n: Writer, sln: Any) -> None:
     ]
     for source in host_sources:
         obj = host_obj_dir / (source.name + ".o")
-        n.build(outputs=obj, rule="android_host_cc", inputs=source, variables={"cflags": host_cflags})
+        n.build(outputs=obj, rule="android_host_cc", inputs=source, implicit=bink_libs, variables={"cflags": host_cflags})
         host_objects.append(obj)
     # internet play's UPnP (posix_upnp.c, with port/third_party/miniupnpc),
     # as the other posix_*.c in the host
@@ -530,10 +538,10 @@ def generate_android_build(n: Writer, sln: Any) -> None:
         name="android_host_link",
         command=(f"$android_host_cc -shared -o $out $in -L{sdl_build} "
                  + " ".join(f"-l{lib}" for lib in HOST_LIBRARIES)
-                 + " -Wl,-z,max-page-size=16384 -Wl,--no-undefined"),
+                 + " -Wl,-z,max-page-size=16384 -Wl,--exclude-libs,ALL -Wl,--no-undefined"),
         description="ANDROID HOST LINK $out",
     )
-    n.build(outputs=libmain, rule="android_host_link", inputs=host_objects, implicit=[libsdl])
+    n.build(outputs=libmain, rule="android_host_link", inputs=host_objects + bink_libs, implicit=[libsdl])
 
     # ---------- staging for Gradle
 

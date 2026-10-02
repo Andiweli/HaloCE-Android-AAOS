@@ -1563,9 +1563,21 @@ static real global_ui_white_green = 0.8f;
 static real global_ui_white_blue = 0.8f;
 
 
+
 #ifdef HALO_ANDROID
-#include "android_volume_menu.inc"
-static void av_caption_dispose(void);
+/* Keep B-to-exit at the main menu; settings use the untouched map widgets. */
+static int android_main_menu_root(struct ui_widget_definition *definition)
+{
+    extern int android_ui_profile_handler_kind(short function);
+    long i;
+    for (i=0;i<definition->event_handlers.count;i++) {
+        struct ui_widget_event_handler_reference *e=
+            (struct ui_widget_event_handler_reference *)TAG_BLOCK_ADDRESS(definition->event_handlers)+i;
+        if (TEST_FLAG(e->flags,_event_handler_run_function_bit) &&
+            android_ui_profile_handler_kind(e->function)==3) return 1;
+    }
+    return 0;
+}
 #endif
 
 /* ---------- public code */
@@ -2090,9 +2102,6 @@ static void pool_free(
 void ui_widgets_initialize(
 	void)
 {
-#ifdef HALO_ANDROID
-    av_count=0;av_source=av_button=NONE;av_source_address=NULL;av_description_text=NULL;
-#endif
 
 	boolean success = TRUE;
 	byte *base_address;
@@ -2130,9 +2139,6 @@ void ui_widgets_dispose(
 	void)
 {
 	ui_widgets_close_all();
-#ifdef HALO_ANDROID
-    av_caption_dispose();
-#endif
 	if (widget_memory_pool->base_address)
 		pool_free(widget_memory_pool->base_address);
 	widget_memory_pool->base_address = NULL;
@@ -2188,9 +2194,6 @@ void ui_widget_delete(
 	if (widget->delete_recursion_lock)
 		return;
 	widget->delete_recursion_lock = TRUE;
-#ifdef HALO_ANDROID
-    if(widget==av_description_text) av_description_text=NULL;
-#endif
 	if (widget->local_player_index != NONE && !widget->parent)
 		player_control_inhibit_buttons(
 			widget->local_player_index,
@@ -2553,9 +2556,6 @@ boolean widget_event_function_list_widget_goto_next_item(
 	struct event_record *event,
 	boolean *widget_deleted)
 {
-#ifdef HALO_ANDROID
-    if(av_adjust(widget,1)) return TRUE;
-#endif
 
 	struct ui_widget_definition *definition;
 	struct widget_instance *child;
@@ -2677,9 +2677,6 @@ boolean widget_event_function_list_widget_goto_previous_item(
 	struct event_record *event,
 	boolean *widget_deleted)
 {
-#ifdef HALO_ANDROID
-    if(av_adjust(widget,-1)) return TRUE;
-#endif
 
 	struct ui_widget_definition *definition;
 	struct widget_instance *child;
@@ -3682,10 +3679,6 @@ static void widget_instance_initialize(
 		}
 	}
 
-#ifdef HALO_ANDROID
-    av_initialize(widget);
-    if(!widget->parent) av_finish_layout(widget,widget);
-#endif
 
 	return;
 }
@@ -4922,9 +4915,6 @@ static boolean android_ui_label_follows_button(struct widget_instance *widget)
 }
 #endif
 
-#ifdef HALO_ANDROID
-#include "android_caption_render.inc"
-#endif
 
 static void widget_instance_render_text_box(
 	struct widget_instance *widget,
@@ -4933,9 +4923,6 @@ static void widget_instance_render_text_box(
 	point2d offset,
 	boolean focus)
 {
-#ifdef HALO_ANDROID
-    if(av_render_caption(widget,definition,offset,focus))return;
-#endif
 
 	wchar_t **text;
 	long search_index;
@@ -5066,16 +5053,11 @@ static void widget_instance_render_text_box(
 		wchar_t label[1024];
 		/* No replacements/data callbacks: this is a static asset label,
 		   never a profile/server name populated by the game. */
-		if ((definition->text_label_string_list.index != NONE || av_index(widget->definition_tag_index)>=0) &&
+		if ((definition->text_label_string_list.index != NONE) &&
 			definition->search_and_replace_functions.count == 0 &&
 			definition->game_data_inputs.count == 0)
 			display_text = android_ui_clean_label(*text, label, NUMBEROF(label),
 				android_ui_label_follows_button(widget));
-#endif
-#ifdef HALO_ANDROID
-        { static wchar_t description[512];
-          wchar_t const *custom=av_description(widget,description,NUMBEROF(description));
-          if(custom) {display_text=custom;bounds.x1-=10;clip.x1=MIN(clip.x1,bounds.x1);} }
 #endif
 		if (string_has_icons_to_draw((wchar_t *)display_text))
 			draw_string_and_hack_in_icons(&bounds, &clip, NULL, 0, display_text, FALSE);
@@ -5093,20 +5075,7 @@ static void widget_instance_render_spinner_list(
 	point2d offset,
 	boolean focus)
 {
-#ifdef HALO_ANDROID
-    av_spinner_text(widget);
-#endif
 
-#ifdef HALO_ANDROID
-    rectangle2d android_arrow_clip;
-    int android_spinner_index=av_index(widget->definition_tag_index);
-    if(android_spinner_index>=0 && av_nodes[android_spinner_index].category>=0 && clip_rect) {
-        android_arrow_clip=*clip_rect;
-        android_arrow_clip.x0=MIN(android_arrow_clip.x0,definition->list_header_bounds.x0+offset.x-2);
-        android_arrow_clip.x1=MAX(android_arrow_clip.x1,definition->list_footer_bounds.x1+offset.x+2);
-        clip_rect=&android_arrow_clip;
-    }
-#endif
 	long header_frame_index = 0;
 	long footer_frame_index = 0;
 	real alpha_modifier = widget_instance_get_cumulative_alpha_modifier(widget);
@@ -6385,7 +6354,7 @@ static void widget_instance_process_one_event_recursive(
 #ifdef HALO_ANDROID
     /* Only the active main-menu root may exit. Submenu BACK continues through
        the original widget stack; held buttons and releases never exit. */
-    if(event_for_this_widget && !widget->parent && av_kind(definition,3) &&
+    if(event_for_this_widget && !widget->parent && android_main_menu_root(definition) &&
        event->type==_event_type_button && event->data.button.value==1 &&
        (event->data.button.index==_widget_event_b_button ||
         event->data.button.index==_widget_event_back_button)) {

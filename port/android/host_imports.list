@@ -59,3 +59,15 @@ host_audio_gain
 host_audio_profile
 host_audio_level
 host_audio_set_level
+
+# Bink video/audio adapter
+host_bink_open
+host_bink_close
+host_bink_frame
+host_bink_wait
+host_bink_copy
+host_bink_skip
+
+# Settings overlay and display correction
+host_settings_active
+host_settings_present

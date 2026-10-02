@@ -2247,10 +2247,6 @@ static void player_profile_edit_select_menu_update_extended_description(
 		index++;
 	}
 
-#ifdef HALO_ANDROID
-    { extern int android_volume_description_index(struct widget_instance *,int);
-      index=(short)android_volume_description_index(list_widget,index); }
-#endif
 
 	if (index != NONE)
 	{

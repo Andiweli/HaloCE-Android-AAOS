@@ -368,6 +368,11 @@ void game_time_start(
 void game_time_update(
 	real time_delta_sec)
 {
+#ifdef HALO_ANDROID
+    { extern int host_settings_active(void);
+      if (host_settings_active() && game_connection()==_game_connection_local)
+          time_delta_sec=0.0f; }
+#endif
 	match_assert("c:\\halo\\SOURCE\\game\\game_time.c", 205, game_time_globals);
 
 	if (game_time_globals->active)

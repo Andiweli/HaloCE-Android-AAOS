@@ -2153,6 +2153,12 @@ static void main_exit(
 	game_dispose();
 	debug_keys_dispose();
 	console_dispose();
+#ifdef HALO_ANDROID
+	{
+		extern void platform_log(const char *format, ...);
+		platform_log("Patch34: main_dispose completed normally");
+	}
+#endif
 
 	return;
 }

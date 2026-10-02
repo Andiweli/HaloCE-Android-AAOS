@@ -679,9 +679,6 @@ void player_ui_remember_player1_profile(
 	return;
 }
 
-#ifdef HALO_ANDROID
-static void android_audio_select_profile(long index);
-#endif
 
 void player_ui_begin_editing_profile(
 	long profile_index)
@@ -733,9 +730,6 @@ void player_ui_begin_editing_profile(
 	}
 
 	player_ui_globals.edit_profile_index = profile_index;
-#ifdef HALO_ANDROID
-    if(type == _saved_game_file_type_player_profile) android_audio_select_profile(profile_index);
-#endif
 	return;
 }
 
@@ -1119,15 +1113,6 @@ static void set_local_player_controls_from_player_profile(
 	return;
 }
 
-#ifdef HALO_ANDROID
-static void android_audio_select_profile(long index)
-{
-    char path[512];
-    extern void host_audio_profile(char const *key);
-    if (index == NONE) host_audio_profile("default");
-    else if (player_profile_get_enclosing_directory_path(index, path)) host_audio_profile(path);
-}
-#endif
 
 void player_ui_set_active_player_profile(
 	short local_player_index,
@@ -1146,9 +1131,6 @@ void player_ui_set_active_player_profile(
 		&player_ui_globals.local_players[local_player_index].profile,
 		profile,
 		sizeof(*profile));
-#ifdef HALO_ANDROID
-    if (local_player_index == 0) android_audio_select_profile(profile_index);
-#endif
 	set_local_player_controls_from_player_profile(local_player_index);
 	return;
 }

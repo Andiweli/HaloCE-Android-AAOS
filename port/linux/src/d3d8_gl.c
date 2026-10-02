@@ -3640,6 +3640,13 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 			write_screenshot(back_buffer);
 
 		platform_video_drawable_size(&window_width, &window_height);
+#ifdef HALO_ANDROID
+		/* Fill the actual app surface, including AAOS surfaces whose aspect
+		   differs from the physical display used when the game started. */
+		width = window_width;
+		height = window_height;
+		x = y = 0;
+#else
 		/* letterbox to the back buffer's aspect ratio */
 		width = window_width;
 		height = (int)((long)window_width * back_buffer->target.gl_height / back_buffer->target.gl_width);
@@ -3650,6 +3657,7 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 		}
 		x = (window_width - width) / 2;
 		y = (window_height - height) / 2;
+#endif
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glDisable(GL_SCISSOR_TEST);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -3657,8 +3665,15 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 		glClear(GL_COLOR_BUFFER_BIT);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer_get(back_buffer->target.texture, 0));
 		/* row 0 of the render target is the top of the picture */
+#ifdef HALO_ANDROID
+        { extern int host_settings_present(unsigned int texture,int width,int height);
+          if (!host_settings_present(back_buffer->target.texture,width,height))
+#endif
 		glBlitFramebuffer(0, 0, (GLint)back_buffer->target.gl_width, (GLint)back_buffer->target.gl_height,
 			x, y + height, x + width, y, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+#ifdef HALO_ANDROID
+        }
+#endif
 		platform_video_swap();
 		xgpu_gl_state_invalidate();
 		xgpu_texture_cache_begin_frame();

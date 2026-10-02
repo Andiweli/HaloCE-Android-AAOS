@@ -36,6 +36,7 @@ import java.nio.channels.FileChannel;
 public class LauncherActivity extends Activity {
     private static final int PICK_IMAGE = 1;
 
+    private boolean moviesOnly;
     private File dataRoot;
     private TextView status;
     private ProgressBar progress;
@@ -54,6 +55,10 @@ public class LauncherActivity extends Activity {
         passOnHardwareId();
         passOnInvite(getIntent());
         if (haveData()) {
+            if (getIntent().getBooleanExtra("import_movies", false) || ((!new File(dataRoot, "bink/intro.bik").isFile() || !new File(dataRoot, "bink/credits.bik").isFile()) &&
+                !getPreferences(0).getBoolean("movies_prompt_done", false))) {
+                moviesOnly = true; buildInterface(); return;
+            }
             startGame();
             return;
         }
@@ -145,15 +150,15 @@ public class LauncherActivity extends Activity {
         layout.setBackgroundColor(Color.rgb(12, 16, 20));
 
         TextView title = new TextView(this);
-        title.setText("Halo needs its game data");
+        title.setText(moviesOnly ? "Add intro and credits" : "Halo needs its game data");
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
         title.setGravity(Gravity.CENTER);
         layout.addView(title);
 
         TextView message = new TextView(this);
-        message.setText("Choose an Xbox disc image of Halo: Combat Evolved (an .iso or .xiso file, any "
-            + "version) on this device. Its maps folder is copied into the app's storage (about 1.8 GB), "
+        message.setText(moviesOnly ? "Choose your Halo disc image to add intro.bik and credits.bik with sound. Your maps and saves will stay in place. You can also continue without videos." : "Choose an Xbox disc image of Halo: Combat Evolved (an .iso or .xiso file, any "
+            + "version) on this device. Its maps folder and intro/credits videos are copied into the app's storage (about 1.8 GB), "
             + "and you can delete the image afterwards.\n\n"
             + "You can also copy a maps folder from a computer:\n"
             + "adb push <folder with maps>/. " + (dataRoot != null ? dataRoot.getAbsolutePath() : "") + "/");
@@ -175,6 +180,17 @@ public class LauncherActivity extends Activity {
         });
         layout.addView(pick, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        if (moviesOnly) {
+            Button skip = new Button(this);
+            skip.setText("Continue without videos");
+            skip.setOnClickListener(v -> {
+                if (!pick.isEnabled()) return;
+                getPreferences(0).edit().putBoolean("movies_prompt_done", true).apply();
+                startGame();
+            });
+            layout.addView(skip);
+        }
 
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progress.setMax(1000);
@@ -199,7 +215,7 @@ public class LauncherActivity extends Activity {
         super.onResume();
         Fullscreen.apply(this);
         // data pushed with adb while this screen was open
-        if (pick != null && pick.isEnabled() && haveData())
+        if (!moviesOnly && pick != null && pick.isEnabled() && haveData())
             startGame();
     }
 
@@ -245,9 +261,14 @@ public class LauncherActivity extends Activity {
             try (FileInputStream in = new FileInputStream(descriptor.getFileDescriptor())) {
                 FileChannel channel = in.getChannel();
 
-                XisoExtractor.extractMaps(channel, dataRoot, (file, done, total) ->
-                    report("Extracting maps/" + file + " (" + (done >> 20) + " of " + (total >> 20) + " MB)",
+                if (!moviesOnly) XisoExtractor.extractMaps(channel, dataRoot, (file, done, total) ->
+                    report("Extracting " + file + " (" + (done >> 20) + " of " + (total >> 20) + " MB)",
                         total > 0 ? (int) (done * 1000 / total) : 0));
+                int movies = XisoExtractor.extractMovies(channel, dataRoot, (file, done, total) ->
+                    report("Extracting " + file, total > 0 ? (int)(done * 1000 / total) : 0));
+                if (moviesOnly && movies == 0)
+                    throw new java.io.IOException("No intro.bik or credits.bik found in the bink folder.");
+                getPreferences(0).edit().putBoolean("movies_prompt_done", true).apply();
             }
             handler.post(() -> {
                 if (haveData()) {

@@ -12,15 +12,26 @@ import android.view.WindowManager;
 /** Shared immersive window policy for the importer and SDL game. */
 final class Fullscreen {
     private Fullscreen() {}
+    private static java.lang.ref.WeakReference<Activity> loggedActivity =
+        new java.lang.ref.WeakReference<>(null);
 
     static boolean isAutomotive(Activity activity) {
-        return BuildConfig.IS_AAOS || activity.getPackageManager().hasSystemFeature(
+        // Window policy follows the running device, not the APK flavor.
+        // An AAOS test APK on a handheld must still hide Android system bars.
+        return activity.getPackageManager().hasSystemFeature(
             android.content.pm.PackageManager.FEATURE_AUTOMOTIVE);
     }
 
     @SuppressWarnings("deprecation")
     static void apply(Activity activity) {
-        if (isAutomotive(activity)) {
+        boolean automotive = isAutomotive(activity);
+        if (loggedActivity.get() != activity) {
+            loggedActivity = new java.lang.ref.WeakReference<>(activity);
+            android.util.Log.i("HaloWindow", "flavor=" + (BuildConfig.IS_AAOS ? "aaos" : "mobile")
+                + " automotiveDevice=" + automotive
+                + " policy=" + (automotive ? "car-safe-area" : "immersive-fullscreen"));
+        }
+        if (automotive) {
             AutomotiveWindow.apply(activity);
             return;
         }

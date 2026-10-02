@@ -9,6 +9,8 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Collections;
 
 /**
  * Copies the maps folder out of an Xbox disc image (an "xiso", or a whole
@@ -116,6 +118,100 @@ final class XisoExtractor {
         new XisoExtractor(image).extract(destination, progress);
     }
 
+    /** Copies only the two supported movies; never changes maps or saves. */
+    static int extractMovies(FileChannel image, File destination, Progress progress) throws IOException {
+        return new XisoExtractor(image).movies(destination, progress);
+    }
+
+    /* Choose one complete language directory; never mix different map sets. */
+    private Entry selectMaps(List<Entry> dirs) throws IOException {
+        List<Entry> candidates = new ArrayList<>();
+        for (Entry entry : dirs)
+            if (entry.name.toLowerCase(Locale.ROOT).matches("maps(?:_[a-z]{2})?"))
+                candidates.add(entry);
+        final String preferred = "maps_" + Locale.getDefault().getLanguage();
+        Collections.sort(candidates, (a, b) -> {
+            int ar = a.name.equalsIgnoreCase(preferred) ? 0 : a.name.equalsIgnoreCase("maps") ? 1 : 2;
+            int br = b.name.equalsIgnoreCase(preferred) ? 0 : b.name.equalsIgnoreCase("maps") ? 1 : 2;
+            return ar != br ? Integer.compare(ar, br) : a.name.compareToIgnoreCase(b.name);
+        });
+        for (Entry candidate : candidates) {
+            List<Entry> files = new ArrayList<>();
+            walk(readDirectory(candidate.sector, candidate.size, "Invalid maps directory."),
+                0, 0, false, files, new int[1]);
+            for (Entry file : files) if (file.name.equalsIgnoreCase("ui.map")) return candidate;
+        }
+        return null;
+    }
+
+    private static Entry selectMovie(List<Entry> files, String base, String language) {
+        Entry selected = null;
+        int best = Integer.MAX_VALUE;
+        for (Entry file : files) {
+            String name = file.name.toLowerCase(Locale.ROOT);
+            if (!name.matches(base + "(?:_[a-z]{2})?\\.bik")) continue;
+            int rank = name.equals(base + ".bik") ? 0 :
+                name.equals(base + "_" + language + ".bik") ? 1 :
+                name.equals(base + "_" + Locale.getDefault().getLanguage() + ".bik") ? 2 : 3;
+            if (rank < best || (rank == best && name.compareToIgnoreCase(selected.name) < 0)) {
+                selected = file;
+                best = rank;
+            }
+        }
+        return selected;
+    }
+
+    private int movies(File destination, Progress progress) throws IOException {
+        long[] root = findVolume();
+        List<Entry> dirs = new ArrayList<>();
+        walk(readDirectory(root[0], root[1], "Invalid disc file system."), 0, 0, true, dirs, new int[1]);
+        Entry bink = null;
+        for (Entry entry : dirs) if (entry.name.equalsIgnoreCase("bink")) bink = entry;
+        if (bink == null) return 0;
+        List<Entry> all = new ArrayList<>(), movies = new ArrayList<>();
+        walk(readDirectory(bink.sector, bink.size, "Invalid bink directory."), 0, 0, false, all, new int[1]);
+        Entry maps = selectMaps(dirs);
+        String language = maps != null && maps.name.length() == 7
+            ? maps.name.substring(5).toLowerCase(Locale.ROOT) : Locale.getDefault().getLanguage();
+        long total = 0, done = 0;
+        for (String base : new String[] { "intro", "credits" }) {
+            Entry entry = selectMovie(all, base, language);
+            if (entry == null) continue;
+            if (entry.size < 44 || entry.size > 512L * 1024 * 1024)
+                throw new ExtractException("Invalid movie size: " + entry.name);
+            movies.add(entry); total += entry.size;
+        }
+        if (movies.isEmpty()) return 0;
+        File folder = new File(destination, "bink");
+        if (!folder.isDirectory() && !folder.mkdirs()) throw new ExtractException("Cannot create bink folder.");
+        ByteBuffer buffer = ByteBuffer.allocateDirect(COPY_BUFFER_SIZE);
+        for (Entry entry : movies) {
+            String name = entry.name.toLowerCase(Locale.ROOT).startsWith("intro") ? "intro.bik" : "credits.bik";
+            File temp = new File(folder, name + ".partial");
+            long offset = partition + entry.sector * SECTOR_SIZE, remaining = entry.size;
+            ByteBuffer header = ByteBuffer.allocate(44).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+            readAt(offset, header);
+            if (header.get(0) != 'B' || header.get(1) != 'I' || header.get(2) != 'K' ||
+                Integer.toUnsignedLong(header.getInt(4)) + 8 != entry.size)
+                throw new ExtractException("Invalid or incomplete Bink movie: " + name);
+            try {
+                try (FileOutputStream out = new FileOutputStream(temp)) {
+                    FileChannel target = out.getChannel();
+                    while (remaining > 0) {
+                        buffer.clear(); buffer.limit((int)Math.min(remaining, COPY_BUFFER_SIZE));
+                        readAt(offset, buffer); int count = buffer.remaining();
+                        while (buffer.hasRemaining()) target.write(buffer);
+                        offset += count; remaining -= count; done += count;
+                        progress.report(bink.name + "/" + entry.name, done, total);
+                    }
+                    out.getFD().sync();
+                }
+                if (!temp.renameTo(new File(folder, name))) throw new ExtractException("Cannot install " + name);
+            } finally { temp.delete(); }
+        }
+        return movies.size();
+    }
+
     private void readAt(long offset, ByteBuffer buffer) throws IOException {
         while (buffer.hasRemaining()) {
             int count = image.read(buffer, offset);
@@ -205,13 +301,9 @@ final class XisoExtractor {
         ByteBuffer table = readDirectory(root[0], root[1], "The disc image's file system is damaged.");
         List<Entry> directories = new ArrayList<>();
         walk(table, 0, 0, true, directories, new int[1]);
-        Entry maps = null;
-        for (Entry entry : directories) {
-            if (entry.name.equalsIgnoreCase("maps"))
-                maps = entry;
-        }
+        Entry maps = selectMaps(directories);
         if (maps == null)
-            throw new ExtractException("The disc image has no maps folder: it is not a Halo disc.");
+            throw new ExtractException("No maps or maps_xx folder containing ui.map was found.");
 
         /* its files */
         table = readDirectory(maps.sector, maps.size, "The disc image's maps folder is damaged.");
@@ -233,7 +325,7 @@ final class XisoExtractor {
         ByteBuffer buffer = ByteBuffer.allocateDirect(COPY_BUFFER_SIZE);
         long done = 0;
         for (Entry file : files) {
-            File path = new File(partial, file.name);
+            File path = new File(partial, file.name.toLowerCase(Locale.ROOT));
             long offset = partition + file.sector * SECTOR_SIZE;
             long remaining = file.size;
 
@@ -250,7 +342,7 @@ final class XisoExtractor {
                     offset += count;
                     remaining -= count;
                     done += count;
-                    progress.report(file.name, done, total);
+                    progress.report(maps.name + "/" + file.name, done, total);
                 }
             } catch (ExtractException e) {
                 throw new ExtractException("Could not read " + file.name + " from the disc image (is it complete?).");
@@ -263,8 +355,8 @@ final class XisoExtractor {
         if (!finished.isDirectory() && !finished.mkdirs())
             throw new ExtractException("Could not create " + finished + ".");
         for (Entry file : files) {
-            File from = new File(partial, file.name);
-            File to = new File(finished, file.name);
+            File from = new File(partial, file.name.toLowerCase(Locale.ROOT));
+            File to = new File(finished, file.name.toLowerCase(Locale.ROOT));
 
             to.delete();
             if (!from.renameTo(to))

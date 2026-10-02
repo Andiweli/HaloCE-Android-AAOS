@@ -444,9 +444,18 @@ void _rasterizer_decals_dispose(
 	if (local_d3d_vertex_buffer)
 	{
 		IDirect3DVertexBuffer8_Release(local_d3d_vertex_buffer);
+#ifdef HALO_ANDROID
+		/* The native D3D shim does not own manually constructed headers.
+		   Vertex storage belongs to the game-state arena; only this header
+		   was allocated with match_malloc. */
+		match_free(__FILE__, __LINE__, local_d3d_vertex_buffer);
+#endif
 		local_d3d_vertex_buffer = NULL;
 	}
-	lruv_delete(local_vertex_cache);
+	/* game_state_lruv_cache_new uses the shared game-state arena, not
+	   lruv_new's heap allocation. game_state_dispose releases the arena
+	   later; lruv_delete here would pass an interior pointer to free. */
+	local_vertex_cache = NULL;
 
 	return;
 }

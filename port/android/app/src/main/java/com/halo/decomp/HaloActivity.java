@@ -17,7 +17,36 @@ public class HaloActivity extends SDLActivity {
     /** lets system link's broadcasts in over Wi-Fi while the game runs */
     private WifiManager.MulticastLock multicastLock;
 
+    private static native void nativeMoviePause(boolean paused);
+    private static native boolean nativeMovieSkip();
+    private boolean movieTouch;
+    private int movieKey = -1;
     private HaloPort haloPort;
+    private SettingsOverlay settings;
+    private final android.os.Handler settingsHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private boolean selectHeld, selectOpened;
+    private int selectDevice;
+    private final java.util.Map<Integer,android.view.KeyEvent> gameKeys = new java.util.HashMap<>();
+    private final java.util.Set<Integer> overlayKeys = new java.util.HashSet<>();
+    private final Runnable openSettings = () -> {
+        if (selectHeld && settings != null && getWindow().getDecorView().hasWindowFocus()) {
+            android.view.InputDevice device = android.view.InputDevice.getDevice(selectDevice);
+            if (device != null) { settings.show(); selectOpened = settings.isOpen(); }
+        }
+    };
+    void releaseGameKeys() {
+        for (android.view.KeyEvent down : gameKeys.values())
+            super.dispatchKeyEvent(android.view.KeyEvent.changeAction(down,android.view.KeyEvent.ACTION_UP));
+        gameKeys.clear();
+    }
+    void settingsVisibility(boolean visible) {
+        if (haloPort != null) haloPort.overlay(visible);
+        if (!visible) restoreFullscreen();
+    }
+    private void cancelSelect() {
+        settingsHandler.removeCallbacks(openSettings);selectHeld=false;selectOpened=false;
+    }
+
     @Override
     protected String[] getLibraries() {
         return new String[] { "SDL3", "main" };
@@ -29,6 +58,7 @@ public class HaloActivity extends SDLActivity {
         super.onCreate(savedInstanceState);
         StartDiagnostics.connect(this);
         haloPort = new HaloPort(this, mLayout);
+        settings = new SettingsOverlay(this, mLayout);
         restoreFullscreen();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (!Fullscreen.isAutomotive(this)) preferHighestRefreshRate();
@@ -47,6 +77,8 @@ public class HaloActivity extends SDLActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        nativeMoviePause(false);
+        if (settings != null) settings.resume();
         if (Fullscreen.isAutomotive(this)) resumeNativeThread();
         if (haloPort != null) haloPort.resume();
         restoreFullscreen();
@@ -56,11 +88,19 @@ public class HaloActivity extends SDLActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) restoreFullscreen();
-        else if (haloPort != null) haloPort.focusLost();
+        else {
+            cancelSelect();
+            if (settings != null) settings.close(false);
+            if (haloPort != null) haloPort.focusLost();
+            releaseGameKeys();
+        }
     }
 
     @Override
     protected void onPause() {
+        cancelSelect();
+        if (settings != null) settings.suspend();
+        nativeMoviePause(true);
         if (haloPort != null) haloPort.suspend();
         // SDL normally waits for onStop on modern Android. AAOS can obscure
         // a parked game with only onPause, so stop native video/audio now.
@@ -70,6 +110,8 @@ public class HaloActivity extends SDLActivity {
 
     @Override
     protected void onDestroy() {
+        cancelSelect();
+        if (settings != null) settings.suspend();
         if (multicastLock != null && multicastLock.isHeld()) multicastLock.release();
         multicastLock = null;
         if (haloPort != null) haloPort.suspend();
@@ -78,10 +120,18 @@ public class HaloActivity extends SDLActivity {
 
     @Override
     protected boolean sendCommand(int command, Object data) {
-        if (command == COMMAND_CHANGE_WINDOW_STYLE && Fullscreen.isAutomotive(this)) {
-            // Native SDL fullscreen requests must not undo the automotive policy.
-            runOnUiThread(() -> Fullscreen.apply(this));
-            return true;
+        if (command == COMMAND_CHANGE_WINDOW_STYLE) {
+            // SDL also sends windowed requests while creating its startup window.
+            // Keep the app policy for EVERY request, including delayed native ones.
+            // Posting after SDL's handler keeps its legacy flags from winning over
+            // our cutout and modern system-bar policy.
+            if (Fullscreen.isAutomotive(this)) {
+                runOnUiThread(() -> Fullscreen.apply(this));
+                return true;
+            }
+            boolean sent = super.sendCommand(command, Integer.valueOf(1));
+            getWindow().getDecorView().post(() -> Fullscreen.apply(this));
+            return sent;
         }
         return super.sendCommand(command, data);
     }
@@ -93,17 +143,75 @@ public class HaloActivity extends SDLActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        if (settings != null && settings.isOpen()) { settings.close(false); return; }
+        super.onBackPressed();
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+        if (settings != null && settings.isOpen()) return super.dispatchTouchEvent(event);
+        if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN)
+            movieTouch = nativeMovieSkip();
+        if (movieTouch) {
+            if (event.getActionMasked() == android.view.MotionEvent.ACTION_UP ||
+                event.getActionMasked() == android.view.MotionEvent.ACTION_CANCEL) movieTouch = false;
+            return true;
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
+    @Override
     public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+        int key = event.getKeyCode();
+        boolean down = event.getAction() == android.view.KeyEvent.ACTION_DOWN;
+        if (overlayKeys.contains(key)) {
+            if (!down) overlayKeys.remove(key);
+            if (settings != null && settings.isOpen()) settings.key(event);
+            return true;
+        }
+        if (key == android.view.KeyEvent.KEYCODE_BUTTON_SELECT && settings != null) {
+            if (down && event.getRepeatCount() == 0 && !settings.isOpen()) {
+                selectHeld=true;selectOpened=false;selectDevice=event.getDeviceId();
+                settingsHandler.postDelayed(openSettings,500);
+            } else if (!down) {
+                boolean shortPress=selectHeld && !selectOpened && !event.isCanceled();
+                cancelSelect();
+                if (shortPress && !nativeMovieSkip()) { HaloPort.nativeAction(9,true);HaloPort.nativeAction(9,false); }
+            }
+            return true;
+        }
+        if (settings != null && settings.isOpen()) {
+            if (settings.key(event)) { if (down) overlayKeys.add(key); return true; }
+        }
+
+        if (key == movieKey) {
+            if (event.getAction() == android.view.KeyEvent.ACTION_UP) movieKey = -1;
+            return true;
+        }
+        if (event.getAction() == android.view.KeyEvent.ACTION_DOWN &&
+            (key == android.view.KeyEvent.KEYCODE_BACK || key == android.view.KeyEvent.KEYCODE_ESCAPE ||
+             key == android.view.KeyEvent.KEYCODE_ENTER || key == android.view.KeyEvent.KEYCODE_SPACE ||
+             android.view.KeyEvent.isGamepadButton(key)) && nativeMovieSkip()) {
+            movieKey = key; return true;
+        }
         if (haloPort != null && event.getAction() == android.view.KeyEvent.ACTION_DOWN &&
                 (event.isFromSource(android.view.InputDevice.SOURCE_GAMEPAD) ||
                  event.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK))) {
             haloPort.controllerInput();
         }
+        if (down) gameKeys.put(key,new android.view.KeyEvent(event)); else gameKeys.remove(key);
         return super.dispatchKeyEvent(event);
     }
 
     @Override
     public boolean dispatchGenericMotionEvent(android.view.MotionEvent event) {
+        if (settings != null && settings.isOpen()) {
+            settings.motion(event);
+            // Update SDL's physical axes even while the guest input is blocked.
+            super.dispatchGenericMotionEvent(event);
+            return true;
+        }
         if (haloPort != null && event.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK)) {
             int[] axes = {android.view.MotionEvent.AXIS_X, android.view.MotionEvent.AXIS_Y,
                 android.view.MotionEvent.AXIS_Z, android.view.MotionEvent.AXIS_RZ,
@@ -118,6 +226,8 @@ public class HaloActivity extends SDLActivity {
 
     @Override
     public void onConfigurationChanged(Configuration configuration) {
+        cancelSelect();
+        if (settings != null) settings.close(false);
         super.onConfigurationChanged(configuration);
         restoreFullscreen();
     }

@@ -20,13 +20,13 @@ final class HaloPort {
     private final RetroTouchView touch;
     private final SharedPreferences prefs;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private boolean active, controllerConnected;
+    private boolean active, controllerConnected, overlay;
     private int mode = -1;
     private static final String[] IDS = {"jump", "melee", "use", "weapon", "flashlight", "grenade_type",
         "grenade", "fire", "pause", "back", "crouch", "zoom", "nav_up", "nav_down", "nav_left", "nav_right"};
-    private static final String[] LABELS = {"Springen / OK", "Nahkampf / Zurück", "Nachladen / Benutzen", "Waffe wechseln",
-        "Taschenlampe", "Granate wechseln", "Granate werfen", "Feuern", "Pause / Start", "Zurück (Back)",
-        "Ducken", "Zoom", "Nach oben", "Nach unten", "Nach links", "Nach rechts"};
+    private static final String[] LABELS = {"Jump / OK", "Melee / Back", "Reload / Use", "Switch weapon",
+        "Flashlight", "Switch grenade", "Throw grenade", "Fire", "Pause / Start", "Back",
+        "Crouch", "Zoom", "Up", "Down", "Left", "Right"};
     HaloPort(HaloActivity activity, ViewGroup parent) {
         this.activity = activity;
         prefs = activity.getSharedPreferences("halo_android_controls", 0);
@@ -41,21 +41,21 @@ final class HaloPort {
         touch.setGameplayLayout(new RetroTouchLayout("halo_ce_gameplay_v1", Arrays.asList(
             RetroTouchControl.lookZone("look", .72f,.50f,.55f,.85f),
             RetroTouchControl.moveStick("move", .17f,.72f,.30f),
-            button("fire", "Feuer", .88f,.56f,.16f),
-            button("jump", "Sprung", .88f,.80f,.13f),
-            button("use", "Laden", .73f,.81f,.12f),
-            button("melee", "Nahkampf", .95f,.35f,.10f),
-            button("grenade", "Granate", .58f,.81f,.12f),
-            button("weapon", "Waffe", .76f,.36f,.10f),
+            button("fire", "Fire", .88f,.56f,.16f),
+            button("jump", "Jump", .88f,.80f,.13f),
+            button("use", "Reload", .73f,.81f,.12f),
+            button("melee", "Melee", .95f,.35f,.10f),
+            button("grenade", "Grenade", .58f,.81f,.12f),
+            button("weapon", "Weapon", .76f,.36f,.10f),
             button("zoom", "Zoom", .62f,.36f,.10f),
-            button("crouch", "Ducken", .34f,.82f,.11f),
-            button("flashlight", "Licht", .36f,.34f,.09f),
-            button("grenade_type", "Typ", .49f,.35f,.09f),
+            button("crouch", "Crouch", .34f,.82f,.11f),
+            button("flashlight", "Light", .36f,.34f,.09f),
+            button("grenade_type", "Type", .49f,.35f,.09f),
             button("pause", "Pause", .50f,.10f,.09f))));
         touch.setNavigationLayout(new RetroTouchLayout("halo_ce_navigation_v1", Arrays.asList(
             RetroTouchControl.dPad("navigation", .17f,.72f,.30f),
             button("jump", "OK", .89f,.76f,.13f),
-            button("melee", "Zurück", .74f,.82f,.12f),
+            button("melee", "Back", .74f,.82f,.12f),
             button("use", "X", .89f,.53f,.10f),
             button("weapon", "Y", .76f,.53f,.10f),
             button("pause", "Start", .50f,.90f,.09f))));
@@ -63,11 +63,11 @@ final class HaloPort {
         touch.setAutoHideOnController(false);
         touch.setListener(new RetroTouchAdapter() {
             @Override public void onAction(String id, boolean down) {
-                if (!active || controllerConnected || touch.isEditing()) return;
+                if (!active || overlay || controllerConnected || touch.isEditing()) return;
                 for (int i=0;i<IDS.length;i++) if(IDS[i].equals(id)) { nativeAction(i,down);return; }
             }
-            @Override public void onMove(float x,float y) { if(active && !controllerConnected) nativeMove(x,y); }
-            @Override public void onLook(float x,float y) { if(active && !controllerConnected) nativeLook(x,y); }
+            @Override public void onMove(float x,float y) { if(active && !overlay && !controllerConnected) nativeMove(x,y); }
+            @Override public void onLook(float x,float y) { if(active && !overlay && !controllerConnected) nativeLook(x,y); }
             @Override public void onEditorStateChanged(boolean editing) {
                 nativeReset();
                 // Keep the gameplay layout editable while the engine is in its pause menu.
@@ -86,7 +86,7 @@ final class HaloPort {
         @Override public void run() {
             if(!active) return;
             updateControllerPresence();
-            int next=controllerConnected?0:nativeMode();
+            int next=(controllerConnected || overlay)?0:nativeMode();
             if(!touch.isEditing() && next!=mode) {
                 mode=next;
                 touch.setMode(next==2?RetroTouchMode.GAMEPLAY:next==1?RetroTouchMode.NAVIGATION:RetroTouchMode.OFF);
@@ -105,8 +105,9 @@ final class HaloPort {
             touch.setMode(RetroTouchMode.OFF);
             mode = -1;
         }
-        touch.setVisibility(connected ? View.GONE : View.VISIBLE);
+        touch.setVisibility((connected || overlay) ? View.GONE : View.VISIBLE);
     }
+    void overlay(boolean visible) { overlay=visible;touch.releaseAllInputs();nativeReset();mode=-1;updateControllerPresence(); }
     void controllerInput() { updateControllerPresence(); }
     void focusLost() { touch.releaseAllInputs();nativeReset(); }
     private void applyVolumes() {

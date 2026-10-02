@@ -489,10 +489,14 @@ void bink_playback_render(
 	if (!bink_globals.initialized || !bink_globals.bink)
 		return;
 
+#ifdef HALO_ANDROID
+	if (!bink_globals.needs_decode) goto skip_decode;
+#else
 	if (global_frame_rate_throttle)
 		bink_globals.needs_decode = TRUE;
 	else if (!bink_globals.needs_decode)
 		goto skip_decode;
+#endif
 
 	bink_decompress_video_frame();
 	bink_globals.needs_decode = FALSE;
@@ -511,6 +515,9 @@ void bink_playback_start(
 	const char *full_pathname,
 	unsigned long flags)
 {
+#ifdef HALO_ANDROID
+    flags |= FLAG(_bink_playback_full_screen_bit) | FLAG(_bink_playback_dont_render_ui_bit);
+#endif
 	bink_get_memory_available("begin bink_playback_start");
 
 	if (!bink_globals.initialized)
@@ -978,6 +985,15 @@ static void bink_playback_update__internal(
 {
 	if (bink_globals.initialized && bink_globals.bink)
 	{
+#ifdef HALO_ANDROID
+        /* Never busy-wait: the engine must keep processing lifecycle/input. */
+        extern int host_bink_skip(void);
+        bink_globals.needs_decode = BinkWait(bink_globals.bink)==0;
+        if (host_bink_skip() || (bink_globals.needs_decode &&
+            bink_globals.bink->FrameNum >= bink_globals.bink->Frames)) {
+            bink_playback_stop(); return;
+        }
+#else
 		if (global_frame_rate_throttle)
 		{
 			bink_globals.needs_decode= BinkWait(bink_globals.bink)==0;
@@ -989,6 +1005,8 @@ static void bink_playback_update__internal(
 			}
 			bink_globals.needs_decode= TRUE;
 		}
+
+#endif
 
 		if (TEST_FLAG(bink_globals.flags, _bink_playback_button_click_stops_movie_bit))
 		{
@@ -1002,11 +1020,13 @@ static void bink_playback_update__internal(
 			}
 		}
 
+#ifndef HALO_ANDROID
 		if ((!bink_globals.bink || bink_globals.bink->FrameNum==bink_globals.bink->Frames-1) &&
 			!TEST_FLAG(bink_globals.flags, _bink_playback_loop_bit))
 		{
 			bink_playback_stop();
 		}
+#endif
 	}
 
 	return;
