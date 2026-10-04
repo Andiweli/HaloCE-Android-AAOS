@@ -23,6 +23,10 @@ header included in hcex build.
 struct network_game_server;
 struct game_variant;
 
+/* port: whether the host's game is being played (not its lobby) */
+boolean network_game_server_playing(
+	struct network_game_server *server);
+
 struct network_game_server *network_game_server_create(
 	void);
 void network_game_server_dispose(

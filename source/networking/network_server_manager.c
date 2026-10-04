@@ -1760,6 +1760,13 @@ void network_game_server_client_machine_is_precached(
 	return;
 }
 
+/* Whether the host is playing a game rather than showing its lobby. */
+boolean network_game_server_playing(
+	struct network_game_server *server)
+{
+	return server->state == _network_game_server_state_ingame;
+}
+
 boolean network_game_server_game_is_open(
 	struct network_game_server *server)
 {

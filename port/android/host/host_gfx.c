@@ -370,6 +370,36 @@ static unsigned char *buffer_range(GLuint buffer,uint64_t offset,uint64_t length
     }
     return copy;
 }
+/* ES 3.1 separates an attribute's format from its stream binding. Query
+ * the binding's actual offset and stride so optional geometry dumps keep
+ * describing the uploaded bytes. ES 3.0 retains the pointer query. */
+static int attribute_layout(GLuint attribute, GLint *buffer, GLint *size,
+                            GLint *stride, GLint *format, uint64_t *offset)
+{
+    GLint major=0,minor=0;
+    glGetVertexAttribiv(attribute,GL_VERTEX_ATTRIB_ARRAY_SIZE,size);
+    glGetVertexAttribiv(attribute,GL_VERTEX_ATTRIB_ARRAY_TYPE,format);
+    glGetIntegerv(GL_MAJOR_VERSION,&major);
+    glGetIntegerv(GL_MINOR_VERSION,&minor);
+    if(major>3 || (major==3 && minor>=1)) {
+        GLint binding=0,relative=0;
+        GLint64 base=0;
+        glGetVertexAttribiv(attribute,GL_VERTEX_ATTRIB_BINDING,&binding);
+        glGetVertexAttribiv(attribute,GL_VERTEX_ATTRIB_RELATIVE_OFFSET,&relative);
+        glGetIntegeri_v(GL_VERTEX_BINDING_BUFFER,(GLuint)binding,buffer);
+        glGetIntegeri_v(GL_VERTEX_BINDING_STRIDE,(GLuint)binding,stride);
+        glGetInteger64i_v(GL_VERTEX_BINDING_OFFSET,(GLuint)binding,&base);
+        *offset=(uint64_t)base+(unsigned)relative;
+        return 1;
+    }
+    void *pointer=NULL;
+    glGetVertexAttribiv(attribute,GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,buffer);
+    glGetVertexAttribiv(attribute,GL_VERTEX_ATTRIB_ARRAY_STRIDE,stride);
+    glGetVertexAttribPointerv(attribute,GL_VERTEX_ATTRIB_ARRAY_POINTER,&pointer);
+    *offset=(uintptr_t)pointer;
+    return 0;
+}
+
 static void geometry(GLsizei count,GLenum type,const void *indices,GLint base)
 {
     if(count<=0)return;
@@ -394,18 +424,16 @@ static void geometry(GLsizei count,GLenum type,const void *indices,GLint base)
     note("  VERTEX_RANGE %lld..%lld\n",(long long)low,(long long)high);
     if(low<0 || high<low)return;
     for(GLuint a=0;a<1;a++) {
-        GLint enabled=0,buffer=0,size=0,stride=0,format=0;void *pointer=NULL;
+        GLint enabled=0,buffer=0,size=0,stride=0,format=0;uint64_t offset=0;
         glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_ENABLED,&enabled);if(!enabled)continue;
-        glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,&buffer);glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_SIZE,&size);
-        glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_STRIDE,&stride);glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_TYPE,&format);
-        glGetVertexAttribPointerv(a,GL_VERTEX_ATTRIB_ARRAY_POINTER,&pointer);
+        int bindings=attribute_layout(a,&buffer,&size,&stride,&format,&offset);
         unsigned component=format==GL_FLOAT || format==GL_INT || format==GL_UNSIGNED_INT || format==GL_FIXED?4:
             format==GL_SHORT || format==GL_UNSIGNED_SHORT || format==GL_HALF_FLOAT?2:1;
         unsigned bytes=(unsigned)size*component;
         if(format==GL_INT_2_10_10_10_REV || format==GL_UNSIGNED_INT_2_10_10_10_REV)bytes=4;
-        if(!stride)stride=(GLint)bytes;
+        if(!stride && !bindings)stride=(GLint)bytes;
         char name[80];snprintf(name,sizeof(name),"draw-%04u-attr-%u.bin",draws,a);
-        free(buffer_range((GLuint)buffer,(uintptr_t)pointer+(uint64_t)low*stride,(uint64_t)(high-low)*stride+bytes,name));
+        free(buffer_range((GLuint)buffer,offset+(uint64_t)low*stride,(uint64_t)(high-low)*stride+bytes,name));
     }
 }
 static int before_draw(const char *kind,GLenum mode,GLsizei count,GLenum type,const void *indices,GLint base)
@@ -434,11 +462,9 @@ static int before_draw(const char *kind,GLenum mode,GLsizei count,GLenum type,co
         glIsEnabled(GL_POLYGON_OFFSET_FILL),offset_factor,offset_units,detailed_draw);
     for(GLuint a=0;a<1;a++) {
         GLint enabled=0;glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_ENABLED,&enabled);if(!enabled)continue;
-        GLint buffer=0,size=0,stride=0,format=0;void *pointer=NULL;
-        glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,&buffer);glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_SIZE,&size);
-        glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_STRIDE,&stride);glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_TYPE,&format);
-        glGetVertexAttribPointerv(a,GL_VERTEX_ATTRIB_ARRAY_POINTER,&pointer);
-        note("  ATTR %u buffer=%d size=%d stride=%d type=0x%x offset=%llu\n",a,buffer,size,stride,format,(unsigned long long)(uintptr_t)pointer);
+        GLint buffer=0,size=0,stride=0,format=0;uint64_t offset=0;
+        attribute_layout(a,&buffer,&size,&stride,&format,&offset);
+        note("  ATTR %u buffer=%d size=%d stride=%d type=0x%x offset=%llu\n",a,buffer,size,stride,format,(unsigned long long)offset);
     }
     if (detailed_draw) geometry(count,type,indices,base);
     program_details(program);texture_details();errors("diagnostic-state");return 1;
