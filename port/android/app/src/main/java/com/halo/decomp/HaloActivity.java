@@ -22,16 +22,22 @@ public class HaloActivity extends SDLActivity {
     private boolean movieTouch;
     private int movieKey = -1;
     private HaloPort haloPort;
+    private MotionAim motionAim;
     private SettingsOverlay settings;
+    private GraphicsDiagnostics graphicsDiagnostics;
     private final android.os.Handler settingsHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private boolean selectHeld, selectOpened;
+    private boolean selectHeld, selectOpened, selectTouch;
     private int selectDevice;
     private final java.util.Map<Integer,android.view.KeyEvent> gameKeys = new java.util.HashMap<>();
     private final java.util.Set<Integer> overlayKeys = new java.util.HashSet<>();
     private final Runnable openSettings = () -> {
         if (selectHeld && settings != null && getWindow().getDecorView().hasWindowFocus()) {
-            android.view.InputDevice device = android.view.InputDevice.getDevice(selectDevice);
-            if (device != null) { settings.show(); selectOpened = settings.isOpen(); }
+            if (selectTouch || android.view.InputDevice.getDevice(selectDevice) != null) {
+                // Showing the overlay releases RetroTouch's pressed buttons.
+                selectOpened=true;
+                settings.show();
+                if (!settings.isOpen()) selectOpened=false;
+            }
         }
     };
     void releaseGameKeys() {
@@ -41,10 +47,37 @@ public class HaloActivity extends SDLActivity {
     }
     void settingsVisibility(boolean visible) {
         if (haloPort != null) haloPort.overlay(visible);
+        if (motionAim != null) motionAim.overlay(visible);
         if (!visible) restoreFullscreen();
     }
+    boolean motionAvailable() { return motionAim != null && motionAim.available(); }
+    void motionSettings(boolean enabled, int sensitivity) {
+        if (motionAim != null) motionAim.configure(enabled, sensitivity);
+    }
     private void cancelSelect() {
-        settingsHandler.removeCallbacks(openSettings);selectHeld=false;selectOpened=false;
+        settingsHandler.removeCallbacks(openSettings);selectHeld=false;selectOpened=false;selectTouch=false;
+    }
+    private void beginSelect(boolean touch, int device) {
+        if (settings == null || settings.isOpen() || selectHeld ||
+                !getWindow().getDecorView().hasWindowFocus()) return;
+        selectHeld=true;selectOpened=false;selectTouch=touch;selectDevice=device;
+        settingsHandler.postDelayed(openSettings,500);
+    }
+    private void endSelect(boolean touch, boolean canceled) {
+        if (!selectHeld || selectTouch != touch) return;
+        boolean shortPress=!selectOpened && !canceled;
+        cancelSelect();
+        // Physical SELECT retains its short Back action. The touch button is
+        // an overlay shortcut; cancel/release events must not navigate the game.
+        if (shortPress && !touch && !nativeMovieSkip()) {
+            HaloPort.nativeAction(9,true);HaloPort.nativeAction(9,false);
+        }
+    }
+    void touchSelect(boolean down) {
+        if (down) beginSelect(true,-1); else endSelect(true,false);
+    }
+    void cancelTouchSelect() {
+        if (selectHeld && selectTouch) cancelSelect();
     }
 
     @Override
@@ -54,11 +87,14 @@ public class HaloActivity extends SDLActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        StartDiagnostics.prepare(this);
+        if (BuildConfig.HALO_DIAGNOSTICS_ENABLED) StartDiagnostics.prepare(this);
         super.onCreate(savedInstanceState);
-        StartDiagnostics.connect(this);
+        if (BuildConfig.HALO_DIAGNOSTICS_ENABLED) StartDiagnostics.connect(this);
         haloPort = new HaloPort(this, mLayout);
+        motionAim = new MotionAim(this);
         settings = new SettingsOverlay(this, mLayout);
+        if (BuildConfig.HALO_DIAGNOSTICS_ENABLED)
+            graphicsDiagnostics = new GraphicsDiagnostics(this, mLayout);
         restoreFullscreen();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (!Fullscreen.isAutomotive(this)) preferHighestRefreshRate();
@@ -81,12 +117,14 @@ public class HaloActivity extends SDLActivity {
         if (settings != null) settings.resume();
         if (Fullscreen.isAutomotive(this)) resumeNativeThread();
         if (haloPort != null) haloPort.resume();
+        if (motionAim != null) motionAim.resume();
         restoreFullscreen();
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
+        if (motionAim != null) motionAim.focus(hasFocus);
         if (hasFocus) restoreFullscreen();
         else {
             cancelSelect();
@@ -99,6 +137,7 @@ public class HaloActivity extends SDLActivity {
     @Override
     protected void onPause() {
         cancelSelect();
+        if (motionAim != null) motionAim.suspend();
         if (settings != null) settings.suspend();
         nativeMoviePause(true);
         if (haloPort != null) haloPort.suspend();
@@ -111,6 +150,8 @@ public class HaloActivity extends SDLActivity {
     @Override
     protected void onDestroy() {
         cancelSelect();
+        if (motionAim != null) motionAim.suspend();
+        if (graphicsDiagnostics != null) graphicsDiagnostics.close();
         if (settings != null) settings.suspend();
         if (multicastLock != null && multicastLock.isHeld()) multicastLock.release();
         multicastLock = null;
@@ -172,12 +213,9 @@ public class HaloActivity extends SDLActivity {
         }
         if (key == android.view.KeyEvent.KEYCODE_BUTTON_SELECT && settings != null) {
             if (down && event.getRepeatCount() == 0 && !settings.isOpen()) {
-                selectHeld=true;selectOpened=false;selectDevice=event.getDeviceId();
-                settingsHandler.postDelayed(openSettings,500);
+                beginSelect(false,event.getDeviceId());
             } else if (!down) {
-                boolean shortPress=selectHeld && !selectOpened && !event.isCanceled();
-                cancelSelect();
-                if (shortPress && !nativeMovieSkip()) { HaloPort.nativeAction(9,true);HaloPort.nativeAction(9,false); }
+                endSelect(false,event.isCanceled());
             }
             return true;
         }

@@ -111,6 +111,9 @@ int halo_linux_mouse_look(short gamepad_index, float *yaw, float *pitch)
 	const float scale = 0.0022f;
 	static int invert = -1;
 	float x, y;
+#ifdef HALO_ANDROID
+    float motion_yaw = 0.0f, motion_pitch = 0.0f;
+#endif
 
 	*yaw = 0.0f;
 	*pitch = 0.0f;
@@ -128,11 +131,19 @@ int halo_linux_mouse_look(short gamepad_index, float *yaw, float *pitch)
 #ifdef HALO_ANDROID
     { extern int host_settings_active(void); if(host_settings_active()) return FALSE; }
     { float tx,ty;host_touch_look(&tx,&ty); x+=tx*1400.f; y+=ty*1400.f; }
+    host_motion_look(&motion_yaw, &motion_pitch);
 #endif
 	if (x == 0.0f && y == 0.0f)
+#ifdef HALO_ANDROID
+        if (motion_yaw == 0.0f && motion_pitch == 0.0f)
+#endif
 		return FALSE;
 	*yaw = -x * scale * mouse_sensitivity();
 	*pitch = (invert ? y : -y) * scale * mouse_sensitivity();
+#ifdef HALO_ANDROID
+    *yaw += motion_yaw;
+    *pitch += motion_pitch;
+#endif
 	return TRUE;
 }
 

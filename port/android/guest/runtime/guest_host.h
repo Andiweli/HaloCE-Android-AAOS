@@ -105,6 +105,7 @@ void host_android_path(int which, char *buffer, unsigned int size);
 
 void host_touch_read(unsigned int *buttons, float *x, float *y);
 void host_touch_look(float *x, float *y);
+void host_motion_look(float *yaw, float *pitch);
 void host_touch_mode(int mode);
 float host_audio_gain(int category);
 

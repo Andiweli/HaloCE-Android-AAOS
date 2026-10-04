@@ -23,16 +23,17 @@ final class HaloPort {
     private boolean active, controllerConnected, overlay;
     private int mode = -1;
     private static final String[] IDS = {"jump", "melee", "use", "weapon", "flashlight", "grenade_type",
-        "grenade", "fire", "pause", "back", "crouch", "zoom", "nav_up", "nav_down", "nav_left", "nav_right"};
+        "grenade", "fire", "pause", "back", "crouch", "zoom", "nav_up", "nav_down", "nav_left", "nav_right", "select"};
     private static final String[] LABELS = {"Jump / OK", "Melee / Back", "Reload / Use", "Switch weapon",
         "Flashlight", "Switch grenade", "Throw grenade", "Fire", "Pause / Start", "Back",
-        "Crouch", "Zoom", "Up", "Down", "Left", "Right"};
+        "Crouch", "Zoom", "Up", "Down", "Left", "Right", "SELECT"};
     HaloPort(HaloActivity activity, ViewGroup parent) {
         this.activity = activity;
         prefs = activity.getSharedPreferences("halo_android_controls", 0);
         applyVolumes();
         touch = new RetroTouchView(activity);
         touch.setOnTouchListener((view,event) -> {
+            if (event.getActionMasked()==android.view.MotionEvent.ACTION_CANCEL) activity.cancelTouchSelect();
             boolean handled = touch.onTouchEvent(event);
             // Consume blank overlay touches, so SDL cannot turn them into mouse clicks.
             return touch.getMode() != RetroTouchMode.OFF || handled;
@@ -51,24 +52,29 @@ final class HaloPort {
             button("crouch", "Crouch", .34f,.82f,.11f),
             button("flashlight", "Light", .36f,.34f,.09f),
             button("grenade_type", "Type", .49f,.35f,.09f),
-            button("pause", "Pause", .50f,.10f,.09f))));
+            button("pause", "Pause", .50f,.10f,.09f),
+            button("select", "SELECT", .37f,.10f,.10f))));
         touch.setNavigationLayout(new RetroTouchLayout("halo_ce_navigation_v1", Arrays.asList(
             RetroTouchControl.dPad("navigation", .17f,.72f,.30f),
             button("jump", "OK", .89f,.76f,.13f),
             button("melee", "Back", .74f,.82f,.12f),
             button("use", "X", .89f,.53f,.10f),
             button("weapon", "Y", .76f,.53f,.10f),
-            button("pause", "Start", .50f,.90f,.09f))));
+            button("pause", "Start", .50f,.90f,.09f),
+            button("select", "SELECT", .37f,.90f,.10f))));
         touch.setLookWhileHoldingAction("fire", true);
         touch.setAutoHideOnController(false);
         touch.setListener(new RetroTouchAdapter() {
             @Override public void onAction(String id, boolean down) {
+                if ("select".equals(id) && !down) { activity.touchSelect(false);return; }
                 if (!active || overlay || controllerConnected || touch.isEditing()) return;
+                if ("select".equals(id)) { activity.touchSelect(true);return; }
                 for (int i=0;i<IDS.length;i++) if(IDS[i].equals(id)) { nativeAction(i,down);return; }
             }
             @Override public void onMove(float x,float y) { if(active && !overlay && !controllerConnected) nativeMove(x,y); }
             @Override public void onLook(float x,float y) { if(active && !overlay && !controllerConnected) nativeLook(x,y); }
             @Override public void onEditorStateChanged(boolean editing) {
+                activity.cancelTouchSelect();
                 nativeReset();
                 // Keep the gameplay layout editable while the engine is in its pause menu.
                 if(editing && nativeMode()==2) {nativeAction(8,true);nativeAction(8,false);}
@@ -88,6 +94,7 @@ final class HaloPort {
             updateControllerPresence();
             int next=(controllerConnected || overlay)?0:nativeMode();
             if(!touch.isEditing() && next!=mode) {
+                activity.cancelTouchSelect();
                 mode=next;
                 touch.setMode(next==2?RetroTouchMode.GAMEPLAY:next==1?RetroTouchMode.NAVIGATION:RetroTouchMode.OFF);
             }
@@ -95,10 +102,11 @@ final class HaloPort {
         }
     };
     void resume() { if(active)return; active=true;updateControllerPresence();handler.post(poll); }
-    void suspend() { active=false;handler.removeCallbacks(poll);touch.releaseAllInputs();nativeReset(); }
+    void suspend() { active=false;handler.removeCallbacks(poll);activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset(); }
     private void updateControllerPresence() {
         boolean connected = RetroTouchControllers.isControllerConnected();
         if (connected != controllerConnected) {
+            activity.cancelTouchSelect();
             controllerConnected = connected;
             touch.releaseAllInputs();nativeReset();
             if (connected && touch.isEditing()) touch.setEditing(false);
@@ -107,9 +115,9 @@ final class HaloPort {
         }
         touch.setVisibility((connected || overlay) ? View.GONE : View.VISIBLE);
     }
-    void overlay(boolean visible) { overlay=visible;touch.releaseAllInputs();nativeReset();mode=-1;updateControllerPresence(); }
+    void overlay(boolean visible) { overlay=visible;activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset();mode=-1;updateControllerPresence(); }
     void controllerInput() { updateControllerPresence(); }
-    void focusLost() { touch.releaseAllInputs();nativeReset(); }
+    void focusLost() { activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset(); }
     private void applyVolumes() {
         nativeVolumes(prefs.getInt("master",100), prefs.getInt("effects",100), prefs.getInt("music",100));
     }

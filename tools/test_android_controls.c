@@ -7,6 +7,8 @@ static char test_root[256];
 void host_android_path(int which,char *buffer,unsigned int size) { (void)which;snprintf(buffer,size,"%s",test_root); }
 static Uint64 clock_ms = 1000;
 Uint64 SDL_GetTicks(void) { return clock_ms; }
+static int movie_active;
+int host_bink_active(void) { return movie_active; }
 #define ACTION(a,d) Java_com_halo_decomp_HaloPort_nativeAction(NULL,NULL,a,d)
 #define RESET() Java_com_halo_decomp_HaloPort_nativeReset(NULL,NULL)
 int main(void) {
@@ -43,6 +45,54 @@ int main(void) {
     unlink(audio_file);
     host_audio_profile("profile-b");assert(host_audio_level(1)==4);unlink(audio_file);
     {char folder[512];snprintf(folder,sizeof(folder),"%s/android-volumes",test_root);rmdir(folder);rmdir(test_root);}
+    /* Active gameplay gating, including non-zoom weapons, independent caches and lifecycle transitions. */
+    host_touch_mode(2);
+    Java_com_halo_decomp_MotionAim_nativeEnabled(NULL,NULL,JNI_TRUE);
+    assert(!Java_com_halo_decomp_MotionAim_nativeAiming(NULL,NULL));
+    Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,.01f,-.02f);
+    host_motion_look(&x,&y);assert(!x&&!y);
+    host_touch_mode(2|HALO_ANDROID_TOUCH_AIMING);
+    assert(Java_com_halo_decomp_HaloPort_nativeMode(NULL,NULL)==2);
+    assert(Java_com_halo_decomp_MotionAim_nativeAiming(NULL,NULL));
+    ACTION(7,1);
+    Java_com_halo_decomp_HaloPort_nativeLook(NULL,NULL,.2f,-.1f);
+    Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,.01f,-.02f);
+    host_touch_look(&x,&y);assert(x==.2f&&y==-.1f);
+    host_motion_look(&x,&y);assert(x==.01f&&y==-.02f);
+    host_motion_look(&x,&y);assert(!x&&!y);
+    Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,.01f,.02f);
+    host_touch_mode(2);
+    host_motion_look(&x,&y);assert(!x&&!y);
+    host_touch_read(&b,&x,&y);assert(b&(1u<<7)); /* Changing camera eligibility cannot release fire. */
+    host_touch_mode(2|HALO_ANDROID_TOUCH_AIMING);
+    Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,.02f,.03f);
+    Java_com_halo_decomp_SettingsOverlay_nativeOpen(NULL,NULL,JNI_TRUE);
+    assert(!Java_com_halo_decomp_MotionAim_nativeAiming(NULL,NULL));
+    host_motion_look(&x,&y);assert(!x&&!y);
+    Java_com_halo_decomp_SettingsOverlay_nativeOpen(NULL,NULL,JNI_FALSE);
+    movie_active=1;
+    assert(!Java_com_halo_decomp_MotionAim_nativeAiming(NULL,NULL));
+    Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,.02f,.03f);
+    movie_active=0;
+    host_motion_look(&x,&y);assert(!x&&!y);
+    Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,.02f,.03f);
+    clock_ms+=101;host_motion_look(&x,&y);assert(!x&&!y);
+    clock_ms+=100;
+    assert(!Java_com_halo_decomp_MotionAim_nativeAiming(NULL,NULL));
+    host_touch_mode(2|HALO_ANDROID_TOUCH_AIMING);
+    Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,NAN,INFINITY);
+    Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,1,1);
+    host_motion_look(&x,&y);assert(!x&&!y);
+    for(int i=0;i<5;i++)Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,.1f,-.1f);
+    host_motion_look(&x,&y);assert(x==.2f&&y==-.2f);
+    Java_com_halo_decomp_MotionAim_nativeDelta(NULL,NULL,.01f,.02f);RESET();
+    host_motion_look(&x,&y);assert(!x&&!y);
+    Java_com_halo_decomp_MotionAim_nativeEnabled(NULL,NULL,JNI_FALSE);
+    assert(!Java_com_halo_decomp_MotionAim_nativeAiming(NULL,NULL));
+    host_touch_mode(1);
+    Java_com_halo_decomp_MotionAim_nativeEnabled(NULL,NULL,JNI_TRUE);
+    assert(!Java_com_halo_decomp_MotionAim_nativeAiming(NULL,NULL));
     puts("Android bridge: tap/hold/release, mode/lifecycle reset, move/look and audio checks passed.");
+    puts("Gyro bridge: general gameplay, additive look, held buttons, stale samples, movies, overlay, reset and invalid data passed.");
     return 0;
 }

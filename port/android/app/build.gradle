@@ -17,6 +17,13 @@ def buildNumber = buildNumberText.isInteger() ? buildNumberText.toInteger() : 0
 // debug key of the computer that builds
 def signingKey = System.getenv("HALO_ANDROID_KEYSTORE")
 
+// Patch47: versioned settings header; the confirmed gyro and renderer fixes are retained.
+// Diagnostic UI and startup files are off for every normal build, including
+// debug. Keep the capture code available for an explicitly requested build:
+// ./gradlew -PhaloDiagnostics=true :app:assembleMobileRelease
+def diagnosticsEnabled = providers.gradleProperty("haloDiagnostics")
+    .map { it.equalsIgnoreCase("true") }.getOrElse(false)
+
 android {
     namespace "com.halo.decomp"
     compileSdk 35
@@ -25,9 +32,10 @@ android {
         applicationId "com.halo.decomp"
         minSdk 28
         targetSdk 35
-        versionCode 16
-        versionName "1.0.3"
+        versionCode 17
+        versionName "1.0.4"
         buildConfigField "int", "HALO_BUILD_NUMBER", "${buildNumber}"
+        buildConfigField "boolean", "HALO_DIAGNOSTICS_ENABLED", "${diagnosticsEnabled}"
         ndk {
             abiFilters "arm64-v8a"
         }

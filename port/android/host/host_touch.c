@@ -8,11 +8,16 @@
 #include <stdint.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "../../linux/include/halo_android_controls.h"
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static unsigned int held;
 static unsigned long long until[20];
 static float move_x, move_y, look_x, look_y;
 static int mode;
+static int aiming, motion_enabled, settings_open;
+static float motion_yaw, motion_pitch;
+static Uint64 mode_updated, motion_updated;
+static uint32_t motion_consumed;
 extern int host_bink_active(void);
 static float volumes[3] = {1, 1, 1};
 static float default_volumes[3] = {1, 1, 1};
@@ -20,6 +25,7 @@ static char audio_profile[512], audio_file[1024];
 extern void host_android_path(int which, char *buffer, unsigned int size);
 static void reset(void) {
     held = 0; move_x = move_y = look_x = look_y = 0;
+    motion_yaw = motion_pitch = 0;
     for (int i=0;i<20;i++) until[i]=0;
 }
 JNIEXPORT void JNICALL Java_com_halo_decomp_HaloPort_nativeReset(JNIEnv *e,jclass c) {
@@ -53,7 +59,54 @@ JNIEXPORT void JNICALL Java_com_halo_decomp_HaloPort_nativeVolumes(JNIEnv *e,jcl
     pthread_mutex_unlock(&lock);
 }
 void host_touch_mode(int value) {
-    pthread_mutex_lock(&lock); if(mode!=value) {reset();mode=value;} pthread_mutex_unlock(&lock);
+    int next_mode = value & HALO_ANDROID_TOUCH_MODE_MASK;
+    int next_aiming = next_mode == 2 && (value & HALO_ANDROID_TOUCH_AIMING);
+    pthread_mutex_lock(&lock);
+    if(mode!=next_mode) {reset();mode=next_mode;}
+    if(aiming!=next_aiming) motion_yaw=motion_pitch=0;
+    aiming=next_aiming; mode_updated=SDL_GetTicks();
+    pthread_mutex_unlock(&lock);
+}
+/* Called with lock held. A loading/pause stall must never retain an old
+   gameplay status or sensor delta that would jump the view on the next frame. */
+static int motion_allowed(void) {
+    return motion_enabled && mode==2 && aiming && !settings_open &&
+        !host_bink_active() && SDL_GetTicks()-mode_updated<=200;
+}
+JNIEXPORT void JNICALL Java_com_halo_decomp_MotionAim_nativeEnabled(JNIEnv *e,jclass c,jboolean enabled) {
+    pthread_mutex_lock(&lock);motion_enabled=enabled;motion_yaw=motion_pitch=0;pthread_mutex_unlock(&lock);
+}
+JNIEXPORT jboolean JNICALL Java_com_halo_decomp_MotionAim_nativeAiming(JNIEnv *e,jclass c) {
+    pthread_mutex_lock(&lock);int allowed=motion_allowed();pthread_mutex_unlock(&lock);
+    return allowed ? JNI_TRUE : JNI_FALSE;
+}
+/* Small Logcat status snapshot: UI can verify registration -> accepted
+   input -> game consumption without opening the file/GFX diagnostics. */
+JNIEXPORT jlong JNICALL Java_com_halo_decomp_MotionAim_nativeState(JNIEnv *e,jclass c) {
+    pthread_mutex_lock(&lock);
+    uint32_t state=(motion_enabled?1u:0u)|(mode==2?2u:0u)|(aiming?4u:0u)|
+        (settings_open?8u:0u)|(host_bink_active()?16u:0u)|
+        (SDL_GetTicks()-mode_updated<=200?32u:0u);
+    uint64_t result=((uint64_t)motion_consumed<<32)|state;
+    pthread_mutex_unlock(&lock);return (jlong)result;
+}
+JNIEXPORT void JNICALL Java_com_halo_decomp_MotionAim_nativeDelta(JNIEnv *e,jclass c,jfloat yaw,jfloat pitch) {
+    if(!isfinite(yaw)||!isfinite(pitch)||fabsf(yaw)>.15f||fabsf(pitch)>.15f)return;
+    pthread_mutex_lock(&lock);
+    if(motion_allowed()) {
+        motion_yaw=fmaxf(-.2f,fminf(.2f,motion_yaw+yaw));
+        motion_pitch=fmaxf(-.2f,fminf(.2f,motion_pitch+pitch));
+        motion_updated=SDL_GetTicks();
+    }
+    pthread_mutex_unlock(&lock);
+}
+void host_motion_look(float *yaw,float *pitch) {
+    pthread_mutex_lock(&lock);
+    int fresh=motion_allowed() && SDL_GetTicks()-motion_updated<=100;
+    *yaw=fresh?motion_yaw:0;*pitch=fresh?motion_pitch:0;
+    if(*yaw!=0 || *pitch!=0)motion_consumed++;
+    motion_yaw=motion_pitch=0;
+    pthread_mutex_unlock(&lock);
 }
 void host_touch_read(unsigned int *buttons,float *x,float *y) {
     pthread_mutex_lock(&lock);unsigned int bits=held;
@@ -123,7 +176,6 @@ int host_audio_set_level(int category,int value) {
 }
 
 /* UI thread writes, render/input threads read; never enter guest code from JNI. */
-static int settings_open;
 static float settings_brightness=0.0f, settings_gamma=1.0f;
 JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeOpen(JNIEnv *e,jclass c,jboolean open) {
     pthread_mutex_lock(&lock); settings_open=open; reset(); pthread_mutex_unlock(&lock);

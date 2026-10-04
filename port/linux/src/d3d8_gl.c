@@ -903,6 +903,7 @@ static void gl_initialize(void)
 		platform_log("OpenGL ES %d.%d: copy image %d, border clamp %d, anisotropy %d, S3TC %d, sample counting %d",
 			(int)major, (int)minor, xgpu_capabilities.copy_image, xgpu_capabilities.border_clamp,
 			xgpu_capabilities.anisotropy, xgpu_capabilities.s3tc, xgpu_capabilities.atomic_counters);
+		platform_log("Patch42: persistent geometry mirror bypassed; fresh vertex/index streaming");
 	}
 #else
 	if (config_boolean("debug.gl_debug"))
@@ -2926,6 +2927,19 @@ the range is outside the window, spans two segments or is volatile */
 static BOOL mirror_range(unsigned long address, unsigned long size, GLuint *buffer, unsigned long *offset,
 	unsigned long *generation)
 {
+#ifdef HALO_ANDROID
+	/* Patch42 test: the AYN captures show CPU/GPU mirror mismatches even
+	 * when the recorded page generations agree. Declining this cache for
+	 * BOTH vertex and index ranges selects the existing streaming path,
+	 * including fresh index extents. Keep its frame fences, base-vertex
+	 * handling and D3DCOLOR conversion unchanged. */
+	(void)address;
+	(void)size;
+	(void)buffer;
+	(void)offset;
+	(void)generation;
+	return FALSE;
+#else
 	unsigned long start = address - PLATFORM_CONTIGUOUS_BASE;
 	unsigned long segment, first, last, page, oldest = ~0UL, newest = 0;
 	BOOL present = TRUE;
@@ -2973,6 +2987,7 @@ static BOOL mirror_range(unsigned long address, unsigned long size, GLuint *buff
 		*generation = newest;
 	stats.mirrored_bytes += size;
 	return TRUE;
+#endif
 }
 
 /* the smallest and largest index of an index range the mirror holds: the
@@ -3040,9 +3055,11 @@ static void stream_reserve(unsigned long size)
 static unsigned long stream_upload(const void *data, unsigned long size)
 {
 	unsigned long offset;
+	unsigned long reserved = (size + 15) & ~15UL;
 
-	size = (size + 15) & ~15UL;
-	stream_reserve(size);
+	/* Align ring reservations, not the source read: a short allocation or
+	 * the end of a mapped range need not contain the padding bytes. */
+	stream_reserve(reserved);
 	offset = device.stream_offset;
 	state_array_buffer(device.stream_buffer);
 #ifdef HALO_ANDROID
@@ -3050,7 +3067,7 @@ static unsigned long stream_upload(const void *data, unsigned long size)
 #else
 	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)size, data);
 #endif
-	device.stream_offset += size;
+	device.stream_offset += reserved;
 	return offset;
 }
 
@@ -3099,10 +3116,10 @@ static unsigned long stream_upload_swizzled(const struct vertex_shader_object *d
 static unsigned long index_upload(const void *data, unsigned long size)
 {
 	unsigned long offset;
+	unsigned long reserved = (size + 15) & ~15UL;
 
-	size = (size + 15) & ~15UL;
 	state_element_array_buffer(device.index_buffer);
-	if (device.index_offset + size > INDEX_BUFFER_SIZE)
+	if (device.index_offset + reserved > INDEX_BUFFER_SIZE)
 	{
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER_SIZE, NULL, GL_STREAM_DRAW);
 		device.index_offset = 0;
@@ -3113,7 +3130,7 @@ static unsigned long index_upload(const void *data, unsigned long size)
 #else
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)size, data);
 #endif
-	device.index_offset += size;
+	device.index_offset += reserved;
 	return offset;
 }
 

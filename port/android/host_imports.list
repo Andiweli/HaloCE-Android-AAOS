@@ -53,6 +53,7 @@ host_errno
 
 host_touch_read
 host_touch_look
+host_motion_look
 host_touch_mode
 host_audio_gain
 

@@ -18,7 +18,7 @@ import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/** Temporary Patch23 UI. Captures one frame only when explicitly requested. */
+/** Optional GFX capture, activated only by a diagnostic build of Patch46. */
 final class GraphicsDiagnostics {
     private final Activity activity;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -43,7 +43,7 @@ final class GraphicsDiagnostics {
     }
 
     void capture() {
-        if (busy || closed) return;
+        if (!BuildConfig.HALO_DIAGNOSTICS_ENABLED || busy || closed) return;
         try {
             File media = null;
             for (File folder : activity.getExternalMediaDirs()) {
@@ -57,12 +57,15 @@ final class GraphicsDiagnostics {
             if (!capture.mkdir()) throw new IOException("Cannot create " + capture);
             try (Writer out = new OutputStreamWriter(new FileOutputStream(new File(capture,"device.txt")),StandardCharsets.UTF_8)) {
                 android.content.pm.PackageInfo info = activity.getPackageManager().getPackageInfo(activity.getPackageName(),0);
-                out.write("Halo GFX Patch23\nTime: " + new Date()
+                out.write("Halo GFX Patch46 - optional diagnostics; Patch42 renderer\nTime: " + new Date()
                     + "\nApp: " + info.versionName + " (" + info.getLongVersionCode() + ")"
                     + "\nFlavor: " + (BuildConfig.IS_AAOS ? "AAOS" : "mobile")
                     + "\nDevice: " + Build.MANUFACTURER + " " + Build.MODEL + " / " + Build.DEVICE
                     + "\nAndroid: " + Build.VERSION.RELEASE + " API " + Build.VERSION.SDK_INT
-                    + "\nABIs: " + Arrays.toString(Build.SUPPORTED_ABIS) + "\n");
+                    + "\nABIs: " + Arrays.toString(Build.SUPPORTED_ABIS)
+                    + "\nGuest renderer: persistent geometry mirror bypassed; fresh vertex/index streaming."
+                    + "\nHost libraries unchanged; native MIRROR_UPLOAD_POLICY describes an unused mirror helper."
+                    + "\nNative report labels Patch18/Patch23 are legacy labels, not APK revision identifiers.\n");
             }
             if (!nativeRequest(capture.getAbsolutePath())) throw new IOException("Capture already active");
             busy = true;

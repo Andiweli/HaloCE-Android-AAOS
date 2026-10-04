@@ -6,7 +6,7 @@ import android.os.Build;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
-/** Own native startup log; no READ_LOGS permission, ADB or logcat process. */
+/** Optional startup log, enabled only with -PhaloDiagnostics=true. */
 final class StartDiagnostics {
     private static File folder(Context context) {
         for (File dir : context.getExternalMediaDirs()) {
@@ -20,6 +20,7 @@ final class StartDiagnostics {
     static boolean interrupted(Context context) { return marker(context).exists(); }
 
     static void prepare(Activity activity) {
+        if (!BuildConfig.HALO_DIAGNOSTICS_ENABLED) return;
         try {
             File log = log(activity), previous = new File(log.getParentFile(), "halo-diagnostic-previous.txt");
             if (log.exists()) {
@@ -29,22 +30,26 @@ final class StartDiagnostics {
             }
             try (Writer out = new OutputStreamWriter(new FileOutputStream(log), StandardCharsets.UTF_8)) {
                 android.content.pm.PackageInfo info = activity.getPackageManager().getPackageInfo(activity.getPackageName(),0);
-                out.write("Halo start diagnostic - Patch11\nTime: " + new java.util.Date()
+                out.write("Halo start diagnostic - Patch46 (optional diagnostics; Patch42 renderer)\nTime: " + new java.util.Date()
                     + "\nApp: " + info.versionName + " (" + info.getLongVersionCode() + ")"
                     + "\nFlavor: " + (BuildConfig.IS_AAOS ? "AAOS" : "mobile")
                     + "\nDevice: " + Build.MANUFACTURER + " " + Build.MODEL + " / " + Build.DEVICE
                     + "\nAndroid: " + Build.VERSION.RELEASE + " / API " + Build.VERSION.SDK_INT
                     + "\nABIs: " + java.util.Arrays.toString(Build.SUPPORTED_ABIS)
-                    + "\nLog: " + log.getAbsolutePath() + "\n");
+                    + "\nLog: " + log.getAbsolutePath()
+                    + "\nDiagnostic UI: Patch46; fresh geometry streaming from Patch42."
+                    + "\nNative Patch18/Patch23 labels are legacy labels.\n");
             }
             try (FileOutputStream out = new FileOutputStream(marker(activity))) { out.write(1); }
         } catch (Exception e) { android.util.Log.e("halo", "Diagnostic preparation failed",e); }
     }
     static void connect(Activity activity) {
+        if (!BuildConfig.HALO_DIAGNOSTICS_ENABLED) return;
         try { nativeOpen(log(activity).getAbsolutePath(), marker(activity).getAbsolutePath()); }
         catch (UnsatisfiedLinkError e) { append(activity,"Native diagnostics missing: old libmain.so: " + e); }
     }
     static void append(Context context, String text) {
+        if (!BuildConfig.HALO_DIAGNOSTICS_ENABLED) return;
         try (Writer out=new OutputStreamWriter(new FileOutputStream(log(context),true),StandardCharsets.UTF_8)) {
             out.write(text+"\n");
         } catch (IOException e) { android.util.Log.e("halo",text,e); }

@@ -641,6 +641,9 @@ struct widget_instance;
 #include "game/game_engine.h"
 #include "game/game_globals.h"
 #include "game/players.h"
+#ifdef HALO_ANDROID
+#include "halo_android_controls.h"
+#endif
 #include "hs/hs.h"
 #include "input/input.h"
 #include "input/input_abstraction.h"
@@ -7046,8 +7049,16 @@ void process_ui_widgets(
 		644,
 		widget_globals.initialized);
 #ifdef HALO_ANDROID
-    { extern void host_touch_mode(int mode);
-      host_touch_mode((ui_widgets_active() || we_are_at_the_main_menu) ? 1 : 2); }
+    {
+        int input_mode = (ui_widgets_active() || we_are_at_the_main_menu) ? 1 : 2;
+        /* Publish active gameplay for gyro look, with or without weapon zoom.
+           Never infer it from a button press or inspect guest memory from JNI. */
+        if (input_mode == 2 && game_in_progress() && !game_time_get_paused() &&
+            !cinematic_in_progress() && local_player_get_player_index(0) != NONE &&
+            player_control_get_unit_index(0) != NONE)
+            input_mode |= HALO_ANDROID_TOUCH_AIMING;
+        host_touch_mode(input_mode);
+    }
 #endif
 	widget_globals.current_system_milliseconds = system_milliseconds();
 	ui_widgets_process_mouse();
