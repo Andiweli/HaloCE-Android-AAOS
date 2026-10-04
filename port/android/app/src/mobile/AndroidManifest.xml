@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Patch49: use AAudio's regular output path for mobile playback.
+             The Retroid Flip 2 log uses MMAP when low latency is requested;
+             its Android 13 screen recorder captures other apps but not Halo.
+             SDL imports SDL_ENV metadata before initializing audio, so this
+             also applies to the music, effects and movie playback streams.
+             Keep this test scoped to mobile; AAOS retains its audio setup. -->
+        <meta-data
+            android:name="SDL_ENV.SDL_ANDROID_LOW_LATENCY_AUDIO"
+            android:value="0" />
+    </application>
+</manifest>
