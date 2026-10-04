@@ -1,9 +1,10 @@
 name: Build Android and AAOS
 
-# Build both APKs for main and pull requests; publish only from main.
+# Build both APKs for main, Codex test branches and pull requests.
+# Publish only from main.
 on:
   push:
-    branches: [main]
+    branches: [main, "codex/**"]
     paths-ignore:
       - "**.md"
   pull_request:
