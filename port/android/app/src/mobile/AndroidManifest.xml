@@ -10,5 +10,13 @@
         <meta-data
             android:name="SDL_ENV.SDL_ANDROID_LOW_LATENCY_AUDIO"
             android:value="0" />
+
+        <!-- Patch51: request more scheduling headroom for mobile playback
+             while preserving the regular output path used for capture.
+             This environment hint overrides the game's normal 512-frame
+             SDL_SetHint; the actual device buffer is platform-dependent. -->
+        <meta-data
+            android:name="SDL_ENV.SDL_AUDIO_DEVICE_SAMPLE_FRAMES"
+            android:value="2048" />
     </application>
 </manifest>
