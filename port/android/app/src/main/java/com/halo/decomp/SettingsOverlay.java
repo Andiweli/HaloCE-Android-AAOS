@@ -16,7 +16,7 @@ final class SettingsOverlay {
     static native void nativeOpen(boolean open);
     static native void nativeDisplay(int brightness, int gamma);
     private static final int TEXT_SP=16, HEADING_SP=14;
-    private static final int GYRO_TOGGLE=5, GYRO_SLIDER=6, OK=7, CANCEL=8;
+    private static final int GYRO_TOGGLE=5, GYRO_INVERT=6, GYRO_SLIDER=7, OK=8, CANCEL=9;
     private static final String[] KEYS={"master","effects","music","brightness","gamma","gyro_sensitivity"};
     private static final int[] MIN={0,0,0,50,50,25}, MAX={100,100,100,150,200,200};
     private final HaloActivity activity;
@@ -24,9 +24,9 @@ final class SettingsOverlay {
     private final SharedPreferences prefs;
     private final int[] values=new int[6], original=new int[6];
     private final SeekBar[] sliders=new SeekBar[6];
-    private final View[] targets=new View[9];
-    private boolean gyroEnabled, originalGyro;
-    private Switch gyroSwitch;
+    private final View[] targets=new View[10];
+    private boolean gyroEnabled, originalGyro, gyroInvertPitch, originalGyroInvert;
+    private Switch gyroSwitch, gyroInvertSwitch;
     private FrameLayout root;
     private int selected;
     private long lastMotion;
@@ -38,6 +38,7 @@ final class SettingsOverlay {
         for(int i=0;i<values.length;i++)
             values[i]=Math.max(MIN[i],Math.min(MAX[i],prefs.getInt(KEYS[i],100)));
         gyroEnabled=prefs.getBoolean("gyro_aim",false) && activity.motionAvailable();
+        gyroInvertPitch=prefs.getBoolean("gyro_invert_pitch",false);
         apply();
     }
     boolean isOpen(){return root!=null;}
@@ -45,10 +46,10 @@ final class SettingsOverlay {
     private String[] strings(){
         String language=android.content.res.Resources.getSystem().getConfiguration().getLocales().get(0).getLanguage();
         switch(language){
-            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyrsokop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung"};
-            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes"};
-            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli"};
-            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls"};
+            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyrsokop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung","Gyro Rauf/Runter invertieren"};
+            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes","Inverser haut/bas du gyroscope"};
+            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli","Inverti su/giù del giroscopio"};
+            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls","Invert gyro up/down"};
         }
     }
     private TextView text(String caption,int size) {
@@ -108,28 +109,27 @@ final class SettingsOverlay {
             public void onStopTrackingTouch(SeekBar bar){}
         });
     }
-    private void gyro(LinearLayout rows,String caption,String missing) {
-        boolean available=activity.motionAvailable();
-        String labelText=caption+(available?"":" ("+missing+")");
+    private Switch gyroToggle(LinearLayout rows,int target,String caption,boolean checked) {
         LinearLayout row=row(rows);
-        TextView label=text(labelText,TEXT_SP);label.setPadding(0,0,dp(8),0);
+        TextView label=text(caption,TEXT_SP);label.setPadding(0,0,dp(8),0);
         row.addView(label,new LinearLayout.LayoutParams(0,-2,1));
-        gyroSwitch=new Switch(activity);targets[GYRO_TOGGLE]=gyroSwitch;
-        gyroSwitch.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE);
-        gyroSwitch.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP,TEXT_SP);
-        gyroSwitch.setShowText(false);
-        gyroSwitch.setPadding(0,0,0,0);gyroSwitch.setMinHeight(0);gyroSwitch.setMinimumHeight(0);
-        gyroSwitch.setId(View.generateViewId());label.setLabelFor(gyroSwitch.getId());
-        gyroSwitch.setContentDescription(labelText);gyroSwitch.setFocusableInTouchMode(true);
-        gyroSwitch.setEnabled(available);gyroSwitch.setChecked(gyroEnabled);
-        gyroSwitch.setOnFocusChangeListener((v,focused)->{if(focused)selected=GYRO_TOGGLE;});
-        gyroSwitch.setOnCheckedChangeListener((v,checked)->{gyroEnabled=checked && available;apply();});
-        row.addView(gyroSwitch,new LinearLayout.LayoutParams(-2,dp(48)));
+        Switch toggle=new Switch(activity);targets[target]=toggle;
+        toggle.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE);
+        toggle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP,TEXT_SP);
+        toggle.setShowText(false);
+        toggle.setPadding(0,0,0,0);toggle.setMinHeight(0);toggle.setMinimumHeight(0);
+        toggle.setId(View.generateViewId());label.setLabelFor(toggle.getId());
+        toggle.setContentDescription(caption);toggle.setFocusableInTouchMode(true);
+        toggle.setEnabled(activity.motionAvailable());toggle.setChecked(checked);
+        toggle.setOnFocusChangeListener((v,focused)->{if(focused)selected=target;});
+        row.addView(toggle,new LinearLayout.LayoutParams(-2,dp(48)));
+        return toggle;
     }
     void show(){
         if(isOpen() || suspended)return;
         activity.releaseGameKeys();
         System.arraycopy(values,0,original,0,values.length);originalGyro=gyroEnabled;
+        originalGyroInvert=gyroInvertPitch;
         nativeOpen(true);activity.settingsVisibility(true);
         String[] labels=strings();
         root=new FrameLayout(activity);root.setBackgroundColor(Color.TRANSPARENT);root.setClickable(true);
@@ -159,7 +159,11 @@ final class SettingsOverlay {
         heading(rows,labels[12]);
         for(int i=3;i<5;i++)slider(rows,i,labels[i+1]);
         heading(rows,labels[13]);
-        gyro(rows,labels[7],labels[10]);
+        boolean available=activity.motionAvailable();
+        gyroSwitch=gyroToggle(rows,GYRO_TOGGLE,labels[7]+(available?"":" ("+labels[10]+")"),gyroEnabled);
+        gyroSwitch.setOnCheckedChangeListener((v,checked)->{gyroEnabled=checked && available;apply();});
+        gyroInvertSwitch=gyroToggle(rows,GYRO_INVERT,labels[14],gyroInvertPitch);
+        gyroInvertSwitch.setOnCheckedChangeListener((v,checked)->{gyroInvertPitch=checked;apply();});
         slider(rows,5,labels[6]);
         LinearLayout buttons=new LinearLayout(activity);buttons.setGravity(Gravity.END);panel.addView(buttons);
         for(int i=0;i<2;i++){
@@ -184,9 +188,11 @@ final class SettingsOverlay {
         if(save){
             SharedPreferences.Editor e=prefs.edit();
             for(int i=0;i<values.length;i++)e.putInt(KEYS[i],values[i]);
-            e.putBoolean("gyro_aim",gyroEnabled);e.apply();
+            e.putBoolean("gyro_aim",gyroEnabled);
+            e.putBoolean("gyro_invert_pitch",gyroInvertPitch);e.apply();
         } else {
-            System.arraycopy(original,0,values,0,values.length);gyroEnabled=originalGyro;apply();
+            System.arraycopy(original,0,values,0,values.length);gyroEnabled=originalGyro;
+            gyroInvertPitch=originalGyroInvert;apply();
         }
         parent.removeView(root);root=null;nativeOpen(false);activity.settingsVisibility(false);
     }
@@ -194,7 +200,7 @@ final class SettingsOverlay {
     void resume(){suspended=false;}
     private void apply(){
         HaloPort.nativeVolumes(values[0],values[1],values[2]);nativeDisplay(values[3],values[4]);
-        activity.motionSettings(gyroEnabled,values[5]);
+        activity.motionSettings(gyroEnabled,values[5],gyroInvertPitch);
     }
     private void direction(int key){
         if(key==KeyEvent.KEYCODE_DPAD_UP || key==KeyEvent.KEYCODE_DPAD_DOWN){
@@ -207,6 +213,7 @@ final class SettingsOverlay {
             int delta=key==KeyEvent.KEYCODE_DPAD_LEFT?-5:5;
             sliders[index].setProgress(sliders[index].getProgress()+delta);
         } else if(selected==GYRO_TOGGLE)gyroSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
+        else if(selected==GYRO_INVERT)gyroInvertSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
         else selected=key==KeyEvent.KEYCODE_DPAD_LEFT?OK:CANCEL;
         targets[selected].requestFocus();
     }
@@ -218,7 +225,7 @@ final class SettingsOverlay {
         if(key==KeyEvent.KEYCODE_BUTTON_B || key==KeyEvent.KEYCODE_BACK || key==KeyEvent.KEYCODE_ESCAPE){close(false);return true;}
         if(key>=KeyEvent.KEYCODE_DPAD_UP && key<=KeyEvent.KEYCODE_DPAD_RIGHT)direction(key);
         else if((key==KeyEvent.KEYCODE_BUTTON_A || key==KeyEvent.KEYCODE_DPAD_CENTER || key==KeyEvent.KEYCODE_ENTER) && event.getRepeatCount()==0){
-            if(selected==GYRO_TOGGLE || selected>=OK)targets[selected].performClick();
+            if(selected==GYRO_TOGGLE || selected==GYRO_INVERT || selected>=OK)targets[selected].performClick();
             else{selected=OK;targets[selected].requestFocus();}
         }
         return true;

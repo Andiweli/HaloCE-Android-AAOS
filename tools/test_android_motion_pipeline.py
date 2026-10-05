@@ -87,16 +87,19 @@ stubs = {
         public View getDecorView(){return new View();}
     }''',
     "android/view/Display": '''public class Display {
-        public int getRotation(){return 0;}
+        public int rotation;
+        public int getRotation(){return rotation;}
     }''',
     "android/view/WindowManager": '''public class WindowManager {
-        public Display getDefaultDisplay(){return new Display();}
+        public final Display display=new Display();
+        public Display getDefaultDisplay(){return display;}
     }''',
     "com/halo/decomp/HaloActivity": '''public class HaloActivity extends android.content.Context {
         public final android.hardware.SensorManager manager=new android.hardware.SensorManager();
+        public final android.view.WindowManager windows=new android.view.WindowManager();
         public Object getSystemService(String service){return manager;}
         public android.view.Window getWindow(){return new android.view.Window();}
-        public android.view.WindowManager getWindowManager(){return new android.view.WindowManager();}
+        public android.view.WindowManager getWindowManager(){return windows;}
         public android.content.res.Resources getResources(){return new android.content.res.Resources();}
     }''',
 }
@@ -109,9 +112,12 @@ class MotionAimPipelineTest {
     private static native long state();
     private static long time=1_000_000_000L;
     private static void check(boolean ok,String message){if(!ok)throw new AssertionError(message);}
+    private static void close(float actual,float expected,String message){
+        check(Math.abs(actual-expected)<.000001f,message+": "+actual+" != "+expected);
+    }
     private static float magnitude(float[] look){return Math.abs(look[0])+Math.abs(look[1]);}
     private static MotionAim start(HaloActivity activity){
-        MotionAim motion=new MotionAim(activity);motion.configure(true,100);motion.resume();mode(2);
+        MotionAim motion=new MotionAim(activity);motion.configure(true,100,false);motion.resume();mode(2);
         return motion;
     }
     private static void sample(MotionAim motion,Sensor sensor,int accuracy,long step,float... values){
@@ -123,6 +129,70 @@ class MotionAimPipelineTest {
         for(int i=0;i<30;i++){sample(motion,sensor,accuracy,step,values);total+=magnitude(look());}
         return total;
     }
+    private static float[] measure(HaloActivity activity,MotionAim motion,int rotation,int sensitivity,
+            boolean inverted){
+        motion.focus(false);motion.configure(true,sensitivity,inverted);
+        activity.windows.display.rotation=rotation;motion.focus(true);mode(2);
+        float[] total=new float[2];Sensor sensor=activity.manager.active;
+        for(int i=0;i<30;i++){
+            sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);
+            float[] delta=look();total[0]+=delta[0];total[1]+=delta[1];
+            if(i==0)check(magnitude(delta)==0,"configuration establishes a new timestamp");
+        }
+        return total;
+    }
+    private static void inversion(HaloActivity activity,MotionAim motion){
+        float[][] unit=new float[4][];
+        for(int rotation=0;rotation<4;rotation++){
+            unit[rotation]=measure(activity,motion,rotation,100,false);
+            for(int sensitivity:new int[]{25,100,200}){
+                float[] normal=measure(activity,motion,rotation,sensitivity,false);
+                float[] inverted=measure(activity,motion,rotation,sensitivity,true);
+                check(Math.abs(normal[0])>.02f && Math.abs(normal[1])>.02f,
+                    "both display axes produce meaningful movement");
+                close(inverted[0],normal[0],"pitch inversion preserves yaw, rotation "+rotation);
+                close(inverted[1],-normal[1],"pitch sign reversed, rotation "+rotation);
+                close(normal[0],unit[rotation][0]*sensitivity/100f,"yaw sensitivity preserved");
+                close(normal[1],unit[rotation][1]*sensitivity/100f,"pitch sensitivity preserved");
+            }
+            float[] restored=measure(activity,motion,rotation,100,false);
+            close(restored[0],unit[rotation][0],"false restores yaw");
+            close(restored[1],unit[rotation][1],"false restores pitch");
+        }
+        // Refresh must discard a queued old-direction delta and restart integration.
+        measure(activity,motion,0,100,false);Sensor sensor=activity.manager.active;
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);
+        motion.configure(true,100,true);
+        check(magnitude(look())==0,"invert change clears queued native movement");
+        check(activity.manager.active==sensor,"invert change retains registered sensor");
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);
+        check(magnitude(look())==0,"invert change resets integration timestamp");
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);
+        float[] inverted=look();check(inverted[0]>0 && inverted[1]<0,"new samples use inverted pitch");
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);
+        motion.configure(true,100,true);
+        check(magnitude(look())>0,"unchanged settings do not discard current movement");
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);
+        motion.configure(true,200,true);
+        check(magnitude(look())==0,"sensitivity change clears old queued movement");
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);look();
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);
+        motion.configure(false,200,true);
+        check(magnitude(look())==0 && activity.manager.active==null,"disable clears movement and unregisters");
+        motion.configure(false,200,false);
+        check(run(motion,sensor,0,16_000_000L,.4f,.6f,.1f)==0,"inversion changes cannot enable disabled gyro");
+        motion.configure(true,100,true);sensor=activity.manager.active;
+        check(run(motion,sensor,0,16_000_000L,.4f,.6f,.1f)>.15f,"inverted gyro can be enabled again");
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);
+        motion.overlay(true);check(magnitude(look())==0,"overlay clears inverted pending movement");
+        check(run(motion,sensor,0,16_000_000L,.4f,.6f,.1f)==0,"overlay blocks inverted samples");
+        motion.overlay(false);sensor=activity.manager.active;
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);look();
+        sample(motion,sensor,0,16_000_000L,.4f,.6f,.1f);
+        motion.suspend();check(magnitude(look())==0,"background clears inverted pending movement");
+        check(run(motion,sensor,0,16_000_000L,.4f,.6f,.1f)==0,"background blocks inverted samples");
+        motion.resume();
+    }
     public static void main(String[] args){
         System.load(args[0]);
         HaloActivity activity=new HaloActivity();MotionAim motion=start(activity);
@@ -131,6 +201,7 @@ class MotionAimPipelineTest {
         check(run(motion,sensor,0,10_000_000L,.4f,.6f,0)> .15f,
             "accuracy zero must still produce camera movement through JNI");
         check((state()&0xffffffffL)==0x27L && (state()>>>32)>0,"native flags and consumed counter");
+        inversion(activity,motion);motion.configure(true,100,false);sensor=activity.manager.active;
         motion.overlay(true);check(activity.manager.active==null,"overlay unregisters sensor");
         check(run(motion,sensor,3,10_000_000L,.4f,.6f,0)==0,"overlay blocks queued samples");
         motion.overlay(false);sensor=activity.manager.active;
@@ -145,7 +216,7 @@ class MotionAimPipelineTest {
         motion.suspend();check(activity.manager.active==null,"background unregisters sensor");
         motion.resume();sensor=activity.manager.active;
         check(run(motion,sensor,0,10_000_000L,.4f,.6f,0)>.15f,"resume accepts accuracy zero");
-        motion.configure(false,100);
+        motion.configure(false,100,false);
         check(run(motion,sensor,3,10_000_000L,.4f,.6f,0)==0,"disabled toggle blocks samples");
 
         HaloActivity fallback=new HaloActivity();fallback.manager.calibratedAccepted=false;
@@ -160,7 +231,7 @@ class MotionAimPipelineTest {
         HaloActivity failure=new HaloActivity();failure.manager.calibratedAccepted=false;
         failure.manager.uncalibratedAccepted=false;start(failure);
         check(android.widget.Toast.shown==1 && (state()&1)==0,"registration failure reported, native gyro disabled");
-        System.out.println("Production gyro pipeline: accuracy zero, 10 Hz, JNI consumption, lifecycle, gameplay, invalid data, bias and fallback passed.");
+        System.out.println("Production gyro pipeline: pitch inversion across four rotations and 25/100/200% sensitivity, unchanged yaw, reset/pending safety, accuracy zero, 10 Hz, JNI consumption, lifecycle, gameplay, invalid data, bias and fallback passed.");
     }
 }
 '''

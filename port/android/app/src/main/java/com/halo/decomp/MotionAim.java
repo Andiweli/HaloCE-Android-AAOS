@@ -25,7 +25,7 @@ final class MotionAim implements SensorEventListener {
     private Sensor gyro;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final MotionAimMath math=new MotionAimMath();
-    private boolean enabled,resumed,focused,overlay,registered,lastAllowed,failed;
+    private boolean enabled,invertPitch,resumed,focused,overlay,registered,lastAllowed,failed;
     private int sensitivity=100,accuracy=-1,reports;
     private long events,sent,lastStateLog;
     private float peakRate;
@@ -39,11 +39,11 @@ final class MotionAim implements SensorEventListener {
         focused=activity.getWindow().getDecorView().hasWindowFocus();
     }
     boolean available(){return gyro!=null;}
-    void configure(boolean enabled,int sensitivity) {
+    void configure(boolean enabled,int sensitivity,boolean invertPitch) {
         enabled=enabled && available();
         sensitivity=Math.max(25,Math.min(200,sensitivity));
-        if(this.enabled==enabled && this.sensitivity==sensitivity)return;
-        this.enabled=enabled;this.sensitivity=sensitivity;
+        if(this.enabled==enabled && this.sensitivity==sensitivity && this.invertPitch==invertPitch)return;
+        this.enabled=enabled;this.sensitivity=sensitivity;this.invertPitch=invertPitch;
         math.reset();refresh();
     }
     void resume(){resumed=true;refresh();}
@@ -135,7 +135,8 @@ final class MotionAim implements SensorEventListener {
         // all finite rate samples; math still rejects invalid values/time gaps.
         int rotation=activity.getWindowManager().getDefaultDisplay().getRotation();
         if(math.sample(event.timestamp,rotation,x,y,z,sensitivity/100f)) {
-            nativeDelta(math.yaw,math.pitch);sent++;
+            // Invert only the vertical gyro delta; other look inputs are unchanged.
+            nativeDelta(math.yaw,invertPitch?-math.pitch:math.pitch);sent++;
         }
     }
     @Override public void onAccuracyChanged(Sensor sensor,int accuracy) {

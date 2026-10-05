@@ -51,8 +51,8 @@ public class HaloActivity extends SDLActivity {
         if (!visible) restoreFullscreen();
     }
     boolean motionAvailable() { return motionAim != null && motionAim.available(); }
-    void motionSettings(boolean enabled, int sensitivity) {
-        if (motionAim != null) motionAim.configure(enabled, sensitivity);
+    void motionSettings(boolean enabled, int sensitivity, boolean invertPitch) {
+        if (motionAim != null) motionAim.configure(enabled, sensitivity, invertPitch);
     }
     private void cancelSelect() {
         settingsHandler.removeCallbacks(openSettings);selectHeld=false;selectOpened=false;selectTouch=false;
