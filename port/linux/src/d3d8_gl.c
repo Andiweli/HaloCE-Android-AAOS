@@ -342,7 +342,9 @@ struct gl_device
 	unsigned long index_offset;
 	GLuint samplers[D3DTSS_MAXSTAGES];
 
-	GLuint queries[VISIBILITY_TEST_SLOTS];
+	/* Result ID 0 is valid. Keep the unnamed, active query outside the
+	result slots so tests 0 and 1 cannot overwrite each other's result. */
+	GLuint queries[VISIBILITY_TEST_SLOTS + 1];
 	BOOL query_pending[VISIBILITY_TEST_SLOTS];
 	/* the pixels each of the game's pixels covered in the test's target
 	(render_target_get), which its count is divided by */
@@ -1030,7 +1032,7 @@ static void gl_initialize(void)
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER_SIZE, NULL, GL_STREAM_DRAW);
 #endif
 	glGenSamplers(D3DTSS_MAXSTAGES, device.samplers);
-	glGenQueries(VISIBILITY_TEST_SLOTS, device.queries);
+	glGenQueries(VISIBILITY_TEST_SLOTS + 1, device.queries);
 #ifndef HALO_ANDROID
 	glGenBuffers(1, &device.visibility_results_buffer);
 	glBindBuffer(GL_QUERY_BUFFER, device.visibility_results_buffer);
@@ -1437,6 +1439,10 @@ void WINAPI D3DDevice_BeginVisibilityTest(void)
 		return;
 	/* the query object is chosen when the test ends; use a scratch one */
 	device.visibility_test_active = TRUE;
+	/* Keep a hardware visibility query even when the fragment shader also
+	counts samples. ES 3.1 support alone does not verify shader-counter
+	readback on the current driver. The Vita uses hardware visibility tests. */
+	glBeginQuery(VISIBILITY_QUERY, device.queries[VISIBILITY_TEST_SLOTS]);
 #ifdef HALO_ANDROID
 	if (xgpu_capabilities.atomic_counters)
 	{
@@ -1451,7 +1457,6 @@ void WINAPI D3DDevice_BeginVisibilityTest(void)
 		return;
 	}
 #endif
-	glBeginQuery(VISIBILITY_QUERY, device.queries[0]);
 }
 
 HRESULT WINAPI D3DDevice_EndVisibilityTest(DWORD index)
@@ -1462,25 +1467,21 @@ HRESULT WINAPI D3DDevice_EndVisibilityTest(DWORD index)
 		return S_OK;
 	device.visibility_test_active = FALSE;
 	index %= VISIBILITY_TEST_SLOTS;
-	if (!index)
-		index = 1;
+	glEndQuery(VISIBILITY_QUERY);
 #ifdef HALO_ANDROID
 	if (xgpu_capabilities.atomic_counters)
 	{
 		device.counter_of_slot[index] = device.counter_active;
-		device.query_pending[index] = TRUE;
-		return S_OK;
 	}
 #endif
-	glEndQuery(VISIBILITY_QUERY);
 	/* the target's pixels to a game pixel: the result is a count of the
 	game's pixels (visibility_unscaled), which the game divides by its own
 	test's area (lens flares, rasterizer_lights.c), a split-screen window's
 	or the screen's alike */
 	device.query_area[index] = target_scale[0] * target_scale[1];
 	/* swap the scratch query into the requested slot */
-	scratch = device.queries[0];
-	device.queries[0] = device.queries[index];
+	scratch = device.queries[VISIBILITY_TEST_SLOTS];
+	device.queries[VISIBILITY_TEST_SLOTS] = device.queries[index];
 	device.queries[index] = scratch;
 	device.query_pending[index] = TRUE;
 #ifndef HALO_ANDROID
@@ -1512,8 +1513,6 @@ HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULON
 	if (time_stamp)
 		*time_stamp = 0;
 	index %= VISIBILITY_TEST_SLOTS;
-	if (!index)
-		index = 1;
 	if (!device.gl_ready || !device.query_pending[index])
 	{
 		if (result)
@@ -1523,9 +1522,19 @@ HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULON
 #ifdef HALO_ANDROID
 	if (xgpu_capabilities.atomic_counters)
 	{
+		GLuint hardware_visible = 0;
+
 		/* reading the buffer waits for the draws that counted */
 		samples = host_gl_read_buffer_word(device.visibility_counters,
 			(unsigned int)(device.counter_of_slot[index] * sizeof(GLuint)));
+		glGetQueryObjectuiv(device.queries[index], GL_QUERY_RESULT, &hardware_visible);
+		/* A hardware query still detects visible geometry if an atomic
+		counter was not written or could not be mapped. Preserve the exact
+		count for partial occlusion when both paths agree. */
+		if (!hardware_visible)
+			samples = 0;
+		else if (!samples)
+			samples = VISIBILITY_ALL_SAMPLES;
 		if (result)
 			*result = samples;
 		return S_OK;

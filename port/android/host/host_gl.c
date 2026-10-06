@@ -67,6 +67,10 @@ uint32_t host_gl_read_buffer_word(uint32_t buffer, uint32_t offset)
 
 	glGetIntegerv(GL_ATOMIC_COUNTER_BUFFER_BINDING, &previous);
 	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, buffer);
+	/* A synchronized map waits for the GPU, but shader atomic-counter
+	writes also need to become visible to buffer mapping. This helper is
+	used only with the ES 3.1+ fragment-counter path. */
+	glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 	mapping = glMapBufferRange(GL_ATOMIC_COUNTER_BUFFER, offset, sizeof(value), GL_MAP_READ_BIT);
 	if (mapping)
 	{

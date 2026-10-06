@@ -1,6 +1,6 @@
-# Halo: Combat Evolved - Android & AAOS
+# Halo: Combat Evolved — Android & AAOS
 
-![Android](https://img.shields.io/badge/up%20to-Android%2015%20-green)
+![Android](https://img.shields.io/badge/up%20to-Android%2015%20%28build%20target%29-green)
 ![Architecture](https://img.shields.io/badge/architecture-ARM64%20%2864--bit%29-orange)
 ![AI](https://img.shields.io/badge/AI-assisted%20coding-6e7781)
 ![Controls](https://img.shields.io/badge/Controls-Gamepad%20%2F%20RetroTouch%20%2F%20Keyboard-blueviolet)
