@@ -195,6 +195,9 @@ symbols in this file:
 #include "cutscene/cinematics.h"
 #include "input/input.h"
 #include "input/input_abstraction.h"
+#ifdef HALO_ANDROID
+#include "halo_android_gamepad.h"
+#endif
 #include "interface/player_ui.h"
 #include "items/weapons.h"
 #include "main/main.h"
@@ -275,6 +278,9 @@ enum
 	_player_control_debug_rotate_units_bit,
 	_player_control_debug_rotate_all_units_bit,
 	_player_control_debug_ninja_rope_bit,
+#ifdef HALO_ANDROID
+	_player_control_rotate_weapons_backwards_bit,
+#endif
 };
 
 /* ---------- macros */
@@ -685,10 +691,15 @@ static void handle_one_player_input(
 				player->desired_weapon_index) == NONE ||
 			player->desired_weapon_index == NONE)
 		{
+			short weapon_delta = TEST_FLAG(input.player_control_flags, _player_control_rotate_weapons_bit);
+#ifdef HALO_ANDROID
+			if (weapon_delta && TEST_FLAG(input.player_control_flags, _player_control_rotate_weapons_backwards_bit))
+				weapon_delta = -1;
+#endif
 			player->desired_weapon_index = unit_inventory_next_weapon(
 				player->unit_index,
 				player->desired_weapon_index,
-				TEST_FLAG(input.player_control_flags, _player_control_rotate_weapons_bit));
+				weapon_delta);
 			player->zoom_level = NONE;
 		}
 
@@ -1018,6 +1029,9 @@ void player_control_new_unit(
 {
 	struct player_control *control = player_control_get(local_player_index);
 
+#ifdef HALO_ANDROID
+	input_abstraction_android_reset_gamepad(local_player_index);
+#endif
 	csmemset(control, 0, sizeof(*control));
 	control->unit_index = unit_index;
 	control->desired_weapon_index = NONE;
@@ -1109,6 +1123,16 @@ static void get_local_player_input_blob(
 				}
 			}
 
+#ifdef HALO_ANDROID
+			{
+				/* Apply the physical stick's sensitivity to foot and vehicle look.
+				   Direct mouse/touch and gyro deltas are added separately below. */
+				real yaw_sensitivity, pitch_sensitivity;
+				input_abstraction_android_get_look_sensitivity(gamepad_index, &yaw_sensitivity, &pitch_sensitivity);
+				look_yaw_rate *= yaw_sensitivity;
+				look_pitch_rate *= pitch_sensitivity;
+			}
+#endif
 			input->throttle.i = input_state->forward_movement;
 			input->throttle.j = input_state->strafe;
 			{
@@ -1353,10 +1377,15 @@ static void get_local_player_input_blob(
 				{
 					struct biped_datum *biped = biped_try_and_get(player->unit_index);
 
+					/* Android stick clicks must keep crouch at full stick travel. */
+#ifdef HALO_ANDROID
+					if (biped)
+#else
 					if (biped &&
 						(controls_enable_crouch ||
 						TEST_FLAG(biped->biped.flags, _biped_airborne_bit) ||
 						magnitude_squared2d(&input->throttle) < 0.98f * 0.98f))
+#endif
 					{
 						SET_FLAG(
 							input->unit_control_flags,
@@ -1408,6 +1437,17 @@ static void get_local_player_input_blob(
 					input->player_control_flags,
 					_player_control_rotate_weapons_bit,
 					effective_buttons[_button_switch_weapon] == TRUE);
+#ifdef HALO_ANDROID
+				{
+					short weapon_delta = input_abstraction_android_take_weapon_delta(gamepad_index);
+
+					if (weapon_delta && !TEST_FLAG(control->inhibited_button_bit_vector, _button_switch_weapon))
+					{
+						SET_FLAG(input->player_control_flags, _player_control_rotate_weapons_bit, TRUE);
+						SET_FLAG(input->player_control_flags, _player_control_rotate_weapons_backwards_bit, weapon_delta < 0);
+					}
+				}
+#endif
 				SET_FLAG(
 					input->player_control_flags,
 					_player_control_rotate_grenades_bit,

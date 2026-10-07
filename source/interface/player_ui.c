@@ -226,6 +226,11 @@ static void clear_profile_edit_data(
 static long player1_last_used_profile_index = NONE;
 struct player_ui_globals player_ui_globals = { 0 };
 static char player1_profile_path[0x100] = { 0 };
+#ifdef HALO_ANDROID
+/* Main-menu configuration exists before a profile is activated for gameplay.
+   Keep the selected profile's saved layout outside the original ABI structs. */
+static short android_menu_joystick_preset = NONE;
+#endif
 
 /* ---------- public code */
 
@@ -270,6 +275,9 @@ void player_ui_initialize(
 	}
 	player_ui_globals.edit_profile_index = NONE;
 	player_ui_globals.initialized = TRUE;
+#ifdef HALO_ANDROID
+	android_menu_joystick_preset = NONE;
+#endif
 	return;
 }
 
@@ -358,6 +366,29 @@ struct player_profile *player_ui_get_edit_player_profile(
 		result = NULL;
 	return result;
 }
+
+#ifdef HALO_ANDROID
+short player_ui_android_get_overlay_joystick_preset(
+	void)
+{
+	struct player_profile *profile;
+	short preset = NONE;
+	if (!player_ui_globals.initialized) return NONE;
+	profile = player_ui_get_edit_player_profile();
+	/* The main-menu editor can configure a profile before it is activated.
+	   In a running game, only the primary player's draft describes its controls. */
+	if (profile && (main_menu_is_active() ||
+		player_ui_globals.edit_profile_index == player_ui_globals.local_players[0].active_profile_index))
+	{
+		preset = profile->controller_settings.joystick_preset;
+	}
+	else if (main_menu_is_active())
+	{
+		preset = android_menu_joystick_preset;
+	}
+	return preset > _joystick_preset_legacy_south_paw ? _joystick_preset_legacy_south_paw : preset;
+}
+#endif
 
 struct game_variant *player_ui_get_edit_playlist_profile(
 	void)
@@ -699,6 +730,10 @@ void player_ui_begin_editing_profile(
 					&player_ui_globals.edit_profile.current.player,
 					&player_ui_globals.edit_profile.original.player,
 					sizeof(struct player_profile));
+#ifdef HALO_ANDROID
+				if (main_menu_is_active())
+					android_menu_joystick_preset = player_ui_globals.edit_profile.original.player.controller_settings.joystick_preset;
+#endif
 			}
 			else
 			{
@@ -757,6 +792,26 @@ boolean player_ui_save_profile(
 			player_profile_save(
 				player_ui_globals.edit_profile_index,
 				&player_ui_globals.edit_profile.current.player);
+#ifdef HALO_ANDROID
+			if (main_menu_is_active())
+				android_menu_joystick_preset = player_ui_globals.edit_profile.current.player.controller_settings.joystick_preset;
+			/* Saving the edit copy does not reload active profiles. Apply it to
+			   each matching local player before clearing the editing state. */
+			{
+				short local_player_index;
+				for (local_player_index = 0; local_player_index < MAXIMUM_NUMBER_OF_LOCAL_PLAYERS; local_player_index++)
+				{
+					if (player_ui_globals.local_players[local_player_index].active_profile_index ==
+						player_ui_globals.edit_profile_index)
+					{
+						player_ui_set_active_player_profile(
+							local_player_index,
+							player_ui_globals.edit_profile_index,
+							&player_ui_globals.edit_profile.current.player);
+					}
+				}
+			}
+#endif
 			result = TRUE;
 			break;
 
@@ -1131,6 +1186,10 @@ void player_ui_set_active_player_profile(
 		&player_ui_globals.local_players[local_player_index].profile,
 		profile,
 		sizeof(*profile));
+#ifdef HALO_ANDROID
+	if (local_player_index == 0)
+		android_menu_joystick_preset = profile->controller_settings.joystick_preset;
+#endif
 	set_local_player_controls_from_player_profile(local_player_index);
 	return;
 }

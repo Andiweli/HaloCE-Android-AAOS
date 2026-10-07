@@ -13,6 +13,26 @@ int host_bink_active(void) { return movie_active; }
 #define RESET() Java_com_halo_decomp_HaloPort_nativeReset(NULL,NULL)
 int main(void) {
     unsigned int b; float x,y;
+    assert(Java_com_halo_decomp_SettingsOverlay_nativeLookSticks(NULL,NULL)==HALO_ANDROID_RIGHT_STICK_LOOK);
+    host_settings_stick_look_mask(HALO_ANDROID_LEFT_STICK_LOOK);
+    assert(Java_com_halo_decomp_SettingsOverlay_nativeLookSticks(NULL,NULL)==HALO_ANDROID_LEFT_STICK_LOOK);
+    Java_com_halo_decomp_SettingsOverlay_nativeOpen(NULL,NULL,JNI_TRUE);
+    host_settings_stick_look_mask(HALO_ANDROID_LEFT_STICK_LOOK|HALO_ANDROID_RIGHT_STICK_LOOK);
+    assert(Java_com_halo_decomp_SettingsOverlay_nativeLookSticks(NULL,NULL)==3);
+    Java_com_halo_decomp_SettingsOverlay_nativeOpen(NULL,NULL,JNI_FALSE);
+    RESET();assert(Java_com_halo_decomp_SettingsOverlay_nativeLookSticks(NULL,NULL)==3);
+    host_settings_stick_look_mask(255);assert(Java_com_halo_decomp_SettingsOverlay_nativeLookSticks(NULL,NULL)==3);
+    host_settings_stick_look_mask(0);assert(Java_com_halo_decomp_SettingsOverlay_nativeLookSticks(NULL,NULL)==0);
+    host_settings_stick_look_mask(HALO_ANDROID_RIGHT_STICK_LOOK);
+    host_settings_sticks(&x,&y);assert(x==1.f&&y==1.f);
+    Java_com_halo_decomp_SettingsOverlay_nativeSticks(NULL,NULL,50,150);
+    host_settings_sticks(&x,&y);assert(x==.5f&&y==1.5f);
+    Java_com_halo_decomp_SettingsOverlay_nativeSticks(NULL,NULL,125,75);
+    host_settings_sticks(&x,&y);assert(x==1.25f&&y==.75f);
+    Java_com_halo_decomp_SettingsOverlay_nativeSticks(NULL,NULL,-10,200);
+    host_settings_sticks(&x,&y);assert(x==.5f&&y==1.5f);
+    RESET();host_settings_sticks(&x,&y);assert(x==.5f&&y==1.5f);
+    Java_com_halo_decomp_SettingsOverlay_nativeSticks(NULL,NULL,100,100);
     snprintf(test_root,sizeof(test_root),"/tmp/halo-audio-test-%ld",(long)getpid());
     assert(mkdir(test_root,0700)==0);
     host_touch_mode(2);
@@ -94,5 +114,7 @@ int main(void) {
     assert(!Java_com_halo_decomp_MotionAim_nativeAiming(NULL,NULL));
     puts("Android bridge: tap/hold/release, mode/lifecycle reset, move/look and audio checks passed.");
     puts("Gyro bridge: general gameplay, additive look, held buttons, stale samples, movies, overlay, reset and invalid data passed.");
+    puts("Stick bridge: independent defaults, 50-150% range, clamping and input-reset persistence passed.");
+    puts("Stick roles: right/left/both/none, overlay updates, reset persistence and invalid mask bits passed.");
     return 0;
 }

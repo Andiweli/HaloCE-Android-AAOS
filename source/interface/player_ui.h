@@ -43,6 +43,10 @@ long player_ui_get_active_player_profile_index(
 	short local_player_index);
 struct player_profile *player_ui_get_edit_player_profile(
 	void);
+#ifdef HALO_ANDROID
+short player_ui_android_get_overlay_joystick_preset(
+	void);
+#endif
 struct game_variant *player_ui_get_edit_playlist_profile(
 	void);
 boolean player_ui_edit_profile_is_dirty(

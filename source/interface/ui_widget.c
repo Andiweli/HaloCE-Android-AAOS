@@ -1581,6 +1581,36 @@ static int android_main_menu_root(struct ui_widget_definition *definition)
     }
     return 0;
 }
+
+/* A spinner changes before its screen's save/back callback copies values to
+   the edit profile. Publish that choice immediately without applying gameplay
+   controls or depending on localized widget names. */
+static void android_update_joystick_spinner(struct widget_instance *widget)
+{
+    struct widget_instance *list;
+    extern int android_ui_profile_handler_kind(short function);
+    if (widget->type != _ui_widget_type_spinner_list) return;
+    for (list=widget->parent;list;list=list->parent) {
+        struct ui_widget_definition *definition;
+        long i;
+        if (list->type != _ui_widget_type_column_list) continue;
+        definition=ui_widget_definition_get(list->definition_tag_index);
+        for (i=0;i<definition->event_handlers.count;i++) {
+            struct ui_widget_event_handler_reference *event=
+                (struct ui_widget_event_handler_reference *)TAG_BLOCK_ADDRESS(definition->event_handlers)+i;
+            if (TEST_FLAG(event->flags,_event_handler_run_function_bit) &&
+                android_ui_profile_handler_kind(event->function)==4) {
+                struct widget_instance *spinner=list->child?list->child->child:NULL;
+                struct player_profile *profile=player_ui_get_edit_player_profile();
+                while (spinner && spinner->type != _ui_widget_type_spinner_list) spinner=spinner->next;
+                if (spinner==widget && profile && widget->parameters.list.selected_index>=0 &&
+                    widget->parameters.list.selected_index<NUMBER_OF_JOYSTICK_PRESETS)
+                    profile->controller_settings.joystick_preset=(byte)widget->parameters.list.selected_index;
+                return;
+            }
+        }
+    }
+}
 #endif
 
 /* ---------- public code */
@@ -2670,7 +2700,12 @@ boolean widget_event_function_list_widget_goto_next_item(
 		}
 	}
 	if (result)
+	{
 		widget->parameters.list.last_list_tab_direction = 15;
+#ifdef HALO_ANDROID
+		android_update_joystick_spinner(widget);
+#endif
+	}
 
 	return result;
 }
@@ -2787,6 +2822,9 @@ boolean widget_event_function_list_widget_goto_previous_item(
 		}
 	}
 	widget->parameters.list.last_list_tab_direction = -15;
+#ifdef HALO_ANDROID
+	android_update_joystick_spinner(widget);
+#endif
 
 	return TRUE;
 }

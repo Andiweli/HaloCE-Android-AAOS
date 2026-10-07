@@ -68,6 +68,12 @@ symbols in this file:
 #include "scenario/scenario.h"
 #include "units/vehicle_definitions.h"
 #include "units/vehicles.h"
+#ifdef HALO_ANDROID
+#include "halo_android_gamepad.h"
+#include "halo_android_controls.h"
+#include "cutscene/cinematics.h"
+#include "game/game.h"
+#endif
 
 /* ---------- constants */
 
@@ -171,6 +177,63 @@ static boolean local_player_is_piloting_aircraft(
 /* ---------- globals */
 
 struct input_abstraction_runtime_globals input_abstraction_globals = {0};
+#ifdef HALO_ANDROID
+static struct halo_android_gamepad_state android_gamepads[MAXIMUM_GAMEPADS];
+static real_point2d android_look_sensitivity[MAXIMUM_GAMEPADS];
+
+static unsigned int android_stick_look_mask(short preset)
+{
+	switch (preset)
+	{
+		case _joystick_controls_default: return HALO_ANDROID_RIGHT_STICK_LOOK;
+		case _joystick_controls_southpaw: return HALO_ANDROID_LEFT_STICK_LOOK;
+		case _joystick_controls_legacy:
+		case _joystick_controls_legacy_southpaw:
+			return HALO_ANDROID_LEFT_STICK_LOOK | HALO_ANDROID_RIGHT_STICK_LOOK;
+		default: return 0;
+	}
+}
+
+static void android_publish_stick_look(short controller_index)
+{
+	short primary_controller = player_ui_get_single_player_local_player_controller(0);
+	if (primary_controller == NONE) primary_controller = 0;
+	if (controller_index == primary_controller)
+	{
+		short preset = player_ui_android_get_overlay_joystick_preset();
+		if (preset == NONE)
+			preset = input_abstraction_globals.player_control_preferences[controller_index].joystick_controls;
+		host_settings_stick_look_mask(android_stick_look_mask(preset));
+	}
+}
+
+void input_abstraction_android_reset_gamepad(short controller_index)
+{
+	if (controller_index >= 0 && controller_index < MAXIMUM_GAMEPADS)
+	{
+		halo_android_gamepad_reset(&android_gamepads[controller_index]);
+		android_look_sensitivity[controller_index].x = 1.f;
+		android_look_sensitivity[controller_index].y = 1.f;
+	}
+}
+
+short input_abstraction_android_take_weapon_delta(short controller_index)
+{
+	if (controller_index >= 0 && controller_index < MAXIMUM_GAMEPADS)
+		return halo_android_gamepad_take_weapon_delta(&android_gamepads[controller_index]);
+	return 0;
+}
+
+void input_abstraction_android_get_look_sensitivity(short controller_index, float *yaw, float *pitch)
+{
+	*yaw = *pitch = 1.f;
+	if (controller_index >= 0 && controller_index < MAXIMUM_GAMEPADS)
+	{
+		*yaw = android_look_sensitivity[controller_index].x;
+		*pitch = android_look_sensitivity[controller_index].y;
+	}
+}
+#endif
 static real const gamepad_axis_normalization_scale = 1.f / SHORT_MAX;
 static real const stick_direction_angles[] =
 {
@@ -187,17 +250,29 @@ void input_abstraction_initialize(
 {
 	long controller_index;
 
+#ifdef HALO_ANDROID
+	csmemset(android_gamepads, 0, sizeof(android_gamepads));
+#endif
 	csmemset(
 		&input_abstraction_globals,
 		0,
 		offsetof(struct input_abstraction_runtime_globals, time_of_first_device_insertion));
 	for (controller_index = 0; controller_index < MAXIMUM_GAMEPADS; controller_index++)
 	{
+#ifdef HALO_ANDROID
+		android_look_sensitivity[controller_index].x = 1.f;
+		android_look_sensitivity[controller_index].y = 1.f;
+#endif
 		set_default_game_input_preferences(
 			&input_abstraction_globals.player_control_preferences[controller_index]);
 		input_abstraction_globals.controller_available[controller_index] =
 			input_has_gamepad((short)controller_index);
 	}
+#ifdef HALO_ANDROID
+	/* Player UI initializes after input; publish the fresh default directly. */
+	host_settings_stick_look_mask(android_stick_look_mask(
+		input_abstraction_globals.player_control_preferences[0].joystick_controls));
+#endif
 	input_abstraction_reset_controller_detection_timer();
 	input_abstraction_globals.initialized = TRUE;
 
@@ -267,6 +342,9 @@ void input_abstraction_update_local_player_preferences(
 		&input_abstraction_globals.player_control_preferences[controller_index],
 		preferences,
 		sizeof(*preferences));
+#ifdef HALO_ANDROID
+	android_publish_stick_look(controller_index);
+#endif
 
 	return;
 }
@@ -320,6 +398,33 @@ void input_abstraction_update(
 	for (controller_index = 0; controller_index < MAXIMUM_GAMEPADS; controller_index++)
 	{
 		struct gamepad_state const *gamepad = input_get_gamepad_state((short)controller_index);
+		boolean dpad_movement = TRUE;
+#ifdef HALO_ANDROID
+		boolean gameplay_active = FALSE;
+		unsigned int dpad = 0;
+		long player_index = NONE;
+		android_look_sensitivity[controller_index].x = 1.f;
+		android_look_sensitivity[controller_index].y = 1.f;
+		android_publish_stick_look((short)controller_index);
+
+		/* Menus still read the original gamepad directions. Only gameplay
+		   removes their old stick-movement/look shortcuts. */
+		dpad_movement = main_menu_is_active() || !game_in_progress() || ui_widgets_active();
+		if (gamepad)
+		{
+			if (gamepad->buttons[_gamepad_binary_button_dpad_up]) dpad |= HALO_ANDROID_DPAD_UP;
+			if (gamepad->buttons[_gamepad_binary_button_dpad_down]) dpad |= HALO_ANDROID_DPAD_DOWN;
+			if (gamepad->buttons[_gamepad_binary_button_dpad_left]) dpad |= HALO_ANDROID_DPAD_LEFT;
+			if (gamepad->buttons[_gamepad_binary_button_dpad_right]) dpad |= HALO_ANDROID_DPAD_RIGHT;
+			if (!dpad_movement && !game_time_get_paused() &&
+				!cinematic_in_progress() && !host_settings_active())
+			{
+				player_index = local_player_get_player_index((short)controller_index);
+				gameplay_active = player_index != NONE && player_get(player_index)->unit_index != NONE;
+			}
+		}
+		halo_android_gamepad_update(&android_gamepads[controller_index], dpad, gameplay_active);
+#endif
 
 		if (gamepad)
 		{
@@ -354,6 +459,18 @@ void input_abstraction_update(
 				state->buttons[control_index] =
 					gamepad->buttons[input_abstraction_globals.player_control_preferences[controller_index].game_control_to_xbox_buttons[control_index]];
 			}
+#ifdef HALO_ANDROID
+			if (gameplay_active)
+			{
+				/* L3 is momentary; DOWN/UP explicitly set the separate latch. */
+				state->buttons[_game_control_crouch] = MAX(
+					state->buttons[_game_control_crouch],
+					gamepad->buttons[_gamepad_binary_button_left_thumb]);
+				if (android_gamepads[controller_index].crouch_latched &&
+					!state->buttons[_game_control_crouch])
+					state->buttons[_game_control_crouch] = TRUE;
+			}
+#endif
 
 			if (input_abstraction_globals.player_control_preferences[controller_index].joystick_controls == _joystick_controls_legacy ||
 				input_abstraction_globals.player_control_preferences[controller_index].joystick_controls == _joystick_controls_legacy_southpaw)
@@ -438,11 +555,11 @@ void input_abstraction_update(
 			switch (input_abstraction_globals.player_control_preferences[controller_index].joystick_controls)
 			{
 				case _joystick_controls_default:
-					if (gamepad->buttons[_gamepad_binary_button_dpad_left])
+					if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_left])
 					{
 						state->strafe = 1.f;
 					}
-					else if (gamepad->buttons[_gamepad_binary_button_dpad_right])
+					else if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_right])
 					{
 						state->strafe = -1.f;
 					}
@@ -450,11 +567,11 @@ void input_abstraction_update(
 					{
 						state->strafe = -left_stick.x;
 					}
-					if (gamepad->buttons[_gamepad_binary_button_dpad_up])
+					if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_up])
 					{
 						state->forward_movement = 1.f;
 					}
-					else if (gamepad->buttons[_gamepad_binary_button_dpad_down])
+					else if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_down])
 					{
 						state->forward_movement = -1.f;
 					}
@@ -466,11 +583,11 @@ void input_abstraction_update(
 					state->pitch = (invert_look ? -1.f : 1.f) * right_stick.y;
 					break;
 				case _joystick_controls_southpaw:
-					if (gamepad->buttons[_gamepad_binary_button_dpad_left])
+					if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_left])
 					{
 						state->yaw = 1.f;
 					}
-					else if (gamepad->buttons[_gamepad_binary_button_dpad_right])
+					else if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_right])
 					{
 						state->yaw = -1.f;
 					}
@@ -478,11 +595,11 @@ void input_abstraction_update(
 					{
 						state->yaw = -left_stick.x;
 					}
-					if (gamepad->buttons[_gamepad_binary_button_dpad_up])
+					if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_up])
 					{
 						state->pitch = invert_look ? -1.f : 1.f;
 					}
-					else if (gamepad->buttons[_gamepad_binary_button_dpad_down])
+					else if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_down])
 					{
 						state->pitch = invert_look ? 1.f : -1.f;
 					}
@@ -494,11 +611,11 @@ void input_abstraction_update(
 					state->strafe = -right_stick.x;
 					break;
 				case _joystick_controls_legacy:
-					if (gamepad->buttons[_gamepad_binary_button_dpad_left])
+					if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_left])
 					{
 						state->yaw = 1.f;
 					}
-					else if (gamepad->buttons[_gamepad_binary_button_dpad_right])
+					else if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_right])
 					{
 						state->yaw = -1.f;
 					}
@@ -506,11 +623,11 @@ void input_abstraction_update(
 					{
 						state->yaw = -left_stick.x;
 					}
-					if (gamepad->buttons[_gamepad_binary_button_dpad_up])
+					if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_up])
 					{
 						state->forward_movement = 1.f;
 					}
-					else if (gamepad->buttons[_gamepad_binary_button_dpad_down])
+					else if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_down])
 					{
 						state->forward_movement = -1.f;
 					}
@@ -522,11 +639,11 @@ void input_abstraction_update(
 					state->pitch = (invert_look ? -1.f : 1.f) * right_stick.y;
 					break;
 				case _joystick_controls_legacy_southpaw:
-					if (gamepad->buttons[_gamepad_binary_button_dpad_left])
+					if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_left])
 					{
 						state->strafe = 1.f;
 					}
-					else if (gamepad->buttons[_gamepad_binary_button_dpad_right])
+					else if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_right])
 					{
 						state->strafe = -1.f;
 					}
@@ -534,11 +651,11 @@ void input_abstraction_update(
 					{
 						state->strafe = -left_stick.x;
 					}
-					if (gamepad->buttons[_gamepad_binary_button_dpad_up])
+					if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_up])
 					{
 						state->pitch = invert_look ? -1.f : 1.f;
 					}
-					else if (gamepad->buttons[_gamepad_binary_button_dpad_down])
+					else if (dpad_movement && gamepad->buttons[_gamepad_binary_button_dpad_down])
 					{
 						state->pitch = invert_look ? 1.f : -1.f;
 					}
@@ -553,6 +670,22 @@ void input_abstraction_update(
 					error(_error_silent, "unknown joystick preset");
 					break;
 			}
+#ifdef HALO_ANDROID
+			if (gameplay_active)
+			{
+				real left_sensitivity, right_sensitivity;
+				short preset = input_abstraction_globals.player_control_preferences[controller_index].joystick_controls;
+				boolean left_pitch = preset == _joystick_controls_southpaw || preset == _joystick_controls_legacy_southpaw;
+				boolean left_yaw = preset == _joystick_controls_southpaw || preset == _joystick_controls_legacy;
+
+				host_settings_sticks(&left_sensitivity, &right_sensitivity);
+				/* Only the mapped look axes use these settings. Movement, including
+				   any saved value of an inactive slider, keeps its original response.
+				   Scale angular rates later so 150% also works at full deflection. */
+				android_look_sensitivity[controller_index].x = left_yaw ? left_sensitivity : right_sensitivity;
+				android_look_sensitivity[controller_index].y = left_pitch ? left_sensitivity : right_sensitivity;
+			}
+#endif
 			input_abstraction_globals.controller_available[controller_index] = TRUE;
 		}
 		else

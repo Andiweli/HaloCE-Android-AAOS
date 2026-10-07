@@ -72,3 +72,5 @@ host_bink_skip
 # Settings overlay and display correction
 host_settings_active
 host_settings_present
+host_settings_sticks
+host_settings_stick_look_mask

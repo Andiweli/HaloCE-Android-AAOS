@@ -15,22 +15,35 @@ import android.widget.*;
 final class SettingsOverlay {
     static native void nativeOpen(boolean open);
     static native void nativeDisplay(int brightness, int gamma);
+    static native void nativeSticks(int left, int right);
+    static native int nativeLookSticks();
     private static final int TEXT_SP=16, HEADING_SP=14;
-    private static final int GYRO_TOGGLE=5, GYRO_INVERT=6, GYRO_SLIDER=7, OK=8, CANCEL=9;
-    private static final String[] KEYS={"master","effects","music","brightness","gamma","gyro_sensitivity"};
-    private static final int[] MIN={0,0,0,50,50,25}, MAX={100,100,100,150,200,200};
+    private static final int LEFT_LOOK=1, RIGHT_LOOK=2;
+    private static final int GYRO_TOGGLE=5, GYRO_INVERT=6, GYRO_SLIDER=7, LEFT_STICK=8, RIGHT_STICK=9, OK=10, CANCEL=11;
+    private static final String[] KEYS={"master","effects","music","brightness","gamma","gyro_sensitivity","left_stick_sensitivity","right_stick_sensitivity"};
+    private static final int[] MIN={0,0,0,50,50,25,50,50}, MAX={100,100,100,150,200,200,150,150};
+    private static final int[] SLIDER_TARGETS={0,1,2,3,4,GYRO_SLIDER,LEFT_STICK,RIGHT_STICK};
     private final HaloActivity activity;
     private final ViewGroup parent;
     private final SharedPreferences prefs;
-    private final int[] values=new int[6], original=new int[6];
-    private final SeekBar[] sliders=new SeekBar[6];
-    private final View[] targets=new View[10];
+    private final int[] values=new int[KEYS.length], original=new int[KEYS.length];
+    private final SeekBar[] sliders=new SeekBar[KEYS.length];
+    private final View[] targets=new View[CANCEL+1];
+    private final View[] stickRows=new View[2];
     private boolean gyroEnabled, originalGyro, gyroInvertPitch, originalGyroInvert;
     private Switch gyroSwitch, gyroInvertSwitch;
     private FrameLayout root;
     private int selected;
+    private int stickLookMask;
     private long lastMotion;
     private boolean suspended;
+    private final Runnable refreshStickRoles=new Runnable(){
+        public void run(){
+            if(!isOpen())return;
+            refreshStickSliders();
+            root.postDelayed(this,100);
+        }
+    };
 
     SettingsOverlay(HaloActivity activity,ViewGroup parent) {
         this.activity=activity;this.parent=parent;
@@ -46,10 +59,10 @@ final class SettingsOverlay {
     private String[] strings(){
         String language=android.content.res.Resources.getSystem().getConfiguration().getLocales().get(0).getLanguage();
         switch(language){
-            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyrsokop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung","Gyro Rauf/Runter invertieren"};
-            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes","Inverser haut/bas du gyroscope"};
-            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli","Inverti su/giù del giroscopio"};
-            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls","Invert gyro up/down"};
+            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyroskop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung","Gyro Rauf/Runter invertieren","Linker Stick Empfindlichkeit","Rechter Stick Empfindlichkeit"};
+            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes","Inverser haut/bas du gyroscope","Sensibilité du stick gauche","Sensibilité du stick droit"};
+            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli","Inverti su/giù del giroscopio","Sensibilità stick sinistro","Sensibilità stick destro"};
+            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls","Invert gyro up/down","Left stick sensitivity","Right stick sensitivity"};
         }
     }
     private TextView text(String caption,int size) {
@@ -82,8 +95,25 @@ final class SettingsOverlay {
         rows.addView(row,new LinearLayout.LayoutParams(-1,-2));
         return row;
     }
+    private boolean sliderEnabled(int index) {
+        if(index==5)return activity.motionAvailable();
+        if(index==6)return (stickLookMask&LEFT_LOOK)!=0;
+        if(index==7)return (stickLookMask&RIGHT_LOOK)!=0;
+        return true;
+    }
+    private void refreshStickSliders(){
+        int mask=nativeLookSticks();
+        if(mask==stickLookMask)return;
+        stickLookMask=mask;
+        for(int i=6;i<8;i++){
+            boolean enabled=sliderEnabled(i);
+            sliders[i].setEnabled(enabled);
+            stickRows[i-6].setAlpha(enabled?1.f:.65f);
+        }
+        if(!targets[selected].isEnabled())direction(KeyEvent.KEYCODE_DPAD_DOWN);
+    }
     private void slider(LinearLayout rows,int index,String caption) {
-        final int target=index==5?GYRO_SLIDER:index;
+        final int target=SLIDER_TARGETS[index];
         LinearLayout row=row(rows);
         TextView label=text(caption,TEXT_SP);label.setPadding(0,0,dp(8),0);
         // Fixed text size; a long translation grows the row instead of shrinking.
@@ -95,7 +125,9 @@ final class SettingsOverlay {
         SeekBar slider=new SeekBar(activity);sliders[index]=slider;targets[target]=slider;
         slider.setMax(MAX[index]-MIN[index]);slider.setProgress(values[index]-MIN[index]);
         slider.setKeyProgressIncrement(5);
-        if(index==5)slider.setEnabled(activity.motionAvailable());
+        boolean enabled=sliderEnabled(index);
+        slider.setEnabled(enabled);
+        if(index>=6){stickRows[index-6]=row;row.setAlpha(enabled?1.f:.65f);}
         slider.setContentDescription(caption);slider.setFocusableInTouchMode(true);
         slider.setId(View.generateViewId());label.setLabelFor(slider.getId());
         controls.addView(slider,new LinearLayout.LayoutParams(0,-1,1));
@@ -128,6 +160,7 @@ final class SettingsOverlay {
     void show(){
         if(isOpen() || suspended)return;
         activity.releaseGameKeys();
+        stickLookMask=nativeLookSticks();
         System.arraycopy(values,0,original,0,values.length);originalGyro=gyroEnabled;
         originalGyroInvert=gyroInvertPitch;
         nativeOpen(true);activity.settingsVisibility(true);
@@ -165,6 +198,8 @@ final class SettingsOverlay {
         gyroInvertSwitch=gyroToggle(rows,GYRO_INVERT,labels[14],gyroInvertPitch);
         gyroInvertSwitch.setOnCheckedChangeListener((v,checked)->{gyroInvertPitch=checked;apply();});
         slider(rows,5,labels[6]);
+        slider(rows,6,labels[15]);
+        slider(rows,7,labels[16]);
         LinearLayout buttons=new LinearLayout(activity);buttons.setGravity(Gravity.END);panel.addView(buttons);
         for(int i=0;i<2;i++){
             final int index=i+OK;Button button=new Button(activity);
@@ -182,9 +217,11 @@ final class SettingsOverlay {
         }
         parent.addView(root,new ViewGroup.LayoutParams(-1,-1));
         selected=0;targets[0].requestFocus();lastMotion=0;
+        root.post(refreshStickRoles);
     }
     void close(boolean save){
         if(!isOpen())return;
+        root.removeCallbacks(refreshStickRoles);
         if(save){
             SharedPreferences.Editor e=prefs.edit();
             for(int i=0;i<values.length;i++)e.putInt(KEYS[i],values[i]);
@@ -201,6 +238,7 @@ final class SettingsOverlay {
     private void apply(){
         HaloPort.nativeVolumes(values[0],values[1],values[2]);nativeDisplay(values[3],values[4]);
         activity.motionSettings(gyroEnabled,values[5],gyroInvertPitch);
+        nativeSticks(values[6],values[7]);
     }
     private void direction(int key){
         if(key==KeyEvent.KEYCODE_DPAD_UP || key==KeyEvent.KEYCODE_DPAD_DOWN){
@@ -208,8 +246,8 @@ final class SettingsOverlay {
             int next=selected+step;
             while(next>=0 && next<targets.length && !targets[next].isEnabled())next+=step;
             if(next>=0 && next<targets.length)selected=next;
-        } else if(selected<GYRO_TOGGLE || selected==GYRO_SLIDER){
-            int index=selected==GYRO_SLIDER?5:selected;
+        } else if(selected<GYRO_TOGGLE || (selected>=GYRO_SLIDER && selected<=RIGHT_STICK)){
+            int index=selected>=GYRO_SLIDER?selected-GYRO_SLIDER+5:selected;
             int delta=key==KeyEvent.KEYCODE_DPAD_LEFT?-5:5;
             sliders[index].setProgress(sliders[index].getProgress()+delta);
         } else if(selected==GYRO_TOGGLE)gyroSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);

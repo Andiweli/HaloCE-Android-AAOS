@@ -177,6 +177,8 @@ int host_audio_set_level(int category,int value) {
 
 /* UI thread writes, render/input threads read; never enter guest code from JNI. */
 static float settings_brightness=0.0f, settings_gamma=1.0f;
+static float settings_left_stick=1.0f, settings_right_stick=1.0f;
+static unsigned int settings_stick_look_mask=HALO_ANDROID_RIGHT_STICK_LOOK;
 JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeOpen(JNIEnv *e,jclass c,jboolean open) {
     pthread_mutex_lock(&lock); settings_open=open; reset(); pthread_mutex_unlock(&lock);
 }
@@ -185,6 +187,24 @@ JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeDisplay(JNIEnv
     settings_brightness=(fmaxf(50,fminf(150,brightness))-100.f)/100.f;
     settings_gamma=fmaxf(50,fminf(200,gamma))/100.f;
     pthread_mutex_unlock(&lock);
+}
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeSticks(JNIEnv *e,jclass c,jint left,jint right) {
+    pthread_mutex_lock(&lock);
+    settings_left_stick=fmaxf(50,fminf(150,left))/100.f;
+    settings_right_stick=fmaxf(50,fminf(150,right))/100.f;
+    pthread_mutex_unlock(&lock);
+}
+void host_settings_sticks(float *left,float *right) {
+    pthread_mutex_lock(&lock);*left=settings_left_stick;*right=settings_right_stick;pthread_mutex_unlock(&lock);
+}
+/* Publish the applied Halo profile, even in menus/overlays where axes are blocked. */
+void host_settings_stick_look_mask(unsigned int mask) {
+    pthread_mutex_lock(&lock);
+    settings_stick_look_mask=mask&(HALO_ANDROID_LEFT_STICK_LOOK|HALO_ANDROID_RIGHT_STICK_LOOK);
+    pthread_mutex_unlock(&lock);
+}
+JNIEXPORT jint JNICALL Java_com_halo_decomp_SettingsOverlay_nativeLookSticks(JNIEnv *e,jclass c) {
+    pthread_mutex_lock(&lock);unsigned int mask=settings_stick_look_mask;pthread_mutex_unlock(&lock);return (jint)mask;
 }
 int host_settings_active(void) {
     pthread_mutex_lock(&lock); int open=settings_open; pthread_mutex_unlock(&lock); return open;

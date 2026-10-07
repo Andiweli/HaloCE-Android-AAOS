@@ -3346,6 +3346,8 @@ int android_ui_profile_handler_kind(short function)
     if(event_handler_function_list.functions[function] == main_menu_initialize) return 3;
     if(event_handler_function_list.functions[function] == player_profile_color_picker_menu_initialize) return 1;
     if(event_handler_function_list.functions[function] == player_profile_initialize_advanced_controller_settings) return 2;
+    if(event_handler_function_list.functions[function] == player_profile_initialize_controller_settings ||
+       event_handler_function_list.functions[function] == player_profile_change_controller_settings) return 4;
     return 0;
 }
 #endif
