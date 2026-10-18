@@ -123,6 +123,10 @@ int main(int argc, char **argv)
     send_line(2, "halo-linux: NVIDIA CPU skeletal shader 7: 61 original instructions\n");
     send_line(2, "halo-linux: NVIDIA CPU skeletal breakdown v1: input/setup 0.100, execute 0.500, pack 0.050, upload/bind 0.200 ms/active frame; fixed 42/42 vertices\n");
     send_line(2, "halo-linux: NVIDIA CPU skeletal passthrough unavailable; retaining original GPU shaders\n");
+    /* The Shield test's other low-rate families also reach the file. */
+    send_line(2, "halo-linux: gamepad port 1: controller 7\n");
+    send_line(2, "halo-linux: NVIDIA performance test v1: skinning mode 0, visibility async\n");
+    send_line(2, "halo-linux: NVIDIA skinning test A: shader 9 with a uniform block compiled\n");
     /* A lookalike must not match the bounded diagnostic family. */
     send_line(2, "halo-linux: NVIDIA CPU skeletalX timing: not a sample\n");
     send_line(2, "halo-linux: ordinary guest warning\n");
@@ -146,6 +150,8 @@ int main(int argc, char **argv)
     assert(strstr(data, "1.25 ms/frame") && strstr(data, "writev sample 3.75 ms/frame"));
     assert(strstr(data, "shader 7: 61 original instructions"));
     assert(strstr(data, "passthrough unavailable"));
+    assert(strstr(data, "gamepad port 1: controller 7") && strstr(data, "performance test v1") &&
+        strstr(data, "skinning test A"));
     assert(!strstr(data, "ordinary") && !strstr(data, "skeletalX"));
     assert(!strstr(data, "missing platform prefix"));
     unsigned samples = 0;

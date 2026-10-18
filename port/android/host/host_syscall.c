@@ -101,14 +101,20 @@ static void log_bytes(int fd, const char *bytes, size_t size)
 
 		if (c == '\n' || stream->length == sizeof(stream->line) - 1)
 		{
-			static const char cpu_diagnostic_prefix[] = "halo-linux: NVIDIA CPU skeletal ";
-			int priority = fd == 2 ? ANDROID_LOG_WARN : ANDROID_LOG_INFO;
+			static const char *const diagnostic_prefixes[] = {
+				"halo-linux: NVIDIA CPU skeletal ", "halo-linux: NVIDIA performance test ",
+				"halo-linux: NVIDIA skinning test ", "halo-linux: gamepad port ",
+			};
+			int priority = fd == 2 ? ANDROID_LOG_WARN : ANDROID_LOG_INFO, forward = 0;
+			size_t prefix;
 			stream->line[stream->length] = 0;
-			/* platform_log uses guest stderr, not host_logf. Forward only this
-low-rate diagnostic family through the existing bounded file writer.
+			/* platform_log uses guest stderr, not host_logf. Forward only these
+low-rate diagnostic families through the existing bounded file writer.
 host_logf already writes Logcat, so do not emit a second Logcat copy.
 Ordinary guest output keeps its original Logcat-only path. */
-			if (!strncmp(stream->line, cpu_diagnostic_prefix, sizeof(cpu_diagnostic_prefix) - 1))
+			for (prefix = 0; prefix < sizeof(diagnostic_prefixes) / sizeof(diagnostic_prefixes[0]); prefix++)
+				forward |= !strncmp(stream->line, diagnostic_prefixes[prefix], strlen(diagnostic_prefixes[prefix]));
+			if (forward)
 				host_logf(priority, "%s", stream->line);
 			else
 				__android_log_write(priority, "halo", stream->line);

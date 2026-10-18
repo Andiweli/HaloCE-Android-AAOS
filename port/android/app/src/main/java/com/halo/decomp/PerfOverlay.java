@@ -19,6 +19,17 @@ import android.widget.TextView;
 final class PerfOverlay {
     private static native String nativeText();
 
+    /** false when libmain.so predates this overlay: the APK's native payload
+     *  was not rebuilt with these sources (port/android/README.md) */
+    static boolean nativeCurrent() {
+        try {
+            nativeText();
+            return true;
+        } catch (UnsatisfiedLinkError e) {
+            return false;
+        }
+    }
+
     /** the renderer's latest counter text, also for the GFX capture's device.txt */
     static String text() {
         try {

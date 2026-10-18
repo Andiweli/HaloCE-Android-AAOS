@@ -102,8 +102,14 @@ public class HaloActivity extends SDLActivity {
         haloPort = new HaloPort(this, mLayout);
         motionAim = new MotionAim(this);
         // before the settings, which apply the saved counter setting
-        if (BuildConfig.HALO_DIAGNOSTICS_ENABLED)
+        if (BuildConfig.HALO_DIAGNOSTICS_ENABLED) {
             perfOverlay = new PerfOverlay(this, mLayout);
+            // A test APK assembled with an older native payload would run the
+            // old renderer under the new Java code; say so before anyone tests.
+            if (!PerfOverlay.nativeCurrent())
+                android.widget.Toast.makeText(this, "Test build: native libraries are outdated (old libmain.so / halo_guest.elf). Use the APK from the GitHub build.",
+                    android.widget.Toast.LENGTH_LONG).show();
+        }
         settings = new SettingsOverlay(this, mLayout);
         if (BuildConfig.HALO_DIAGNOSTICS_ENABLED)
             graphicsDiagnostics = new GraphicsDiagnostics(this, mLayout);
