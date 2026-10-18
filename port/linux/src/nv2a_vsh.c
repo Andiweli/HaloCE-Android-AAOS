@@ -419,6 +419,9 @@ struct nv2a_cpu_program
 	unsigned long count;
 	BOOL prepared;
 	cpu_fast_executor execute;
+	/* the input registers any operand reads, and the GPU attributes the
+	program writes (nv2a_cpu_program_inputs, nv2a_cpu_program_outputs) */
+	unsigned inputs, outputs;
 	struct cpu_instruction instruction[];
 };
 
@@ -466,7 +469,7 @@ struct nv2a_cpu_program *nv2a_cpu_program_create(const DWORD *instructions, unsi
 {
 	struct nv2a_cpu_program *program;
 	unsigned long index;
-	unsigned input_mask = 0, bone_rows = 0;
+	unsigned input_mask = 0, bone_rows = 0, output_mask = 0;
 	if (!instructions || !count || count > 256)
 		return NULL;
 	program = calloc(1, sizeof(*program) + count * sizeof(program->instruction[0]));
@@ -509,6 +512,22 @@ struct nv2a_cpu_program *nv2a_cpu_program_create(const DWORD *instructions, unsi
 			instruction->execution = 8 | (opcode == _mac_mov || opcode == _mac_arl ? 1 :
 				opcode == _mac_add ? 5 : opcode == _mac_mad ? 7 : 3);
 		}
+		if (instruction->output_is_register && instruction->output_mask &&
+			(instruction->output_from_ilu ? instruction->ilu : instruction->mac))
+		{
+			/* as nv2a_cpu_vertex_execute stores them: oD0 oD1 oB0 oB1 oT0..oT3
+			are attributes 1..8; oFog, oPts the auxiliary pair */
+			switch (instruction->output_address)
+			{
+			case 3: output_mask |= 1U << 1; break;
+			case 4: output_mask |= 1U << 2; break;
+			case 5: output_mask |= NV2A_CPU_OUTPUT_FOG; break;
+			case 6: output_mask |= NV2A_CPU_OUTPUT_POINT_SIZE; break;
+			case 7: case 8: case 9: case 10: case 11: case 12:
+				output_mask |= 1U << (instruction->output_address - 4);
+				break;
+			}
+		}
 		if (instruction->ilu && (instruction->ilu_mask ||
 			(instruction->output_mask && instruction->output_from_ilu) ||
 			(instruction->ilu == _ilu_rcc && instruction->operand[2].mux == _mux_temporary && instruction->operand[2].index == 12)))
@@ -522,6 +541,8 @@ and all three relative matrix rows. Static meshes/menu shaders stay GPU. */
 	if (bone_rows == 7 && (input_mask & 0x61U) == 0x61U)
 	{
 		program->execute = cpu_fast_find(instructions, program->count);
+		program->inputs = input_mask;
+		program->outputs = output_mask | 1U; /* the position, always */
 		return program;
 	}
 unsupported:
@@ -676,6 +697,16 @@ BOOL nv2a_cpu_program_is_specialized(const struct nv2a_cpu_program *program)
 	return program && program->execute != NULL;
 }
 
+unsigned nv2a_cpu_program_inputs(const struct nv2a_cpu_program *program)
+{
+	return program->inputs;
+}
+
+unsigned nv2a_cpu_program_outputs(const struct nv2a_cpu_program *program)
+{
+	return program->outputs;
+}
+
 void nv2a_cpu_vertex_execute(const struct nv2a_cpu_program *program, const float inputs[16][4],
 	const float constants[192][4], const float viewport_scale[4], const float viewport_offset[4],
 	float screen_offset, float point_size, struct nv2a_cpu_vertex *vertex)
@@ -760,7 +791,8 @@ undefined C float-to-int conversion without altering any such read. */
 	vertex->padding[0] = vertex->padding[1] = 0.0f;
 }
 
-void nv2a_cpu_attribute_decode(unsigned long type, const void *source, float value[4])
+static inline __attribute__((always_inline)) void cpu_attribute_decode(unsigned long type,
+	const void *source, float value[4])
 {
 	unsigned component, count = 0;
 	value[0] = value[1] = value[2] = 0.0f; value[3] = 1.0f;
@@ -810,6 +842,23 @@ are not consecutive enum values. Low nibble: 1 normalized short,
 		return;
 	}
 	memcpy(value, source, count * sizeof(float));
+}
+
+void nv2a_cpu_attribute_decode(unsigned long type, const void *source, float value[4])
+{
+	cpu_attribute_decode(type, source, value);
+}
+
+void nv2a_cpu_attribute_decode_column(unsigned long type, const void *source, unsigned long stride,
+	unsigned long count, float (*inputs)[16][4], unsigned reg)
+{
+	const unsigned char *element = source;
+	unsigned long vertex;
+
+	/* one element type for the whole column: the type switch inlines into
+	this loop and always takes the same branch */
+	for (vertex = 0; vertex < count; vertex++, element += stride)
+		cpu_attribute_decode(type, element, inputs[vertex][reg]);
 }
 
 char *nv2a_cpu_vertex_glsl(void)

@@ -92,6 +92,18 @@ void nv2a_cpu_vertex_execute(const struct nv2a_cpu_program *program, const float
 	float screen_offset, float point_size, struct nv2a_cpu_vertex *vertex);
 char *nv2a_cpu_vertex_glsl(void); /* malloc'd source, same language as fragment shader */
 void nv2a_cpu_attribute_decode(unsigned long type, const void *source, float value[4]);
+/* the same for one element of count vertices, into inputs[vertex][reg] */
+void nv2a_cpu_attribute_decode_column(unsigned long type, const void *source, unsigned long stride,
+	unsigned long count, float (*inputs)[16][4], unsigned reg);
+/* bit r: some operand reads input register v<r>; registers outside the mask
+are never read, whatever they hold */
+unsigned nv2a_cpu_program_inputs(const struct nv2a_cpu_program *program);
+/* bit a (1..8): the program writes nv2a_cpu_vertex.value[a]; position is
+always written. Unwritten attributes keep their initial (0, 0, 0, 1); an
+unwritten fog is 1 and an unwritten point size the draw's. */
+#define NV2A_CPU_OUTPUT_FOG (1U << 9)
+#define NV2A_CPU_OUTPUT_POINT_SIZE (1U << 10)
+unsigned nv2a_cpu_program_outputs(const struct nv2a_cpu_program *program);
 #endif
 
 /* ---------- pixel shaders */
