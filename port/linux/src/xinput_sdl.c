@@ -446,6 +446,15 @@ static void sdl_gamepad_state(SDL_Gamepad *gamepad, XINPUT_GAMEPAD *pad)
 		pad->bAnalogButtons[XINPUT_GAMEPAD_LEFT_TRIGGER] = (BYTE)left_trigger;
 	if (right_trigger > pad->bAnalogButtons[XINPUT_GAMEPAD_RIGHT_TRIGGER])
 		pad->bAnalogButtons[XINPUT_GAMEPAD_RIGHT_TRIGGER] = (BYTE)right_trigger;
+#ifdef HALO_ANDROID
+	{
+		/* the L2 and R2 keys of handhelds, which SDL leaves unmapped (host_sdl.c) */
+		int held = host_sdl_gamepad_digital_triggers((unsigned int)(uintptr_t)gamepad);
+
+		merge_button(pad, XINPUT_GAMEPAD_LEFT_TRIGGER, (held & 1) != 0);
+		merge_button(pad, XINPUT_GAMEPAD_RIGHT_TRIGGER, (held & 2) != 0);
+	}
+#endif
 
 	/* a stick only overrides the keyboard when it is pushed further */
 	value = stick(SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX), FALSE);

@@ -145,6 +145,11 @@ The controller gets the rumble. The back gesture of Android is the B
 button. A Bluetooth or USB keyboard operates as on Linux. The screen does
 not accept touch input.
 
+Some handhelds (Anbernic's among them) have L2 and R2 keys instead of
+analog triggers. SDL maps them to no trigger when it does not know the
+controller. The game then reads the keys as fully pulled triggers
+(`host_sdl_gamepad_digital_triggers` in `host/host_sdl.c`).
+
 ## Settings
 
 The settings are in `config.toml` in the data folder of the app. To change

@@ -10,6 +10,8 @@ void host_touch_look(float *x, float *y);
 void host_motion_look(float *yaw, float *pitch);
 void host_touch_mode(int mode);
 int host_settings_active(void);
+/* Bit 0: digital L2 held, bit 1: digital R2 held, where SDL maps no trigger to them. */
+int host_sdl_gamepad_digital_triggers(unsigned int gamepad);
 void host_settings_sticks(float *left, float *right);
 void host_settings_stick_look_mask(unsigned int mask);
 float host_audio_gain(int category);

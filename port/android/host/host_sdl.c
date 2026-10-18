@@ -232,6 +232,48 @@ int host_sdl_gamepad_type(uint32_t gamepad)
 	return object ? SDL_GetGamepadType(object) : SDL_GAMEPAD_TYPE_UNKNOWN;
 }
 
+/* Digital L2 and R2 (handhelds such as Anbernic's, some Bluetooth pads):
+Android reports them as KEYCODE_BUTTON_L2 and R2, which SDL's Android driver
+makes joystick buttons 15 and 16 (SDL_sysjoystick.c keycode_to_SDL). The
+mappings SDL knows for such pads make these the triggers (SDL_gamepad_db.h:
+8BitDo, Switch Pro); the one it makes up for any other pad
+(SDL_gamepad.c SDL_CreateMappingForAndroidGamepad) takes triggers only from
+a fifth and sixth axis and leaves the keys out, so the triggers of such a
+pad never moved. They do here, while the mapping leaves the buttons free.
+Button 15 is also the share button of Xbox pads (KEYCODE_MEDIA_RECORD): it
+is L2 only on a pad without an analog left trigger, or with a digital R2
+(more than 16 buttons). Bit 0: L2 held, bit 1: R2 held. */
+int host_sdl_gamepad_digital_triggers(uint32_t gamepad)
+{
+	SDL_Gamepad *object = handle_get(gamepad, _handle_gamepad);
+	SDL_Joystick *joystick = object ? SDL_GetGamepadJoystick(object) : NULL;
+	SDL_GamepadBinding **bindings;
+	int buttons, count = 0, index, held = 0;
+	bool bound[2] = { false, false }, analog = false;
+
+	buttons = joystick ? SDL_GetNumJoystickButtons(joystick) : 0;
+	if (buttons <= 15)
+		return 0;
+	bindings = SDL_GetGamepadBindings(object, &count);
+	for (index = 0; bindings && index < count; index++)
+	{
+		const SDL_GamepadBinding *binding = bindings[index];
+
+		if (binding->input_type == SDL_GAMEPAD_BINDTYPE_BUTTON &&
+			(binding->input.button == 15 || binding->input.button == 16))
+			bound[binding->input.button - 15] = true;
+		if (binding->input_type == SDL_GAMEPAD_BINDTYPE_AXIS && binding->output_type == SDL_GAMEPAD_BINDTYPE_AXIS &&
+			binding->output.axis.axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER)
+			analog = true;
+	}
+	SDL_free(bindings);
+	if (!bound[0] && (!analog || buttons > 16) && SDL_GetJoystickButton(joystick, 15))
+		held |= 1;
+	if (!bound[1] && buttons > 16 && SDL_GetJoystickButton(joystick, 16))
+		held |= 2;
+	return held;
+}
+
 int host_sdl_rumble_gamepad(uint32_t gamepad, uint32_t low, uint32_t high, uint32_t milliseconds)
 {
 	SDL_Gamepad *object = handle_get(gamepad, _handle_gamepad);
