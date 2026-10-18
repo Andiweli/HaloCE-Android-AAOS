@@ -49,6 +49,9 @@ Gradle variants; a debug APK still permits Java/Android debugging.
 The original command-line native build below remains available. `ninja
 android` now also copies its outputs and SDL Java sources into the portable
 `port/android/native` directory. Gradle always uses that directory.
+Without the NDK, run the build workflow by hand with **Commit the rebuilt
+native payload**: it commits that directory, built from the branch's
+sources, to the branch (never main).
 
 `ninja android` builds the game for 64-bit ARM Android (arm64-v8a).
 `ninja android_apk` makes an app from it:
