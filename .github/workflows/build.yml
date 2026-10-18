@@ -12,6 +12,11 @@ on:
     paths-ignore:
       - "**.md"
   workflow_dispatch:
+    inputs:
+      commit_native:
+        description: "Commit the rebuilt native payload (port/android/native) to this branch (never main)"
+        type: boolean
+        default: false
 
 concurrency:
   group: build-${{ github.ref }}
@@ -31,6 +36,9 @@ jobs:
     # The runner image has the Android SDK and NDK, a JDK and CMake.
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    # write: only the opt-in native payload commit below pushes
+    permissions:
+      contents: write
     steps:
       - name: Install the toolchain
         run: |
@@ -85,6 +93,22 @@ jobs:
 
       - name: Compile cache
         run: ccache --show-stats
+
+      # A test branch built by hand can keep the native payload that matches
+      # its sources, so an Android Studio build of the branch runs the same
+      # guest images and host library as these APKs (port/android/README.md).
+      - name: Commit the native payload
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.commit_native && github.ref != 'refs/heads/main' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add port/android/native
+          if git diff --cached --quiet; then
+            echo "the native payload is already current"
+            exit 0
+          fi
+          git commit -m "Stage the native payload built from ${GITHUB_SHA::7} [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - uses: actions/upload-artifact@v4
         with:

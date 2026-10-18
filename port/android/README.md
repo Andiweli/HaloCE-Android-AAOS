@@ -465,7 +465,12 @@ glslangValidator. Neither replaces a test on the Shield.
 
 The native payload in `port/android/native` is staged by the build
 workflow (artifact `halo-android-native`) and must match these sources:
-build the APK with the workflow, or `ninja android` with the NDK.
+build the APK with the workflow, or `ninja android` with the NDK. Run the
+workflow by hand with **Commit the rebuilt native payload** to commit it to
+a test branch (never main), so that Android Studio builds of the branch
+use it too. A diagnostic build whose libmain.so predates these sources
+says so in a message at start, and its counter reads "libmain.so predates
+the frame-time counter".
 ## Find problems
 
 - This Shield matrix diagnostic package enables the top-centre `GFX`
