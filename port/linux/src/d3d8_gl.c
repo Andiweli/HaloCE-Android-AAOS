@@ -54,8 +54,32 @@ and entry points used below that ES lacks */
 
 /* what the context supports (gl_initialize) */
 struct xgpu_capabilities xgpu_capabilities;
-/* Keep the pointer path for devices whose actual context is ES 3.0. */
+/* Keep the pointer path for ES 3.0 and the NVIDIA model-geometry test. */
 static BOOL vertex_bindings_supported;
+static BOOL android_cpu_skeletal_vertices;
+static GLuint android_cpu_vertex_shader;
+static BOOL android_cpu_vertex_shader_attempted;
+static struct nv2a_cpu_program *android_active_cpu_program;
+static double android_cpu_frame_ms, android_cpu_total_ms, android_cpu_worst_ms;
+/* input/setup, original shader execution, planar packing, upload/bindings */
+static double android_cpu_frame_parts[4], android_cpu_total_parts[4];
+static unsigned long android_cpu_frame_fixed_vertices, android_cpu_total_fixed_vertices;
+static unsigned long android_cpu_total_vertices, android_cpu_active_frames, android_cpu_frame_vertices;
+
+static BOOL android_is_nvidia(const char *vendor, const char *renderer)
+{
+	return (vendor && strstr(vendor, "NVIDIA")) ||
+		(renderer && strstr(renderer, "NVIDIA"));
+}
+
+static BOOL android_use_vertex_bindings(GLint major, GLint minor, const char *vendor, const char *renderer)
+{
+	/* The Shield reports ES 3.2, but exhibits stretched animated models.
+	Use the existing ES 3.0 attribute-pointer path for NVIDIA to isolate
+	the stream-binding path without changing shaders or node matrices. */
+	return (major > 3 || (major == 3 && minor >= 1)) &&
+		!android_is_nvidia(vendor, renderer);
+}
 #else
 static BOOL vertex_bindings_supported = TRUE;
 #endif
@@ -171,6 +195,10 @@ struct vertex_shader_object
 	unsigned long packed_mask;
 	/* [0] streams per the declaration, [1] immediate mode (all floats) */
 	GLuint shader[2];
+#ifdef HALO_ANDROID
+	BOOL cpu_checked;
+	struct nv2a_cpu_program *cpu_program;
+#endif
 };
 
 /* ---------- programs */
@@ -1022,10 +1050,19 @@ static void gl_initialize(void)
 #ifdef HALO_ANDROID
 	{
 		BOOL es32 = major > 3 || (major == 3 && minor >= 2);
+		const char *vendor = (const char *)glGetString(GL_VENDOR);
+		const char *renderer = (const char *)glGetString(GL_RENDERER);
 
-		vertex_bindings_supported = major > 3 || (major == 3 && minor >= 1);
-		platform_log("Patch50: vertex stream bindings %s (OpenGL ES %d.%d)",
-			vertex_bindings_supported ? "enabled" : "disabled; ES 3.0 pointer fallback", (int)major, (int)minor);
+		vertex_bindings_supported = android_use_vertex_bindings(major, minor, vendor, renderer);
+		android_cpu_skeletal_vertices = android_is_nvidia(vendor, renderer);
+		if (android_cpu_skeletal_vertices)
+			platform_log("NVIDIA skeletal compatibility: original NV2A vertex execution on CPU; GPU passthrough; other meshes unchanged");
+		if (android_is_nvidia(vendor, renderer))
+			platform_log("Shield vertex compatibility: classic attribute pointers (OpenGL ES %d.%d); vendor=%s; renderer=%s",
+				(int)major, (int)minor, vendor ? vendor : "unknown", renderer ? renderer : "unknown");
+		else
+			platform_log("Patch50: vertex stream bindings %s (OpenGL ES %d.%d)",
+				vertex_bindings_supported ? "enabled" : "disabled; ES 3.0 pointer fallback", (int)major, (int)minor);
 
 		/* clip control is emulated in the vertex shader (nv2a_vsh.c) */
 		xgpu_capabilities.copy_image = es32 || host_gl_has_extension("GL_EXT_copy_image") ||
@@ -1971,6 +2008,47 @@ static unsigned long hash_words(const void *data, unsigned long size)
 static GLuint vertex_shader_get(struct vertex_shader_object *program, BOOL immediate)
 {
 	int variant = immediate ? 1 : 0;
+
+#ifdef HALO_ANDROID
+	android_active_cpu_program = NULL;
+	if (android_cpu_skeletal_vertices)
+	{
+		BOOL declaration_supported = TRUE;
+		unsigned long index;
+		if (!immediate)
+			for (index = 0; index < device.vertex_shader->element_count; index++)
+			{
+				unsigned long type = device.vertex_shader->elements[index].type;
+				if (type != D3DVSDT_NONE && !vertex_type_bytes(type)) declaration_supported = FALSE;
+			}
+		if (!program->cpu_checked)
+		{
+			program->cpu_program = nv2a_cpu_program_create(program->instructions, program->instruction_count);
+			program->cpu_checked = TRUE;
+			if (program->cpu_program)
+				platform_log("NVIDIA CPU skeletal shader %lu: %lu original instructions, %s", program->id, program->instruction_count,
+					nv2a_cpu_program_is_specialized(program->cpu_program) ? "fixed CPU executor v1" : "interpreter fallback");
+		}
+		if (declaration_supported && program->cpu_program)
+		{
+			/* All skeletal shaders share one small GPU vertex shader. */
+			if (!android_cpu_vertex_shader_attempted)
+			{
+				char *source = nv2a_cpu_vertex_glsl();
+				android_cpu_vertex_shader_attempted = TRUE;
+				android_cpu_vertex_shader = compile_shader(GL_VERTEX_SHADER, source, "CPU skeletal passthrough");
+				free(source);
+				if (!android_cpu_vertex_shader)
+					platform_log("NVIDIA CPU skeletal passthrough unavailable; retaining original GPU shaders");
+			}
+			if (android_cpu_vertex_shader)
+			{
+				android_active_cpu_program = program->cpu_program;
+				return android_cpu_vertex_shader;
+			}
+		}
+	}
+#endif
 
 	if (!program->shader[variant])
 	{
@@ -3515,6 +3593,144 @@ static void setup_streams(unsigned long first, unsigned long count)
 	}
 }
 
+#ifdef HALO_ANDROID
+static BOOL android_cpu_setup_vertices(unsigned long first, unsigned long count, const float *immediate)
+{
+	static struct nv2a_cpu_vertex *scratch;
+	static unsigned long capacity;
+	static unsigned char *upload;
+	static unsigned long upload_capacity;
+	static float (*decoded)[16][4];
+	static unsigned long decoded_capacity;
+	struct { const unsigned char *data; unsigned long stride, type, reg; } streams[16];
+	unsigned long stream_count = 0;
+	float defaults[16][4];
+	struct vertex_shader_object *declaration = device.vertex_shader;
+	unsigned long vertex, index, offset, bytes;
+	struct timespec stamp[5];
+	clock_gettime(CLOCK_MONOTONIC, &stamp[0]);
+	if (count > STREAM_BUFFER_SIZE / sizeof(*scratch))
+	{
+		platform_log("NVIDIA CPU skeletal draw rejected: %lu vertices exceed the streaming buffer", count);
+		return FALSE;
+	}
+	bytes = count * sizeof(*scratch);
+	if (count > capacity)
+	{
+		struct nv2a_cpu_vertex *larger = realloc(scratch, bytes);
+		if (!larger)
+		{
+			platform_log("NVIDIA CPU skeletal vertex allocation failed (%lu bytes)", bytes);
+			return FALSE;
+		}
+		scratch = larger; capacity = count;
+	}
+	bytes = count * 38 * sizeof(float);
+	if (bytes > upload_capacity)
+	{
+		unsigned char *larger = realloc(upload, bytes);
+		if (!larger)
+		{
+			platform_log("NVIDIA CPU skeletal upload allocation failed (%lu bytes)", bytes);
+			return FALSE;
+		}
+		upload = larger; upload_capacity = bytes;
+	}
+	if (count > decoded_capacity)
+	{
+		void *larger = realloc(decoded, count * sizeof(*decoded));
+		if (!larger)
+		{
+			platform_log("NVIDIA CPU skeletal input allocation failed (%lu vertices)", count);
+			return FALSE;
+		}
+		decoded = larger; decoded_capacity = count;
+	}
+	if (immediate)
+		memcpy(decoded, immediate, count * sizeof(*decoded));
+	else
+	{
+		/* Resolve addresses and constant streams once per draw. Only the last
+valid element for a register matters, as in the original element loop. */
+		const struct vertex_element *last[16] = { NULL };
+		memcpy(defaults, device.attributes, sizeof(defaults));
+		for (index = 0; index < 16; index++)
+			if (declaration->packed_mask & (1UL << index))
+			{
+				defaults[index][0] = defaults[index][1] = defaults[index][2] = 0.0f;
+				defaults[index][3] = 1.0f;
+			}
+		for (index = 0; index < declaration->element_count; index++)
+		{
+			const struct vertex_element *element = &declaration->elements[index];
+			if (element->type != D3DVSDT_NONE && device.streams[element->stream].data)
+				last[element->reg] = element;
+		}
+		for (index = 0; index < 16; index++)
+		{
+			const struct vertex_element *element = last[index];
+			const unsigned char *base;
+			unsigned long stride;
+			if (!element) continue;
+			stride = device.streams[element->stream].stride;
+			base = PLATFORM_PHYSICAL_TO_VIRTUAL(device.streams[element->stream].data);
+			base += first * stride + element->offset;
+			if (!stride)
+				nv2a_cpu_attribute_decode(element->type, base, defaults[index]);
+			else
+			{
+				streams[stream_count].data = base;
+				streams[stream_count].stride = stride;
+				streams[stream_count].type = element->type;
+				streams[stream_count++].reg = index;
+			}
+		}
+		for (vertex = 0; vertex < count; vertex++)
+		{
+			memcpy(decoded[vertex], defaults, sizeof(defaults));
+			for (index = 0; index < stream_count; index++)
+				nv2a_cpu_attribute_decode(streams[index].type,
+					streams[index].data + vertex * streams[index].stride, decoded[vertex][streams[index].reg]);
+		}
+	}
+	clock_gettime(CLOCK_MONOTONIC, &stamp[1]);
+	nv2a_cpu_program_prepare_constants(android_active_cpu_program, device.constants);
+	for (vertex = 0; vertex < count; vertex++)
+		nv2a_cpu_vertex_execute(android_active_cpu_program, decoded[vertex], device.constants,
+			draw_uniforms.viewport_scale, draw_uniforms.viewport_offset, draw_uniforms.screen_offset,
+			draw_uniforms.point_size, &scratch[vertex]);
+	clock_gettime(CLOCK_MONOTONIC, &stamp[2]);
+
+	/* Pack ten contiguous attribute blocks into one upload. Apart from
+aligned float4 fetches, this lets GFX record each attribute without
+duplicating the entire interleaved buffer ten times. */
+	for (index = 0; index < 9; index++)
+		for (vertex = 0; vertex < count; vertex++)
+			memcpy(upload + (index * count + vertex) * 4 * sizeof(float), scratch[vertex].value[index], 4 * sizeof(float));
+	for (vertex = 0; vertex < count; vertex++)
+		memcpy(upload + count * 36 * sizeof(float) + vertex * 2 * sizeof(float), &scratch[vertex].fog, 2 * sizeof(float));
+	/* One reservation/upload: orphaning cannot invalidate a second stream.
+The existing ring and index rebasing still govern this draw. */
+	clock_gettime(CLOCK_MONOTONIC, &stamp[3]);
+	offset = stream_upload(upload, bytes);
+	stats.streamed_bytes += bytes;
+	for (index = 0; index < 9; index++)
+		state_attribute_pointer((GLuint)index, device.stream_buffer, 4, GL_FLOAT, GL_FALSE, FALSE,
+			4 * sizeof(float), offset + index * count * 4 * sizeof(float));
+	state_attribute_pointer(9, device.stream_buffer, 2, GL_FLOAT, GL_FALSE, FALSE,
+		2 * sizeof(float), offset + count * 36 * sizeof(float));
+	for (index = 10; index < 16; index++) state_attribute_value(index, device.attributes[index]);
+	clock_gettime(CLOCK_MONOTONIC, &stamp[4]);
+	for (index = 0; index < 4; index++)
+		android_cpu_frame_parts[index] += (stamp[index + 1].tv_sec - stamp[index].tv_sec) * 1000.0 +
+			(stamp[index + 1].tv_nsec - stamp[index].tv_nsec) / 1000000.0;
+	android_cpu_frame_ms += (stamp[4].tv_sec - stamp[0].tv_sec) * 1000.0 + (stamp[4].tv_nsec - stamp[0].tv_nsec) / 1000000.0;
+	if (nv2a_cpu_program_is_specialized(android_active_cpu_program)) android_cpu_frame_fixed_vertices += count;
+	android_cpu_frame_vertices += count;
+	return TRUE;
+}
+#endif
+
 static GLenum primitive_mode(D3DPRIMITIVETYPE type)
 {
 	switch (type)
@@ -3578,7 +3794,14 @@ void WINAPI D3DDevice_DrawVertices(D3DPRIMITIVETYPE primitive_type, UINT start_v
 	if (!vertex_count || !prepare_draw(FALSE))
 		return;
 	trace_draw("draw", primitive_type, vertex_count, NULL);
-	setup_streams(start_vertex, vertex_count);
+#ifdef HALO_ANDROID
+	if (android_active_cpu_program)
+	{
+		if (!android_cpu_setup_vertices(start_vertex, vertex_count, NULL)) return;
+	}
+	else
+#endif
+		setup_streams(start_vertex, vertex_count);
 	if (primitive_type == D3DPT_QUADLIST)
 	{
 		unsigned long count;
@@ -3614,7 +3837,14 @@ void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT 
 	index_extent(index_data, vertex_count, generation, mirrored, &minimum, &maximum);
 	trace_draw("indexed", primitive_type, vertex_count, NULL);
 	/* (the streams from the base vertex on: index i is vertex base + i) */
-	setup_streams(device.base_vertex_index + minimum, maximum - minimum + 1);
+#ifdef HALO_ANDROID
+	if (android_active_cpu_program)
+	{
+		if (!android_cpu_setup_vertices(device.base_vertex_index + minimum, maximum - minimum + 1, NULL)) return;
+	}
+	else
+#endif
+		setup_streams(device.base_vertex_index + minimum, maximum - minimum + 1);
 	if (mirrored)
 	{
 		/* the attributes start at vertex minimum */
@@ -3684,20 +3914,29 @@ void WINAPI D3DDevice_End(void)
 	if (!count || !prepare_draw(TRUE))
 		return;
 	trace_draw("immediate", type, count, device.immediate_vertices);
-	offset = stream_upload(device.immediate_vertices, count * stride);
-	if (vertex_bindings_supported)
+#ifdef HALO_ANDROID
+	if (android_active_cpu_program)
 	{
-		/* Every attribute reads four floats from binding 0. */
-		state_vertex_buffer(0, device.stream_buffer, offset, (GLsizei)stride);
-		for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
-			state_attribute_format(index, 0, 4, GL_FLOAT, GL_FALSE, FALSE, (GLuint)(index * 4 * sizeof(float)));
+		if (!android_cpu_setup_vertices(0, count, device.immediate_vertices)) return;
 	}
 	else
+#endif
 	{
-		for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
+		offset = stream_upload(device.immediate_vertices, count * stride);
+		if (vertex_bindings_supported)
 		{
-			state_attribute_pointer(index, device.stream_buffer, 4, GL_FLOAT, GL_FALSE, FALSE, (GLsizei)stride,
-				offset + index * 4 * sizeof(float));
+			/* Every attribute reads four floats from binding 0. */
+			state_vertex_buffer(0, device.stream_buffer, offset, (GLsizei)stride);
+			for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
+				state_attribute_format(index, 0, 4, GL_FLOAT, GL_FALSE, FALSE, (GLuint)(index * 4 * sizeof(float)));
+		}
+		else
+		{
+			for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
+			{
+				state_attribute_pointer(index, device.stream_buffer, 4, GL_FLOAT, GL_FALSE, FALSE, (GLsizei)stride,
+					offset + index * 4 * sizeof(float));
+			}
 		}
 	}
 	if (type == D3DPT_QUADLIST)
@@ -3974,6 +4213,35 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 	}
 	device.frame++;
 	stats.presents++;
+#ifdef HALO_ANDROID
+	if (android_cpu_frame_vertices)
+	{
+		unsigned part;
+		android_cpu_total_ms += android_cpu_frame_ms;
+		for (part = 0; part < 4; part++) android_cpu_total_parts[part] += android_cpu_frame_parts[part];
+		android_cpu_total_fixed_vertices += android_cpu_frame_fixed_vertices;
+		if (android_cpu_frame_ms > android_cpu_worst_ms) android_cpu_worst_ms = android_cpu_frame_ms;
+		android_cpu_total_vertices += android_cpu_frame_vertices;
+		android_cpu_active_frames++;
+	}
+	android_cpu_frame_ms = 0.0; android_cpu_frame_vertices = 0;
+	android_cpu_frame_fixed_vertices = 0;
+	memset(android_cpu_frame_parts, 0, sizeof(android_cpu_frame_parts));
+	if (android_cpu_skeletal_vertices && device.frame % 300 == 0 && android_cpu_active_frames)
+	{
+		platform_log("NVIDIA CPU skeletal timing: %lu active frames, %lu vertices/frame, %.2f ms/frame, worst %.2f ms (includes stream upload)",
+			android_cpu_active_frames, android_cpu_total_vertices / android_cpu_active_frames,
+			android_cpu_total_ms / android_cpu_active_frames, android_cpu_worst_ms);
+		platform_log("NVIDIA CPU skeletal breakdown v1: input/setup %.3f, execute %.3f, pack %.3f, upload/bind %.3f ms/active frame; fixed %lu/%lu vertices",
+			android_cpu_total_parts[0] / android_cpu_active_frames, android_cpu_total_parts[1] / android_cpu_active_frames,
+			android_cpu_total_parts[2] / android_cpu_active_frames, android_cpu_total_parts[3] / android_cpu_active_frames,
+			android_cpu_total_fixed_vertices, android_cpu_total_vertices);
+		memset(android_cpu_total_parts, 0, sizeof(android_cpu_total_parts));
+		android_cpu_total_fixed_vertices = 0;
+		android_cpu_total_ms = android_cpu_worst_ms = 0.0;
+		android_cpu_total_vertices = android_cpu_active_frames = 0;
+	}
+#endif
 	if (debug_settings.statistics && device.frame % 60 == 0)
 	{
 		platform_log("frame %lu: %lu draws, %lu immediate, %lu clears, %lu target changes; skipped %lu no program, %lu no target, %lu link; "

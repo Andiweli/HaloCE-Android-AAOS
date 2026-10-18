@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <math.h>
 
 #define MAX_DRAWS 2048
 #define MAX_PROGRAMS 128
@@ -26,6 +27,11 @@ static char directory[1024];
 static FILE *report;
 static unsigned draws, program_count, texture_count, image_bytes;
 static GLuint programs[MAX_PROGRAMS], textures[MAX_TEXTURES], read_fbo;
+static unsigned char model_programs[MAX_PROGRAMS];
+#define MAX_MODEL_DETAILS 64
+#define MAX_GENERIC_DETAILS 4
+#define MAX_UNIFORM_UPLOADS 192
+static unsigned model_details, generic_details, uniform_uploads, uniform_uploads_skipped, geometry_skips;
 static int report_failed, timed_out;
 static int detailed_draw;
 static unsigned detailed_draws;
@@ -135,12 +141,16 @@ static void save_image(const char *name,GLuint fbo,int width,int height)
     if (failed) report_failed=1;
 }
 static GLint value(GLenum name) {GLint v=0;glGetIntegerv(name,&v);return v;}
-static void program_details(GLuint program)
+/* Shader-source heuristic, not an object/material classification. Keep a
+ * separate model budget so environment draws cannot consume every detail
+ * slot before a visible animated NPC is drawn. */
+static int program_sources(GLuint program)
 {
-    if (!program) return;
-    int seen=0;for(unsigned i=0;i<program_count;i++)if(programs[i]==program)seen=1;
-    if (!seen && program_count<MAX_PROGRAMS) {
-        programs[program_count++]=program;
+    if (!program) return 0;
+    for(unsigned i=0;i<program_count;i++)if(programs[i]==program)return model_programs[i];
+    if (program_count<MAX_PROGRAMS) {
+        unsigned slot=program_count++;
+        programs[slot]=program;model_programs[slot]=0;
         GLint linked=0;GLuint shaders[8];GLsizei count=0;
         glGetProgramiv(program,GL_LINK_STATUS,&linked);
         glGetAttachedShaders(program,8,&count,shaders);
@@ -149,32 +159,44 @@ static void program_details(GLuint program)
             GLint length=0,type=0;glGetShaderiv(shaders[i],GL_SHADER_SOURCE_LENGTH,&length);
             glGetShaderiv(shaders[i],GL_SHADER_TYPE,&type);
             if (length<=0 || length>131072) {note("SHADER source skipped size=%d\n",length);continue;}
-            char *source=malloc((size_t)length);if(!source)continue;
+            char *source=calloc((size_t)length+1,1);if(!source)continue;
             GLsizei actual=0;glGetShaderSource(shaders[i],length,&actual,source);
+            if(type==GL_VERTEX_SHADER && (strstr(source,"c[clamp(a0") ||
+                strstr(source,"c[60]") || strstr(source,"c[61]") || strstr(source,"c[62]")))
+                model_programs[slot]=1;
             char path[1200];snprintf(path,sizeof(path),"%s/program-%u-shader-%u-%x.glsl",directory,program,shaders[i],type);
             FILE *file=fopen(path,"wb");
             if(file){if(fwrite(source,1,(size_t)actual,file)!=(size_t)actual)report_failed=1;if(fclose(file))report_failed=1;}
             else report_failed=1;
             free(source);
         }
+        note("MODEL_CANDIDATE program=%u shader_heuristic=%u\n",program,model_programs[slot]);
+        return model_programs[slot];
     }
+    return 0;
+}
+static void program_details(GLuint program, int model_candidate)
+{
     if (!detailed_draw) return;
     GLint count=0;glGetProgramiv(program,GL_ACTIVE_UNIFORMS,&count);
     for(GLint i=0;i<count && i<512;i++) {
         char name[256];GLint size=0;GLenum type=0;
         glGetActiveUniform(program,(GLuint)i,sizeof(name),NULL,&size,&type,name);
+        note("  UNIFORM %s active_size=%d type=0x%x\n",name,size,type);
         /* Every draw records values, including matrices/constant arrays. */
         char *array=strstr(name,"[0]");if(array)*array=0;
         for(int j=0;j<size && j<256;j++) {
-            /* Position transform and alpha/combiner controls suffice for this
-             * geometry investigation. Avoid 192 driver queries per draw. */
+            /* Bone matrices begin at c[60] (Xbox register -36). Query
+             * every active c element for model candidates, including each
+             * actual location; cached uploads may otherwise go unnoticed. */
             if (!detailed_draw) break;
-            if (!strcmp(name,"c") && !(j<4 || j==58 || j==59)) continue;
+            if (!strcmp(name,"c") && (j>=192 || (!model_candidate && !(j<4 || j==58 || j==59)))) continue;
             if (strcmp(name,"c") && strcmp(name,"viewport_scale") && strcmp(name,"viewport_offset")
                 && strcmp(name,"screen_offset") && strcmp(name,"alpha_reference")
                 && strcmp(name,"ps_final_c0") && strcmp(name,"ps_final_c1")) continue;
             char element[280];snprintf(element,sizeof(element),array?"%s[%d]":"%s",name,j);
-            GLint loc=glGetUniformLocation(program,element);if(loc<0)continue;
+            GLint loc=glGetUniformLocation(program,element);
+            if(loc<0){note("  U_INACTIVE %s location=%d\n",element,loc);continue;}
             GLfloat data[16]={0};int n=1;
             switch(type) {
                 case GL_FLOAT_VEC2:n=2;break;case GL_FLOAT_VEC3:n=3;break;case GL_FLOAT_VEC4:n=4;break;
@@ -187,9 +209,10 @@ static void program_details(GLuint program)
                 case GL_INT_VEC4:case GL_BOOL_VEC4:case GL_UNSIGNED_INT_VEC4:n=4;break;
             }
             glGetUniformfv(program,loc,data);
-            note("  U %s type=0x%x",element,type);
-            for(int k=0;k<n;k++) note(" %.9g",data[k]);
-            note("\n");
+            int nonfinite=0;
+            note("  U %s location=%d type=0x%x",element,loc,type);
+            for(int k=0;k<n;k++){note(" %.9g",data[k]);nonfinite+=!isfinite(data[k]);}
+            note(" nonfinite=%d\n",nonfinite);
         }
     }
 }
@@ -339,6 +362,7 @@ static void delete_buffers(GLsizei n,const GLuint *ids) {
 static unsigned char *buffer_range(GLuint buffer,uint64_t offset,uint64_t length,const char *name)
 {
     if(!buffer || !length || length>262144 || geometry_bytes+length>16u*1024u*1024u) {
+        geometry_skips++;
         note("  BUFFER skipped id=%u offset=%llu bytes=%llu (capture bounds)\n",buffer,(unsigned long long)offset,(unsigned long long)length);return NULL;
     }
     GLint previous=value(GL_COPY_READ_BUFFER_BINDING),mapped=0;GLint64 size=0;
@@ -423,7 +447,7 @@ static void geometry(GLsizei count,GLenum type,const void *indices,GLint base)
     }
     note("  VERTEX_RANGE %lld..%lld\n",(long long)low,(long long)high);
     if(low<0 || high<low)return;
-    for(GLuint a=0;a<1;a++) {
+    for(GLuint a=0;a<16;a++) {
         GLint enabled=0,buffer=0,size=0,stride=0,format=0;uint64_t offset=0;
         glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_ENABLED,&enabled);if(!enabled)continue;
         int bindings=attribute_layout(a,&buffer,&size,&stride,&format,&offset);
@@ -443,11 +467,14 @@ static int before_draw(const char *kind,GLenum mode,GLsizei count,GLenum type,co
     if (capture_expired() && !timed_out) {
         note("DETAIL_BUDGET reached: brief trace continues for all remaining draws.\n");timed_out=1;
     }
-    detailed_draw=!timed_out && mode==GL_TRIANGLES;
-    if(detailed_draw)detailed_draws++;
+    GLuint program=(GLuint)value(GL_CURRENT_PROGRAM);
+    int model_candidate=program_sources(program);
+    int triangles=mode==GL_TRIANGLES || mode==GL_TRIANGLE_STRIP || mode==GL_TRIANGLE_FAN;
+    detailed_draw=!timed_out && triangles &&
+        (model_candidate ? model_details<MAX_MODEL_DETAILS : generic_details<MAX_GENERIC_DETAILS);
+    if(detailed_draw){detailed_draws++;if(model_candidate)model_details++;else generic_details++;}
     errors("before-draw");
     GLint vp[4];GLboolean mask[4];glGetIntegerv(GL_VIEWPORT,vp);glGetBooleanv(GL_COLOR_WRITEMASK,mask);
-    GLuint program=(GLuint)value(GL_CURRENT_PROGRAM);
     note("DRAW %u %s mode=0x%x count=%d type=0x%x offset=%llu base=%d program=%u fbo=%d vao=%d indexbuffer=%d\n",
          draws,kind,mode,count,type,(unsigned long long)(uintptr_t)indices,base,program,value(GL_DRAW_FRAMEBUFFER_BINDING),value(GL_VERTEX_ARRAY_BINDING),value(GL_ELEMENT_ARRAY_BUFFER_BINDING));
     note("  vp=%d,%d,%d,%d depth=%u/%x write=%d cull=%u/%x front=%x blend=%u rgb=%x/%x equation=%x color=%u%u%u%u stencil=%u scissor=%u\n",
@@ -460,14 +487,49 @@ static int before_draw(const char *kind,GLenum mode,GLsizei count,GLenum type,co
         value(GL_STENCIL_FUNC),value(GL_STENCIL_REF),value(GL_STENCIL_VALUE_MASK),value(GL_STENCIL_WRITEMASK),
         value(GL_STENCIL_FAIL),value(GL_STENCIL_PASS_DEPTH_FAIL),value(GL_STENCIL_PASS_DEPTH_PASS),
         glIsEnabled(GL_POLYGON_OFFSET_FILL),offset_factor,offset_units,detailed_draw);
-    for(GLuint a=0;a<1;a++) {
-        GLint enabled=0;glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_ENABLED,&enabled);if(!enabled)continue;
+    note("  MODEL_DETAIL candidate=%d detailed=%d cpu_uniform_uploads=%u\n",model_candidate,detailed_draw,uniform_uploads);
+    for(GLuint a=0;detailed_draw && a<16;a++) {
+        GLint enabled=0,normalized=0,integer=0,divisor=0;
+        glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_ENABLED,&enabled);
+        glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_NORMALIZED,&normalized);
+        glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_INTEGER,&integer);
+        glGetVertexAttribiv(a,GL_VERTEX_ATTRIB_ARRAY_DIVISOR,&divisor);
+        if(!enabled){
+            GLfloat current[4];GLuint unsigned_current[4];
+            glGetVertexAttribfv(a,GL_CURRENT_VERTEX_ATTRIB,current);
+            glGetVertexAttribIuiv(a,GL_CURRENT_VERTEX_ATTRIB,unsigned_current);
+            note("  ATTR %u enabled=0 current_float=%g,%g,%g,%g current_uint=%u,%u,%u,%u\n",a,
+                current[0],current[1],current[2],current[3],unsigned_current[0],unsigned_current[1],unsigned_current[2],unsigned_current[3]);
+            continue;
+        }
         GLint buffer=0,size=0,stride=0,format=0;uint64_t offset=0;
         attribute_layout(a,&buffer,&size,&stride,&format,&offset);
-        note("  ATTR %u buffer=%d size=%d stride=%d type=0x%x offset=%llu\n",a,buffer,size,stride,format,(unsigned long long)offset);
+        note("  ATTR %u enabled=1 buffer=%d size=%d stride=%d type=0x%x offset=%llu normalized=%d integer=%d divisor=%d\n",
+            a,buffer,size,stride,format,(unsigned long long)offset,normalized,integer,divisor);
     }
     if (detailed_draw) geometry(count,type,indices,base);
-    program_details(program);texture_details();errors("diagnostic-state");return 1;
+    program_details(program,model_candidate);texture_details();errors("diagnostic-state");return 1;
+}
+/* Record the CPU arguments of the actual uniform uploads, then call the
+ * original GL entry unchanged. GPU readback at each detailed draw records
+ * the values the driver subsequently exposes. Uploads before this captured
+ * frame are intentionally not represented as a complete CPU snapshot. */
+static void (*real_uniform4fv)(GLint,GLsizei,const GLfloat *);
+static void uniform4fv(GLint location,GLsizei count,const GLfloat *data)
+{
+    if(atomic_load(&state)==2 && location>=0 && count>0 && count<=192 && data && !timed_out) {
+        GLuint program=(GLuint)value(GL_CURRENT_PROGRAM);
+        if(program_sources(program)) {
+            if(uniform_uploads<MAX_UNIFORM_UPLOADS) {
+                unsigned serial=++uniform_uploads;
+                note("CPU_UNIFORM4 serial=%u program=%u location=%d count=%d before_draw=%u\n",serial,program,location,count,draws+1);
+                for(GLsizei i=0;i<count;i++)
+                    note("  CPU_U4 ordinal=%d %.9g %.9g %.9g %.9g\n",i,
+                        data[i*4],data[i*4+1],data[i*4+2],data[i*4+3]);
+            } else uniform_uploads_skipped++;
+        }
+    }
+    real_uniform4fv(location,count,data);
 }
 static void (*real_clear)(GLbitfield);
 static void (*real_blit)(GLint,GLint,GLint,GLint,GLint,GLint,GLint,GLint,GLbitfield,GLenum);
@@ -496,6 +558,7 @@ void *host_gfx_wrap(const char *name,void *function)
     if(!strcmp(name,"glDeleteBuffers")){real_delete_buffers=function;return delete_buffers;}
     if(!strcmp(name,"glClear")){real_clear=function;return clear_frame;}
     if(!strcmp(name,"glBlitFramebuffer")){real_blit=function;return blit_frame;}
+    if(!strcmp(name,"glUniform4fv")){real_uniform4fv=function;return uniform4fv;}
     if(!strcmp(name,"glDrawArrays")){real_arrays=function;return arrays;}
     if(!strcmp(name,"glDrawElements")){real_elements=function;return elements;}
     if(!strcmp(name,"glDrawElementsBaseVertex")){real_base=function;return base_elements;}
@@ -510,7 +573,8 @@ void host_gfx_swap(int width,int height)
         errors("diagnostic-end");
         if(read_fbo){glDeleteFramebuffers(1,&read_fbo);read_fbo=0;}
         note("END draws=%u programs=%u textures=%u draw_limit=%d report_limit=%ld\n",draws,program_count,texture_count,MAX_DRAWS,REPORT_BUDGET);
-        fprintf(report,"CAPTURE_STATUS detail_timed_out=%d detailed_draws=%u draw_limit_hit=%d report_limit_hit=%d\n",timed_out,detailed_draws,draws>MAX_DRAWS,ftell(report)>REPORT_BUDGET);
+        fprintf(report,"CAPTURE_STATUS detail_timed_out=%d detailed_draws=%u model_details=%u generic_details=%u cpu_uniform_uploads=%u cpu_uniform_uploads_skipped=%u geometry_skips=%u draw_limit_hit=%d report_limit_hit=%d\n",
+            timed_out,detailed_draws,model_details,generic_details,uniform_uploads,uniform_uploads_skipped,geometry_skips,draws>MAX_DRAWS,ftell(report)>REPORT_BUDGET);
         if(fflush(report))report_failed=1;
         if(fclose(report))report_failed=1;
         report=NULL;
@@ -523,10 +587,11 @@ void host_gfx_swap(int width,int height)
     report=fopen(path,"w");
     if(!report){atomic_store(&state,-1);return;}
     draws=program_count=texture_count=image_bytes=geometry_bytes=0;report_bytes=0;report_failed=timed_out=0;detailed_draws=0;detailed_draw=0;
+    model_details=generic_details=uniform_uploads=uniform_uploads_skipped=geometry_skips=0;
     clock_gettime(CLOCK_MONOTONIC,&started);
-    note("Halo GFX Patch23 Android/AAOS: CPU/GPU mirror comparison\nGL_VENDOR=%s\nGL_RENDERER=%s\nGL_VERSION=%s\nGLSL=%s\nSurface=%dx%d guest=%08x-%08x\n",
+    note("Halo GFX Shield matrix diagnostic 1\nGL_VENDOR=%s\nGL_RENDERER=%s\nGL_VERSION=%s\nGLSL=%s\nSurface=%dx%d guest=%08x-%08x\n",
          glGetString(GL_VENDOR),glGetString(GL_RENDERER),glGetString(GL_VERSION),glGetString(GL_SHADING_LANGUAGE_VERSION),width,height,host_image.base,host_image.end);
-    note("No per-draw pixel reads or texture images: use Patch15 images as reference.\nAll draws get a brief trace; triangle draws get position/index bytes and selected uniforms until the detail budget.\nTriangle topology is a selection heuristic, not a material classification. No CPU visibility/material-name trace.\n");
+    note("All draws get a brief trace; triangle/list/strip/fan model candidates get GPU c[0..191], all enabled attribute/index bytes and attribute states.\nMODEL_SELECTION=vertex shader relative constants or c[60..62], a heuristic, not object identification.\nDETAIL_LIMITS=model 64, generic 4, CPU Uniform4fv uploads 192, time 12 seconds, geometry 16 MiB, report 8 MiB.\nCPU_UNIFORM4 records only arguments uploaded during this captured frame; GPU U records actual pre-draw readback. No complete CPU matrix snapshot or proof of shader execution is claimed.\n");
     note("UPLOAD_UNMAP_FAILURES lifetime=%u\n",upload_unmap_failures);
     note("CPU_READ_METHOD=anonymous-pipe\nMIRROR_UPLOAD_POLICY=ordered-buffer-sub-data\nFRAME_POLICY=original-30fps-no-interpolation\nCPU comparison is a live observation, not an atomic snapshot. Equal generations do not exclude a concurrent write to an already writable page.\n");
     errors("pending-before-capture");

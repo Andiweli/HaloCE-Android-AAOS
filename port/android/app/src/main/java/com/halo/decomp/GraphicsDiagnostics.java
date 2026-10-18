@@ -18,7 +18,7 @@ import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/** Optional GFX capture, activated only by a diagnostic build of Patch46. */
+/** On-demand Shield matrix capture, visible only in diagnostic builds. */
 final class GraphicsDiagnostics {
     private final Activity activity;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -57,14 +57,22 @@ final class GraphicsDiagnostics {
             if (!capture.mkdir()) throw new IOException("Cannot create " + capture);
             try (Writer out = new OutputStreamWriter(new FileOutputStream(new File(capture,"device.txt")),StandardCharsets.UTF_8)) {
                 android.content.pm.PackageInfo info = activity.getPackageManager().getPackageInfo(activity.getPackageName(),0);
-                out.write("Halo GFX Patch46 - optional diagnostics; Patch42 renderer\nTime: " + new Date()
+                out.write("Halo GFX Shield CPU skeletal compatibility\nTime: " + new Date()
                     + "\nApp: " + info.versionName + " (" + info.getLongVersionCode() + ")"
                     + "\nFlavor: " + (BuildConfig.IS_AAOS ? "AAOS" : "mobile")
                     + "\nDevice: " + Build.MANUFACTURER + " " + Build.MODEL + " / " + Build.DEVICE
                     + "\nAndroid: " + Build.VERSION.RELEASE + " API " + Build.VERSION.SDK_INT
                     + "\nABIs: " + Arrays.toString(Build.SUPPORTED_ABIS)
                     + "\nGuest renderer: persistent geometry mirror bypassed; fresh vertex/index streaming."
-                    + "\nHost libraries unchanged; native MIRROR_UPLOAD_POLICY describes an unused mirror helper."
+                    + "\nNVIDIA skeletal programs execute on CPU; other devices/meshes retain their GPU vertex path."
+                    + "\nCPU optimization v1: exact-match fixed executors for original skeletal microcode, interpreter fallback for other programs."
+                    + "\nCPU skeletal GPU attributes: 0=clip position, 1..4=colours, 5..8=texcoords, 9=fog/point size."
+                    + "\nCapture: GPU attributes/indices and shader sources; GPU c[0..191]/CPU Uniform4fv only for ordinary GPU programs."
+                    + "\nNative log reports bounded NVIDIA CPU skeletal timing every 300 frames."
+                    + "\nNative breakdown v1: input/setup, execute, pack and upload/bind in ms per active frame; fixed/total vertex counts."
+                    + "\nCPU timing export: guest-log bridge v1; timing samples are included in halo-diagnostic.txt."
+                    + "\nModel selection is a shader heuristic; capture bounds and skipped data are listed in report.txt."
+                    + "\nNative MIRROR_UPLOAD_POLICY describes an unused mirror helper."
                     + "\nNative report labels Patch18/Patch23 are legacy labels, not APK revision identifiers.\n");
             }
             if (!nativeRequest(capture.getAbsolutePath())) throw new IOException("Capture already active");

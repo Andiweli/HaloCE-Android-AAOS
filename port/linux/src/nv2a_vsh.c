@@ -20,6 +20,10 @@ clip-space position again.
 #include "xgpu.h"
 
 #include <stdlib.h>
+#ifdef HALO_ANDROID
+#include <math.h>
+#include <string.h>
+#endif
 
 /* ---------- instruction fields */
 
@@ -386,3 +390,446 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 		);
 	return text.buffer;
 }
+
+#ifdef HALO_ANDROID
+/* This path bypasses the driver's skeletal vertex execution altogether.
+Decode once per shader; execute its original parallel MAC/ILU instructions,
+not a guessed two-bone formula. In particular, shadow projection, tangent
+space, lighting, fog and the viewport conversion retain their original code. */
+typedef float cpu_vec4 __attribute__((vector_size(16)));
+typedef char cpu_vertex_size_assert[sizeof(struct nv2a_cpu_vertex) == 40 * sizeof(float) ? 1 : -1];
+struct cpu_operand
+{
+	unsigned char mux, index, negate, relative, swizzle[4];
+	unsigned char swizzle_kind;
+	cpu_vec4 constant;
+};
+struct cpu_instruction
+{
+	struct cpu_operand operand[3];
+	unsigned char mac, ilu, temporary, mac_mask, ilu_mask;
+	unsigned char output_mask, output_address, output_is_register, output_from_ilu;
+	unsigned char execution; /* A/B/C reads in bits 0..2, MAC/ILU in 3/4 */
+};
+typedef BOOL (*cpu_fast_executor)(const float inputs[16][4], const float constants[192][4],
+	cpu_vec4 output[14], cpu_vec4 *clip);
+static cpu_fast_executor cpu_fast_find(const DWORD *words, unsigned long count);
+struct nv2a_cpu_program
+{
+	unsigned long count;
+	BOOL prepared;
+	cpu_fast_executor execute;
+	struct cpu_instruction instruction[];
+};
+
+static struct cpu_operand cpu_operand_decode(const DWORD *instruction, unsigned which)
+{
+	struct cpu_operand result = { 0 };
+	unsigned low, word, index;
+	if (which == 0)
+	{
+		word = 1; low = 6;
+		result.negate = (unsigned char)field(instruction, 1, 8, 1);
+		result.index = (unsigned char)field(instruction, 2, 28, 4);
+		result.mux = (unsigned char)field(instruction, 2, 26, 2);
+	}
+	else if (which == 1)
+	{
+		word = 2; low = 23;
+		result.negate = (unsigned char)field(instruction, 2, 25, 1);
+		result.index = (unsigned char)field(instruction, 2, 13, 4);
+		result.mux = (unsigned char)field(instruction, 2, 11, 2);
+	}
+	else
+	{
+		word = 2; low = 8;
+		result.negate = (unsigned char)field(instruction, 2, 10, 1);
+		result.index = (unsigned char)((field(instruction, 2, 0, 2) << 2) | field(instruction, 3, 30, 2));
+		result.mux = (unsigned char)field(instruction, 3, 28, 2);
+	}
+	for (index = 0; index < 4; index++)
+		result.swizzle[index] = (unsigned char)field(instruction, word, (int)low - (int)index * 2, 2);
+	result.swizzle_kind = result.swizzle[0] == result.swizzle[1] && result.swizzle[0] == result.swizzle[2] &&
+		result.swizzle[0] == result.swizzle[3] ? result.swizzle[0] :
+		result.swizzle[0] == 0 && result.swizzle[1] == 1 && result.swizzle[2] == 2 && result.swizzle[3] == 3 ? 4 : 5;
+	if (result.mux == _mux_input)
+		result.index = (unsigned char)field(instruction, 1, 9, 4);
+	else if (result.mux == _mux_constant)
+	{
+		result.index = (unsigned char)field(instruction, 1, 13, 8);
+		result.relative = (unsigned char)field(instruction, 3, 1, 1);
+	}
+	return result;
+}
+
+struct nv2a_cpu_program *nv2a_cpu_program_create(const DWORD *instructions, unsigned long count)
+{
+	struct nv2a_cpu_program *program;
+	unsigned long index;
+	unsigned input_mask = 0, bone_rows = 0;
+	if (!instructions || !count || count > 256)
+		return NULL;
+	program = calloc(1, sizeof(*program) + count * sizeof(program->instruction[0]));
+	if (!program)
+		return NULL;
+	for (index = 0; index < count; index++)
+	{
+		const DWORD *words = instructions + index * 4;
+		struct cpu_instruction *instruction = &program->instruction[index];
+		unsigned operand_index;
+		instruction->mac = (unsigned char)field(words, 1, 21, 4);
+		instruction->ilu = (unsigned char)field(words, 1, 25, 3);
+		instruction->temporary = (unsigned char)field(words, 3, 20, 4);
+		instruction->mac_mask = (unsigned char)field(words, 3, 24, 4);
+		instruction->ilu_mask = (unsigned char)field(words, 3, 16, 4);
+		instruction->output_mask = (unsigned char)field(words, 3, 12, 4);
+		instruction->output_is_register = (unsigned char)field(words, 3, 11, 1);
+		instruction->output_address = (unsigned char)field(words, 3, 3, 8);
+		instruction->output_from_ilu = (unsigned char)field(words, 3, 2, 1);
+		if (instruction->mac > _mac_arl || (instruction->temporary > 12 &&
+			((instruction->mac && instruction->mac != _mac_arl && instruction->mac_mask) ||
+			 (!instruction->mac && instruction->ilu && instruction->ilu_mask))))
+			goto unsupported;
+		for (operand_index = 0; operand_index < 3; operand_index++)
+		{
+			struct cpu_operand *operand = &instruction->operand[operand_index];
+			*operand = cpu_operand_decode(words, operand_index);
+			if ((operand->mux == _mux_temporary && operand->index > 12) ||
+				(operand->mux == _mux_constant && !operand->relative && operand->index >= 192))
+				goto unsupported;
+			if (operand->mux == _mux_input)
+				input_mask |= 1U << operand->index;
+			if (operand->mux == _mux_constant && operand->relative && operand->index >= 60 && operand->index <= 62)
+				bone_rows |= 1U << (operand->index - 60);
+		}
+		if (instruction->mac && (instruction->mac_mask || instruction->mac == _mac_arl ||
+			(instruction->output_mask && !instruction->output_from_ilu)))
+		{
+			unsigned opcode = instruction->mac;
+			instruction->execution = 8 | (opcode == _mac_mov || opcode == _mac_arl ? 1 :
+				opcode == _mac_add ? 5 : opcode == _mac_mad ? 7 : 3);
+		}
+		if (instruction->ilu && (instruction->ilu_mask ||
+			(instruction->output_mask && instruction->output_from_ilu) ||
+			(instruction->ilu == _ilu_rcc && instruction->operand[2].mux == _mux_temporary && instruction->operand[2].index == 12)))
+			instruction->execution |= 16 | 4;
+		program->count++;
+		if (field(words, 3, 0, 1))
+			break;
+	}
+	/* Only Halo's skeletal programs: position, two node indices, weight,
+and all three relative matrix rows. Static meshes/menu shaders stay GPU. */
+	if (bone_rows == 7 && (input_mask & 0x61U) == 0x61U)
+	{
+		program->execute = cpu_fast_find(instructions, program->count);
+		return program;
+	}
+unsupported:
+	free(program);
+	return NULL;
+}
+
+static cpu_vec4 cpu_operand_read(const struct cpu_operand *operand, const float inputs[16][4],
+	const float constants[192][4], const cpu_vec4 temporary[12], cpu_vec4 position, int address, BOOL prepared)
+{
+	cpu_vec4 source = { 0, 0, 0, 0 }, result;
+	unsigned component;
+	if (operand->mux == _mux_temporary)
+		source = operand->index == 12 ? position : temporary[operand->index];
+	else if (operand->mux == _mux_input)
+		memcpy(&source, inputs[operand->index], sizeof(source));
+	else if (operand->mux == _mux_constant)
+	{
+		if (prepared && !operand->relative) return operand->constant;
+		int index = operand->index + (operand->relative ? address : 0);
+		if (index < 0) index = 0;
+		if (index > 191) index = 191;
+		memcpy(&source, constants[index], sizeof(source));
+	}
+	if (operand->swizzle_kind == 4) result = source;
+	else if (operand->swizzle_kind < 4)
+	{
+		float value = source[operand->swizzle_kind];
+		result = (cpu_vec4){ value, value, value, value };
+	}
+	else for (component = 0; component < 4; component++) result[component] = source[operand->swizzle[component]];
+	return operand->negate ? -result : result;
+}
+
+void nv2a_cpu_program_prepare_constants(struct nv2a_cpu_program *program, const float constants[192][4])
+{
+	unsigned long index;
+	/* Fixed executors load constants directly; the compiler removes repeated
+operand decoding and swizzles. Unknown programs retain the interpreter. */
+	if (program->execute) return;
+	for (index = 0; index < program->count; index++)
+	{
+		unsigned which;
+		for (which = 0; which < 3; which++)
+		{
+			struct cpu_operand *operand = &program->instruction[index].operand[which];
+			if (operand->mux == _mux_constant && !operand->relative)
+				operand->constant = cpu_operand_read(operand, NULL, constants, NULL, (cpu_vec4){ 0, 0, 0, 0 }, 0, FALSE);
+		}
+	}
+	program->prepared = TRUE;
+}
+
+static void cpu_write(cpu_vec4 *destination, cpu_vec4 source, unsigned mask)
+{
+	unsigned component;
+	switch (mask)
+	{
+	case 0: return;
+	case 15: *destination = source; return;
+	case 8: (*destination)[0] = source[0]; return;
+	case 4: (*destination)[1] = source[1]; return;
+	case 2: (*destination)[2] = source[2]; return;
+	case 1: (*destination)[3] = source[3]; return;
+	}
+	for (component = 0; component < 4; component++)
+		if (mask & (8U >> component)) (*destination)[component] = source[component];
+}
+
+static inline __attribute__((always_inline)) cpu_vec4 cpu_mac(unsigned opcode, cpu_vec4 a, cpu_vec4 b, cpu_vec4 c)
+{
+	cpu_vec4 result = { 0, 0, 0, 0 };
+	unsigned component;
+	float dot;
+	switch (opcode)
+	{
+	case _mac_mov: case _mac_arl: return a;
+	case _mac_mul: return a * b;
+	case _mac_add: return a + c;
+	case _mac_mad: return a * b + c;
+	case _mac_dp3: case _mac_dph: case _mac_dp4:
+		dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+		if (opcode == _mac_dph) dot += b[3];
+		if (opcode == _mac_dp4) dot += a[3] * b[3];
+		return (cpu_vec4){ dot, dot, dot, dot };
+	case _mac_dst: return (cpu_vec4){ 1, a[1] * b[1], a[2], b[3] };
+	default:
+		for (component = 0; component < 4; component++)
+		{
+			switch (opcode)
+			{
+			case _mac_min: result[component] = fminf(a[component], b[component]); break;
+			case _mac_max: result[component] = fmaxf(a[component], b[component]); break;
+			case _mac_slt: result[component] = a[component] < b[component]; break;
+			case _mac_sge: result[component] = a[component] >= b[component]; break;
+			}
+		}
+		return result;
+	}
+}
+
+static inline __attribute__((always_inline)) cpu_vec4 cpu_ilu(unsigned opcode, cpu_vec4 c)
+{
+	float x = c[0], value;
+	switch (opcode)
+	{
+	case _ilu_mov: return c;
+	case _ilu_rcp: value = 1.0f / x; break;
+	case _ilu_rcc:
+		value = 1.0f / x;
+		value = value > 0.0f ? fminf(fmaxf(value, 5.42101e-20f), 1.884467e19f) :
+			fminf(fmaxf(value, -1.884467e19f), -5.42101e-20f);
+		break;
+	case _ilu_rsq: value = 1.0f / sqrtf(fabsf(x)); break;
+	case _ilu_exp: return (cpu_vec4){ exp2f(floorf(x)), x - floorf(x), exp2f(x), 1 };
+	case _ilu_log:
+		x = fabsf(x);
+		if (x == 0.0f) return (cpu_vec4){ -1.0e30f, 1, -1.0e30f, 1 };
+		value = floorf(log2f(x));
+		return (cpu_vec4){ value, x / exp2f(value), log2f(x), 1 };
+	case _ilu_lit:
+		value = c[0] > 0.0f ? powf(fmaxf(c[1], 0.0f), fminf(fmaxf(c[3], -127.9961f), 127.9961f)) : 0.0f;
+		return (cpu_vec4){ 1, fmaxf(c[0], 0.0f), value, 1 };
+	default: value = 0; break;
+	}
+	return (cpu_vec4){ value, value, value, value };
+}
+
+static inline cpu_vec4 cpu_load(const float value[4])
+{
+	cpu_vec4 result;
+	memcpy(&result, value, sizeof(result));
+	return result;
+}
+
+static inline int cpu_constant_index(int address, unsigned index)
+{
+	int result = address + (int)index;
+	return result < 0 ? 0 : result > 191 ? 191 : result;
+}
+
+static inline int cpu_address(float x)
+{
+	float value = floorf(x + 0.001f);
+	return !isfinite(value) ? 0 : value < -256.0f ? -256 : value > 256.0f ? 256 : (int)value;
+}
+
+#include "nv2a_cpu_shaders.inc"
+
+BOOL nv2a_cpu_program_is_specialized(const struct nv2a_cpu_program *program)
+{
+	return program && program->execute != NULL;
+}
+
+void nv2a_cpu_vertex_execute(const struct nv2a_cpu_program *program, const float inputs[16][4],
+	const float constants[192][4], const float viewport_scale[4], const float viewport_offset[4],
+	float screen_offset, float point_size, struct nv2a_cpu_vertex *vertex)
+{
+	cpu_vec4 temporary[12] = { { 0, 0, 0, 0 } };
+	cpu_vec4 output[14] = { { 0, 0, 0, 1 } }, clip = { 0, 0, 0, 0 };
+	static const unsigned outputs[9] = { 0, 3, 4, 7, 8, 9, 10, 11, 12 };
+	BOOL captured = FALSE;
+	int address = 0;
+	unsigned long index;
+	unsigned component;
+	for (index = 1; index < 9; index++) output[outputs[index]][3] = 1.0f;
+	output[5] = (cpu_vec4){ 1, 1, 1, 1 };
+	output[6] = (cpu_vec4){ point_size, point_size, point_size, point_size };
+	if (program->execute)
+		captured = program->execute(inputs, constants, output, &clip);
+	else for (index = 0; index < program->count; index++)
+	{
+		const struct cpu_instruction *instruction = &program->instruction[index];
+		cpu_vec4 a = { 0, 0, 0, 0 }, b = a, c = a, mac = a, ilu = a;
+		unsigned execution = instruction->execution;
+		if (!execution) continue;
+		if (execution & 1) a = cpu_operand_read(&instruction->operand[0], inputs, constants, temporary, output[0], address, program->prepared);
+		if (execution & 2) b = cpu_operand_read(&instruction->operand[1], inputs, constants, temporary, output[0], address, program->prepared);
+		if (execution & 4) c = cpu_operand_read(&instruction->operand[2], inputs, constants, temporary, output[0], address, program->prepared);
+		if (execution & 8) mac = cpu_mac(instruction->mac, a, b, c);
+		if (execution & 16) ilu = cpu_ilu(instruction->ilu, c);
+		if (instruction->ilu == _ilu_rcc && instruction->operand[2].mux == _mux_temporary &&
+			instruction->operand[2].index == 12)
+		{
+			clip = output[0]; captured = TRUE;
+		}
+		/* Both units read the old registers; writes follow in the same order
+as the GLSL translator, including the parallel ILU destination r1. */
+		if (instruction->mac == _mac_arl)
+		{
+			/* Relative reads clamp to 0..191. Saturating the address avoids
+undefined C float-to-int conversion without altering any such read. */
+			address = cpu_address(mac[0]);
+		}
+		else if (instruction->mac && instruction->mac_mask)
+			cpu_write(instruction->temporary == 12 ? &output[0] : &temporary[instruction->temporary], mac, instruction->mac_mask);
+		if (instruction->ilu && instruction->ilu_mask)
+		{
+			unsigned reg = instruction->mac ? 1 : instruction->temporary;
+			cpu_write(reg == 12 ? &output[0] : &temporary[reg], ilu, instruction->ilu_mask);
+		}
+		if (instruction->output_is_register && (instruction->output_from_ilu ? instruction->ilu : instruction->mac))
+		{
+			unsigned reg = instruction->output_address;
+			if (!(reg == 0 || reg == 3 || reg == 4 || reg == 5 || reg == 6 || (reg >= 7 && reg <= 12))) reg = 13;
+			cpu_write(&output[reg], instruction->output_from_ilu ? ilu : mac, instruction->output_mask);
+		}
+	}
+	for (component = 0; component < 3; component++)
+	{
+		float scale = viewport_scale[component] != 0.0f ? viewport_scale[component] : 1.0f;
+		float half_pixel = component == 0 ? 0.5f + screen_offset : component == 1 ? 0.5f : 0.0f;
+		vertex->value[0][component] = captured ?
+			(clip[component] * constants[58][component] +
+			 (constants[59][component] + half_pixel - viewport_offset[component]) * clip[3]) / scale :
+			((output[0][component] + half_pixel - viewport_offset[component]) / scale) * output[0][3];
+	}
+	vertex->value[0][3] = captured ? clip[3] : output[0][3];
+	if (!(fabsf(vertex->value[0][3]) > 0.0f) || isnan(vertex->value[0][3]))
+	{
+		vertex->value[0][0] = vertex->value[0][1] = vertex->value[0][2] = 0.0f;
+		vertex->value[0][3] = -1.0f;
+	}
+	vertex->value[0][1] = -vertex->value[0][1];
+	vertex->value[0][2] = 2.0f * vertex->value[0][2] - vertex->value[0][3];
+	for (index = 1; index < 9; index++)
+	{
+		for (component = 0; component < 4; component++)
+		{
+			float value = output[outputs[index]][component];
+			vertex->value[index][component] = index < 5 ? fminf(fmaxf(value, 0.0f), 1.0f) : value;
+		}
+	}
+	vertex->fog = output[5][0];
+	vertex->point_size = output[6][0];
+	vertex->padding[0] = vertex->padding[1] = 0.0f;
+}
+
+void nv2a_cpu_attribute_decode(unsigned long type, const void *source, float value[4])
+{
+	unsigned component, count = 0;
+	value[0] = value[1] = value[2] = 0.0f; value[3] = 1.0f;
+	/* memcpy permits unaligned guest stream elements on every host. */
+	switch (type)
+	{
+	case D3DVSDT_FLOAT1: count = 1; break;
+	case D3DVSDT_FLOAT2: count = 2; break;
+	case D3DVSDT_FLOAT3: case D3DVSDT_FLOAT2H: count = 3; break;
+	case D3DVSDT_FLOAT4: count = 4; break;
+	case D3DVSDT_D3DCOLOR:
+		value[0] = ((const unsigned char *)source)[2] / 255.0f;
+		value[1] = ((const unsigned char *)source)[1] / 255.0f;
+		value[2] = ((const unsigned char *)source)[0] / 255.0f;
+		value[3] = ((const unsigned char *)source)[3] / 255.0f;
+		return;
+	case D3DVSDT_NORMPACKED3:
+	{
+		unsigned int packed;
+		int x, y, z;
+		memcpy(&packed, source, 4);
+		x = (int)(packed & 2047U); if (x & 1024) x -= 2048;
+		y = (int)((packed >> 11) & 2047U); if (y & 1024) y -= 2048;
+		z = (int)(packed >> 22); if (z & 512) z -= 1024;
+		value[0] = x / 1023.0f; value[1] = y / 1023.0f; value[2] = z / 511.0f;
+		return;
+	}
+	default:
+		/* XDK types encode the component count in the high nibble; they
+are not consecutive enum values. Low nibble: 1 normalized short,
+4 normalized byte, 5 short. */
+		if ((type & 15) == 1 || (type & 15) == 4 || (type & 15) == 5)
+			count = type >> 4;
+		if (count > 4) count = 0;
+		for (component = 0; component < count; component++)
+		{
+			if ((type & 15) == 4)
+				value[component] = ((const unsigned char *)source)[component] / 255.0f;
+			else
+			{
+				short raw;
+				memcpy(&raw, (const unsigned char *)source + component * 2, 2);
+				value[component] = (type & 15) == 1 ?
+					fmaxf(raw / 32767.0f, -1.0f) : (float)raw;
+			}
+		}
+		return;
+	}
+	memcpy(value, source, count * sizeof(float));
+}
+
+char *nv2a_cpu_vertex_glsl(void)
+{
+	struct xgpu_text text = { 0 };
+	xgpu_text_append(&text, "#version %s\n", xgpu_capabilities.shading_language);
+	xgpu_text_append(&text, "%s", "precision highp float;\nprecision highp int;\n"
+		"/* NVIDIA CPU skeletal vertex path: original c[60] node programs run on the CPU. */\n"
+		"layout(location=0) in vec4 p;\n"
+		"layout(location=1) in vec4 d0;\nlayout(location=2) in vec4 d1;\n"
+		"layout(location=3) in vec4 b0;\nlayout(location=4) in vec4 b1;\n"
+		"layout(location=5) in vec4 t0;\nlayout(location=6) in vec4 t1;\n"
+		"layout(location=7) in vec4 t2;\nlayout(location=8) in vec4 t3;\n"
+		"layout(location=9) in vec2 auxiliary;\n"
+		"out vec4 xD0;\nout vec4 xD1;\nout vec4 xB0;\nout vec4 xB1;\n"
+		"out vec4 xT0;\nout vec4 xT1;\nout vec4 xT2;\nout vec4 xT3;\nout float xFog;\n"
+		"invariant gl_Position;\nvoid main(){\n"
+		"gl_Position=p; gl_PointSize=auxiliary.y;\n"
+		"xD0=d0; xD1=d1; xB0=b0; xB1=b1;\n"
+		"xT0=t0; xT1=t1; xT2=t2; xT3=t3; xFog=auxiliary.x;\n}\n");
+	return text.buffer;
+}
+#endif

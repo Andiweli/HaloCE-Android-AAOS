@@ -72,6 +72,28 @@ string. */
 char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instruction_count,
 	unsigned long packed_attribute_mask);
 
+#ifdef HALO_ANDROID
+/* NVIDIA skeletal compatibility: execute the same NV2A program on the CPU.
+The GPU receives the completed position, colours, texcoords, fog and size.
+No changes to the guest/host ABI or to the shaders on other GPUs. */
+struct nv2a_cpu_program;
+struct nv2a_cpu_vertex
+{
+	float value[9][4]; /* position, D0, D1, B0, B1, T0, T1, T2, T3 */
+	float fog, point_size;
+	float padding[2]; /* 160-byte stride: every vertex/vector stays 16-byte aligned */
+};
+struct nv2a_cpu_program *nv2a_cpu_program_create(const DWORD *instructions, unsigned long count);
+BOOL nv2a_cpu_program_is_specialized(const struct nv2a_cpu_program *program);
+/* Render thread only: refresh static operands once per draw, never per vertex. */
+void nv2a_cpu_program_prepare_constants(struct nv2a_cpu_program *program, const float constants[192][4]);
+void nv2a_cpu_vertex_execute(const struct nv2a_cpu_program *program, const float inputs[16][4],
+	const float constants[192][4], const float viewport_scale[4], const float viewport_offset[4],
+	float screen_offset, float point_size, struct nv2a_cpu_vertex *vertex);
+char *nv2a_cpu_vertex_glsl(void); /* malloc'd source, same language as fragment shader */
+void nv2a_cpu_attribute_decode(unsigned long type, const void *source, float value[4]);
+#endif
+
 /* ---------- pixel shaders */
 
 enum

@@ -18,11 +18,10 @@ def buildNumber = buildNumberText.isInteger() ? buildNumberText.toInteger() : 0
 def signingKey = System.getenv("HALO_ANDROID_KEYSTORE")
 
 // Patch47: versioned settings header; the confirmed gyro and renderer fixes are retained.
-// Diagnostic UI and startup files are off for every normal build, including
-// debug. Keep the capture code available for an explicitly requested build:
-// ./gradlew -PhaloDiagnostics=true :app:assembleMobileRelease
+// Shield matrix diagnostic package: show the top-centre GFX button by
+// default. -PhaloDiagnostics=false restores the normal UI for this build.
 def diagnosticsEnabled = providers.gradleProperty("haloDiagnostics")
-    .map { it.equalsIgnoreCase("true") }.getOrElse(false)
+    .map { it.equalsIgnoreCase("true") }.getOrElse(true)
 
 android {
     namespace "com.halo.decomp"
