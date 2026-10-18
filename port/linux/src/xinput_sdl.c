@@ -5,6 +5,8 @@ Xbox controllers and the debug keyboard for the Linux build.
 
 Port 0 is always connected: it is the keyboard and mouse, merged with the
 first SDL gamepad when one is present. Further SDL gamepads take ports 1-3.
+On Android only controllers with analog sticks take ports, which they keep
+while connected; other gamepad devices (TV remotes) merge into port 0.
 
 Keyboard and mouse (port 0):
 	W A S D          left stick          arrows           D-pad
@@ -344,38 +346,84 @@ static void wheel_update(void)
 
 /* ---------- SDL gamepads */
 
-/* the SDL gamepads in connection order, at most one per port */
+#ifdef HALO_ANDROID
+/* Android lists more than controllers as gamepads: the Shield TV's remote
+(twice, with its "tvQA" twin), the emulator's keyboard, some phones' key
+devices. Only gamepads with both analog sticks take a port, and a port
+stays with its controller while it is connected, as an Xbox port does: a
+controller switched on later, or one that returns under a new ID after
+sleeping, takes the lowest free port without moving anyone else. Devices
+without sticks merge into port 0 with the touch controls, so a remote
+still works the menus. */
+static SDL_JoystickID port_ids[PORT_COUNT];
+#define PORT0_EXTRA_COUNT 8
+static SDL_Gamepad *port0_extras[PORT0_EXTRA_COUNT];
+static int port0_extra_count;
+
+static BOOL gamepad_has_sticks(SDL_Gamepad *gamepad)
+{
+	return SDL_GamepadHasAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX) && SDL_GamepadHasAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTX);
+}
+#endif
+
+/* the SDL gamepads by port (NULL: none); returns one past the highest
+port with a gamepad */
 static int sdl_gamepads(SDL_Gamepad *gamepads[PORT_COUNT])
 {
 	SDL_JoystickID *ids;
 	int count = 0, index, found = 0;
 
 	memset(gamepads, 0, sizeof(SDL_Gamepad *) * PORT_COUNT);
+#ifdef HALO_ANDROID
+	port0_extra_count = 0;
+#endif
 	ids = SDL_GetGamepads(&count);
 	if (!ids)
-		return 0;
+		count = 0;
 #ifdef HALO_ANDROID
 	{
-		/* Android can list input devices with a few gamepad buttons (the
-		emulator's keyboard, some phones' key devices) as generic gamepads:
-		recognised controllers take the first ports */
-		int pass;
+		int port;
 
-		for (pass = 0; pass < 2; pass++)
+		/* free the ports of controllers that are gone */
+		for (port = 0; port < PORT_COUNT; port++)
 		{
-			for (index = 0; index < count && found < PORT_COUNT; index++)
-			{
-				SDL_Gamepad *gamepad = SDL_GetGamepadFromID(ids[index]);
-				SDL_GamepadType type;
-				BOOL recognised;
+			BOOL connected = FALSE;
 
-				if (!gamepad)
-					continue;
-				type = SDL_GetGamepadType(gamepad);
-				recognised = type != SDL_GAMEPAD_TYPE_UNKNOWN && type != SDL_GAMEPAD_TYPE_STANDARD;
-				if (recognised == (pass == 0))
-					gamepads[found++] = gamepad;
+			for (index = 0; index < count; index++)
+				connected |= ids[index] == port_ids[port];
+			if (port_ids[port] && !connected)
+			{
+				platform_log("gamepad port %d: controller %u disconnected", port, (unsigned)port_ids[port]);
+				port_ids[port] = 0;
 			}
+		}
+		for (index = 0; index < count; index++)
+		{
+			SDL_Gamepad *gamepad = SDL_GetGamepadFromID(ids[index]);
+
+			if (!gamepad)
+				continue;
+			if (!gamepad_has_sticks(gamepad))
+			{
+				if (port0_extra_count < PORT0_EXTRA_COUNT)
+					port0_extras[port0_extra_count++] = gamepad;
+				continue;
+			}
+			for (port = 0; port < PORT_COUNT && port_ids[port] != ids[index]; port++)
+				;
+			if (port == PORT_COUNT)
+			{
+				/* a fifth controller waits until a port is free */
+				for (port = 0; port < PORT_COUNT && port_ids[port]; port++)
+					;
+				if (port == PORT_COUNT)
+					continue;
+				port_ids[port] = ids[index];
+				platform_log("gamepad port %d: controller %u", port, (unsigned)ids[index]);
+			}
+			gamepads[port] = gamepad;
+			if (found < port + 1)
+				found = port + 1;
 		}
 	}
 #else
@@ -387,7 +435,8 @@ static int sdl_gamepads(SDL_Gamepad *gamepads[PORT_COUNT])
 			gamepads[found++] = gamepad;
 	}
 #endif
-	SDL_free(ids);
+	if (ids)
+		SDL_free(ids);
 	return found;
 }
 
@@ -470,13 +519,16 @@ VOID WINAPI XInitDevices(DWORD preallocation_type_count, PXDEVICE_PREALLOC_TYPE 
 static DWORD connected_gamepads(void)
 {
 	SDL_Gamepad *gamepads[PORT_COUNT];
-	int count = sdl_gamepads(gamepads);
 	DWORD mask = XDEVICE_PORT0_MASK;
 	int port;
 
 	/* the first pad shares port 0 with the keyboard */
-	for (port = 1; port < count; port++)
-		mask |= 1UL << port;
+	sdl_gamepads(gamepads);
+	for (port = 1; port < PORT_COUNT; port++)
+	{
+		if (gamepads[port])
+			mask |= 1UL << port;
+	}
 	return mask;
 }
 
@@ -547,13 +599,12 @@ DWORD WINAPI XInputGetState(HANDLE device, PXINPUT_STATE state)
 {
 	int port = controller_port(device);
 	SDL_Gamepad *gamepads[PORT_COUNT];
-	int count;
 
 	memset(state, 0, sizeof(*state));
 	if (port < 0)
 		return ERROR_DEVICE_NOT_CONNECTED;
 	platform_pump_events();
-	count = sdl_gamepads(gamepads);
+	sdl_gamepads(gamepads);
 	if (port == 0)
 	{
 		struct platform_input_state input;
@@ -563,9 +614,15 @@ DWORD WINAPI XInputGetState(HANDLE device, PXINPUT_STATE state)
 		wheel_update();
 		if (!console_is_active())
 			keyboard_gamepad(&input, &state->Gamepad);
-		if (count > 0)
+		if (gamepads[0])
 			sdl_gamepad_state(gamepads[0], &state->Gamepad);
 #ifdef HALO_ANDROID
+		{
+			int extra;
+
+			for (extra = 0; extra < port0_extra_count; extra++)
+				sdl_gamepad_state(port0_extras[extra], &state->Gamepad);
+		}
         {
             unsigned int bits; float x,y;
             static const int analog_buttons[8]={XINPUT_GAMEPAD_A,XINPUT_GAMEPAD_B,
@@ -593,7 +650,7 @@ DWORD WINAPI XInputGetState(HANDLE device, PXINPUT_STATE state)
 			pthread_mutex_unlock(&mouse_lock);
 		}
 	}
-	else if (port < count)
+	else if (gamepads[port])
 	{
 		sdl_gamepad_state(gamepads[port], &state->Gamepad);
 	}
@@ -615,15 +672,14 @@ DWORD WINAPI XInputSetState(HANDLE device, PXINPUT_FEEDBACK feedback)
 {
 	int port = controller_port(device);
 	SDL_Gamepad *gamepads[PORT_COUNT];
-	int count;
 
 	if (!feedback)
 		return ERROR_INVALID_PARAMETER;
 	feedback->Header.dwStatus = ERROR_SUCCESS;
 	if (port < 0)
 		return ERROR_DEVICE_NOT_CONNECTED;
-	count = sdl_gamepads(gamepads);
-	if (port < count)
+	sdl_gamepads(gamepads);
+	if (gamepads[port])
 	{
 		/* the game refreshes the motors every frame; rumble a little longer
 		than that so they do not stutter */

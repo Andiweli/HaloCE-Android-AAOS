@@ -232,6 +232,13 @@ int host_sdl_gamepad_type(uint32_t gamepad)
 	return object ? SDL_GetGamepadType(object) : SDL_GAMEPAD_TYPE_UNKNOWN;
 }
 
+int host_sdl_gamepad_has_axis(uint32_t gamepad, int axis)
+{
+	SDL_Gamepad *object = handle_get(gamepad, _handle_gamepad);
+
+	return object ? SDL_GamepadHasAxis(object, (SDL_GamepadAxis)axis) : 0;
+}
+
 int host_sdl_rumble_gamepad(uint32_t gamepad, uint32_t low, uint32_t high, uint32_t milliseconds)
 {
 	SDL_Gamepad *object = handle_get(gamepad, _handle_gamepad);

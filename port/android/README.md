@@ -122,8 +122,14 @@ To make a copy of the saved games, enter
 
 The game reads controllers through the gamepad functions of SDL3. All the
 controllers that Android knows operate. The first controller is player 1.
-The other controllers are players 2 to 4 (split screen). The buttons agree
-with the positions on the Xbox controller:
+The other controllers are players 2 to 4 (split screen). Only controllers
+with two analog sticks take one of the four ports, and each keeps its port
+while connected: a controller switched on later, or one that wakes from
+sleep under a new Android ID, takes the lowest free port. TV remotes (the
+Shield lists its remote twice) and other gamepad devices without sticks
+merge into the first port, so they still work the menus. The log names
+each port's controller (`gamepad port`), also in `halo-diagnostic.txt`.
+The buttons agree with the positions on the Xbox controller:
 
 | DualSense | Xbox | Function in the game |
 | --- | --- | --- |
