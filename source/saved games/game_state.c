@@ -121,6 +121,7 @@ symbols in this file:
 #include "data.h"
 #include "lruv_cache.h"
 #include "memory_pool.h"
+#include "cluster_partitions.h"
 
 /* ---------- constants */
 
@@ -181,6 +182,9 @@ static game_state_before_save_proc before_save_procs[] =
 static game_state_before_load_proc before_load_procs[] =
 {
 	game_sound_clear,
+	/* port: where the cluster lists' references are, which the game state
+	being loaded does not hold */
+	cluster_partitions_port_forget,
 };
 
 static game_state_after_load_proc after_load_procs[] =
@@ -253,8 +257,8 @@ static void game_state_call_after_load_procs(
 void game_state_dispose(
 	void)
 {
-	game_state_free_buffer();
 	game_state_close_file();
+	game_state_free_buffer();
 
 	return;
 }

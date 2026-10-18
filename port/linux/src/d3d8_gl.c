@@ -56,6 +56,8 @@ and entry points used below that ES lacks */
 struct xgpu_capabilities xgpu_capabilities;
 /* Keep the pointer path for devices whose actual context is ES 3.0. */
 static BOOL vertex_bindings_supported;
+#else
+static BOOL vertex_bindings_supported = TRUE;
 #endif
 
 /* ---------- the screen's width
@@ -222,7 +224,7 @@ struct program_entry
 	unsigned long constant_count;
 	BOOL constants_consecutive;
 	/* constants_serial at the program's last constant upload (constants_store) */
-	unsigned long constants_serial;
+	unsigned long long constants_serial;
 	/* draw_uniforms_serial when the uniforms below were brought up to date */
 	unsigned long uniforms_serial;
 	/* what the program's other uniforms hold (all ones: unknown) */
@@ -351,6 +353,10 @@ struct gl_device
 	float query_area[VISIBILITY_TEST_SLOTS];
 	GLuint active_query;
 	BOOL visibility_test_active;
+	/* CPU query fallback: keep the last result until a new one is ready,
+	so the game does not spin while the GPU finishes the test. */
+	GLuint visibility_known[VISIBILITY_TEST_SLOTS];
+	BOOL visibility_unread[VISIBILITY_TEST_SLOTS];
 #ifdef HALO_ANDROID
 	/* with atomic counters: one counter per test, used as a ring; the
 	counter a test ended in, per result slot */
@@ -427,8 +433,7 @@ xgpu_gl_state_invalidate, after which every value is set again. Unknown
 values are all ones, which no real value matches (floats become NaN, which
 compares unequal to everything). */
 
-#ifdef HALO_ANDROID
-/* OpenGL ES 3.1's vertex bindings: an attribute's format and the binding it
+/* OpenGL ES 3.1 and desktop GL 4.3 vertex bindings: an attribute's format and the binding it
 reads from are set apart from where the binding's data is (state_vertex_buffer,
 state_attribute_format). A draw's streams move every draw - the streamed ones
 into the ring at a new offset, the mirrored ones by their first vertex - and
@@ -455,7 +460,6 @@ struct vertex_binding
 	unsigned long offset;
 	GLsizei stride;
 };
-#endif
 struct attribute_pointer
 {
 	GLuint buffer;
@@ -496,10 +500,8 @@ static struct
 	GLuint array_buffer;
 	GLuint element_array_buffer;
 	unsigned char attribute_enabled[XGPU_VERTEX_ATTRIBUTE_COUNT];
-#ifdef HALO_ANDROID
 	struct attribute_format attribute_formats[XGPU_VERTEX_ATTRIBUTE_COUNT];
 	struct vertex_binding vertex_bindings[VERTEX_BINDING_COUNT];
-#endif
 	struct attribute_pointer attribute_pointers[XGPU_VERTEX_ATTRIBUTE_COUNT];
 	/* a disabled attribute's value; kind 1 is the integer zero */
 	unsigned char attribute_value_kind[XGPU_VERTEX_ATTRIBUTE_COUNT];
@@ -584,7 +586,6 @@ static void state_element_array_buffer(GLuint buffer)
 	}
 }
 
-#ifdef HALO_ANDROID
 /* where binding's data starts, and its stride (a stride of 0 is the same
 element for every vertex, as Direct3D means it: glVertexAttribPointer took 0 as
 tightly packed) */
@@ -631,7 +632,6 @@ static void state_attribute_format(GLuint index, GLuint binding, GLint size, GLe
 		format->binding = binding;
 	}
 }
-#endif
 static void state_attribute_pointer(GLuint index, GLuint buffer, GLint size, GLenum type, GLboolean normalized,
 	BOOL integer, GLsizei stride, unsigned long offset)
 {
@@ -831,16 +831,57 @@ static void surface_dimensions(const D3DSurface *surface, unsigned long *width, 
 		format == D3DFMT_LIN_D24S8 || format == D3DFMT_LIN_F24S8 || format == D3DFMT_LIN_D16 || format == D3DFMT_LIN_F16;
 }
 
+/* the targets render_target_get found last, by what it found them from:
+each draw asks again for the same two (bind_targets) */
+#define RECENT_RENDER_TARGET_COUNT 4
+
+static struct
+{
+	DWORD data, format, size;
+	long screen_width;
+	float scale[2];
+	struct render_target_entry *entry;
+} recent_render_targets[RECENT_RENDER_TARGET_COUNT];
+static unsigned long recent_render_target_next;
+
+static struct render_target_entry *render_target_remember(const D3DSurface *surface, long screen,
+	struct render_target_entry *entry)
+{
+	unsigned long slot = recent_render_target_next++ % RECENT_RENDER_TARGET_COUNT;
+
+	recent_render_targets[slot].data = surface->Data;
+	recent_render_targets[slot].format = surface->Format;
+	recent_render_targets[slot].size = surface->Size;
+	recent_render_targets[slot].screen_width = screen;
+	recent_render_targets[slot].scale[0] = screen_scale[0];
+	recent_render_targets[slot].scale[1] = screen_scale[1];
+	recent_render_targets[slot].entry = entry;
+	return entry;
+}
+
 static struct render_target_entry *render_target_get(const D3DSurface *surface)
 {
 	struct render_target_entry *entry;
-	unsigned long width, height;
+	unsigned long width, height, slot;
+	long screen;
 	BOOL depth;
 
 	if (!surface || !surface->Data)
 		return NULL;
 	float scale[2] = { 1.0f, 1.0f };
 
+	/* (the entries are never freed) */
+	screen = halo_screen_width();
+	for (slot = 0; slot < RECENT_RENDER_TARGET_COUNT; slot++)
+	{
+		if (recent_render_targets[slot].entry && recent_render_targets[slot].data == surface->Data &&
+			recent_render_targets[slot].format == surface->Format && recent_render_targets[slot].size == surface->Size &&
+			recent_render_targets[slot].screen_width == screen && recent_render_targets[slot].scale[0] == screen_scale[0] &&
+			recent_render_targets[slot].scale[1] == screen_scale[1])
+		{
+			return recent_render_targets[slot].entry;
+		}
+	}
 	surface_dimensions(surface, &width, &height, &depth);
 	/* the screen's targets are drawn at the screen's scale */
 	if (width == (unsigned long)halo_screen_width() && height == SCREEN_HEIGHT)
@@ -854,7 +895,7 @@ static struct render_target_entry *render_target_get(const D3DSurface *surface)
 			entry->target.height == height && entry->target.depth == depth &&
 			entry->target.scale[0] == scale[0] && entry->target.scale[1] == scale[1])
 		{
-			return entry;
+			return render_target_remember(surface, screen, entry);
 		}
 	}
 	entry = calloc(1, sizeof(*entry));
@@ -897,13 +938,20 @@ struct xgpu_render_target *xgpu_render_target_find(unsigned long data)
 
 static GLuint framebuffer_get(GLuint color, GLuint depth)
 {
-	struct framebuffer_entry *entry;
+	struct framebuffer_entry *entry, **link;
 	GLenum draw_buffer = color ? GL_COLOR_ATTACHMENT0 : GL_NONE;
 
-	for (entry = framebuffers; entry; entry = entry->next)
+	/* (found, it moves to the front: each draw asks again for the one
+	the draw before it did) */
+	for (link = &framebuffers; (entry = *link) != NULL; link = &entry->next)
 	{
 		if (entry->color == color && entry->depth == depth)
+		{
+			*link = entry->next;
+			entry->next = framebuffers;
+			framebuffers = entry;
 			return entry->framebuffer;
+		}
 	}
 	entry = calloc(1, sizeof(*entry));
 	entry->color = color;
@@ -926,10 +974,19 @@ static GLuint framebuffer_get(GLuint color, GLuint depth)
 /* the pixels per unit of the bound targets (render_target_get) */
 static float target_scale[2] = { 1.0f, 1.0f };
 
-/* the pixel edge of a coordinate in the bound targets' units */
+/* the pixel edge of a coordinate in the bound targets' units: floorf's,
+without its call (on 32-bit x86 it saves and restores the FPU's rounding,
+several times a draw) */
 static GLint target_pixel(float coordinate, int axis)
 {
-	return (GLint)floorf(coordinate * target_scale[axis] + 0.5f);
+	float value = coordinate * target_scale[axis] + 0.5f;
+	GLint pixel = (GLint)value;
+
+	/* (the conversion is toward zero: a negative value with a fraction
+	rounds down one more) */
+	if ((float)pixel > value)
+		pixel--;
+	return pixel;
 }
 
 /* binds the framebuffer for the current targets; returns FALSE if there is
@@ -1080,13 +1137,25 @@ void WINAPI Direct3D_SetPushBufferSize(DWORD push_buffer_size, DWORD segment_cou
 
 /* each vertex constant register's serial is the value constants_serial took
 when the register last changed; a program's registers are current up to
-the serial it recorded when it last uploaded them */
-static unsigned long constant_serials[XGPU_VERTEX_CONSTANT_COUNT];
-static unsigned long constants_serial;
+the serial it recorded when it last uploaded them. The serials are 64-bit:
+the count rises with every register a draw changes (a skinned model changes
+up to 132), and 32 bits wrapped within minutes at a high frame rate, after
+which every program's next draw found none of its registers changed and
+drew with what it last uploaded (another object's node matrices: vertices
+flung across the screen for a frame). */
+static unsigned long long constant_serials[XGPU_VERTEX_CONSTANT_COUNT];
+static unsigned long long constants_serial;
 /* the register each of the latest serials changed, so a program that is
 only a little behind finds its changed registers without a full scan */
 #define CONSTANT_LOG_SIZE 1024
 static unsigned char constant_log[CONSTANT_LOG_SIZE];
+/* the registers changed since the last upload (to any program): the
+smallest and largest, and the serial that upload was current to. A program
+current to that serial needs them, and nothing in the log. The serial is
+64-bit as the others are (cut to 32, it matched a program left at an old
+serial, which then took only the checkpoint's registers). */
+static unsigned long long constants_checkpoint_serial;
+static unsigned long constants_checkpoint_first = XGPU_VERTEX_CONSTANT_COUNT, constants_checkpoint_last;
 
 static void constants_store(unsigned long first, const void *data, unsigned long count)
 {
@@ -1100,6 +1169,10 @@ static void constants_store(unsigned long first, const void *data, unsigned long
 			memcpy(device.constants[first + index], values[index], sizeof(device.constants[0]));
 			constant_serials[first + index] = ++constants_serial;
 			constant_log[constants_serial % CONSTANT_LOG_SIZE] = (unsigned char)(first + index);
+			if (constants_checkpoint_first > first + index)
+				constants_checkpoint_first = first + index;
+			if (constants_checkpoint_last < first + index)
+				constants_checkpoint_last = first + index;
 		}
 	}
 }
@@ -1484,13 +1557,15 @@ HRESULT WINAPI D3DDevice_EndVisibilityTest(DWORD index)
 	device.queries[VISIBILITY_TEST_SLOTS] = device.queries[index];
 	device.queries[index] = scratch;
 	device.query_pending[index] = TRUE;
+	device.visibility_unread[index] = TRUE;
 #ifndef HALO_ANDROID
 	if (device.visibility_results)
 	{
-		/* the GPU writes the count into the slot once it is known */
-		glBindBuffer(GL_QUERY_BUFFER, device.visibility_results_buffer);
-		glGetQueryObjectuiv(device.queries[index], GL_QUERY_RESULT, (GLuint *)(index * sizeof(GLuint)));
-		glBindBuffer(GL_QUERY_BUFFER, 0);
+		/* the GPU writes the count into the slot once it is known (given
+		by name: Mesa's GL thread waits for everything before a
+		glGetQueryObjectuiv, even one into a bound buffer) */
+		glGetQueryBufferObjectuiv(device.queries[index], device.visibility_results_buffer, GL_QUERY_RESULT,
+			(GLintptr)(index * sizeof(GLuint)));
 	}
 #endif
 	return S_OK;
@@ -1550,21 +1625,25 @@ HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULON
 		return S_OK;
 	}
 #endif
-	glGetQueryObjectuiv(device.queries[index], GL_QUERY_RESULT_AVAILABLE, &available);
-	if (!available)
-		return D3DERR_TESTINCOMPLETE;
-	glGetQueryObjectuiv(device.queries[index], GL_QUERY_RESULT, &samples);
+	if (device.visibility_unread[index])
+	{
+		glGetQueryObjectuiv(device.queries[index], GL_QUERY_RESULT_AVAILABLE, &available);
+		if (available)
+		{
+			glGetQueryObjectuiv(device.queries[index], GL_QUERY_RESULT, &samples);
 #ifdef HALO_ANDROID
-	/* ES only says whether any sample passed. The game divides the count by
-	the test's area (lens flare brightness, rasterizer_lights.c): report
-	more than any test covers, well below what would overflow there. */
-	if (samples)
-		samples = VISIBILITY_ALL_SAMPLES;
+			/* ES reports any passing sample; the game expects a pixel count. */
+			if (samples)
+				samples = VISIBILITY_ALL_SAMPLES;
 #else
-	samples = visibility_unscaled(samples, index);
+			samples = visibility_unscaled(samples, index);
 #endif
+			device.visibility_known[index] = samples;
+			device.visibility_unread[index] = FALSE;
+		}
+	}
 	if (result)
-		*result = samples;
+		*result = device.visibility_known[index];
 	return S_OK;
 }
 
@@ -1920,22 +1999,28 @@ typedef char pixel_shader_key_size_assert[sizeof(struct nv2a_pixel_shader_key) %
 
 static GLuint fragment_shader_get(const struct nv2a_pixel_shader_key *key)
 {
-	/* consecutive draws mostly use the same pixel shader */
-	static struct fragment_entry *last;
-	unsigned long hash;
+	/* consecutive draws mostly use one of a few pixel shaders (an object's
+	parts take turns) */
+#define RECENT_FRAGMENT_COUNT 4
+	static struct fragment_entry *recent[RECENT_FRAGMENT_COUNT];
+	static unsigned long recent_next;
+	unsigned long hash, index;
 	struct fragment_entry **bucket;
 	struct fragment_entry *entry;
 	char *source;
 
-	if (last && !memcmp(&last->key, key, sizeof(*key)))
-		return last->shader;
+	for (index = 0; index < RECENT_FRAGMENT_COUNT; index++)
+	{
+		if (recent[index] && !memcmp(&recent[index]->key, key, sizeof(*key)))
+			return recent[index]->shader;
+	}
 	hash = hash_words(key, sizeof(*key));
 	bucket = &fragment_buckets[hash % FRAGMENT_BUCKETS];
 	for (entry = *bucket; entry; entry = entry->next)
 	{
 		if (entry->hash == hash && !memcmp(&entry->key, key, sizeof(*key)))
 		{
-			last = entry;
+			recent[recent_next++ % RECENT_FRAGMENT_COUNT] = entry;
 			return entry->shader;
 		}
 	}
@@ -1959,7 +2044,7 @@ static GLuint fragment_shader_get(const struct nv2a_pixel_shader_key *key)
 	free(source);
 	entry->next = *bucket;
 	*bucket = entry;
-	last = entry;
+	recent[recent_next++ % RECENT_FRAGMENT_COUNT] = entry;
 	return entry->shader;
 }
 
@@ -2655,9 +2740,18 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	{
 		unsigned long first = entry->constant_count, last = 0, index;
 
-		if (constants_serial - entry->constants_serial <= XGPU_VERTEX_CONSTANT_COUNT)
+		if (entry->constants_serial == constants_checkpoint_serial &&
+			constants_checkpoint_last < entry->constant_count)
 		{
-			unsigned long serial;
+			if (constants_checkpoint_first <= constants_checkpoint_last)
+			{
+				first = constants_checkpoint_first;
+				last = constants_checkpoint_last;
+			}
+		}
+		else if (constants_serial - entry->constants_serial <= XGPU_VERTEX_CONSTANT_COUNT)
+		{
+			unsigned long long serial;
 
 			for (serial = entry->constants_serial + 1; serial <= constants_serial; serial++)
 			{
@@ -2690,6 +2784,9 @@ static struct program_entry *prepare_draw(BOOL immediate)
 				glUniform4fv(entry->constants, XGPU_VERTEX_CONSTANT_COUNT, &device.constants[0][0]);
 		}
 		entry->constants_serial = constants_serial;
+		constants_checkpoint_serial = constants_serial;
+		constants_checkpoint_first = XGPU_VERTEX_CONSTANT_COUNT;
+		constants_checkpoint_last = 0;
 	}
 
 	/* the state the other uniforms come from: most draws share it with the
@@ -2888,6 +2985,35 @@ static void trace_draw(const char *kind, D3DPRIMITIVETYPE type, unsigned long co
 }
 
 
+/* Mesa's GL thread queues a glBufferSubData of up to 8 KB; a larger one
+first waits for everything queued before it to have run. The same bytes in
+pieces are queued (all but the largest, as a map loads, which would be
+thousands; Android's GL has no such thread). */
+#define BUFFER_UPLOAD_PIECE 4096
+#define BUFFER_UPLOAD_PIECES_MAXIMUM 16
+
+static void buffer_upload(GLenum target, unsigned long offset, unsigned long size, const void *data)
+{
+#ifndef HALO_ANDROID
+	if (size <= BUFFER_UPLOAD_PIECE * BUFFER_UPLOAD_PIECES_MAXIMUM)
+	{
+		const unsigned char *bytes = data;
+
+		while (size)
+		{
+			unsigned long piece = size < BUFFER_UPLOAD_PIECE ? size : BUFFER_UPLOAD_PIECE;
+
+			glBufferSubData(target, (GLintptr)offset, (GLsizeiptr)piece, bytes);
+			offset += piece;
+			bytes += piece;
+			size -= piece;
+		}
+		return;
+	}
+#endif
+	glBufferSubData(target, (GLintptr)offset, (GLsizeiptr)size, data);
+}
+
 /* ---------- the contiguous window in GL buffers
 
 Vertex and index buffers live in the Xbox's contiguous memory, where most
@@ -3024,8 +3150,8 @@ static BOOL mirror_refresh(unsigned long first, unsigned long last)
 #else
 		(void)unused;
 #endif
-		glBufferSubData(GL_COPY_WRITE_BUFFER, (GLintptr)(address - PLATFORM_CONTIGUOUS_BASE - segment * MIRROR_SEGMENT_SIZE),
-			(GLsizeiptr)size, (const void *)address);
+		buffer_upload(GL_COPY_WRITE_BUFFER, address - PLATFORM_CONTIGUOUS_BASE - segment * MIRROR_SEGMENT_SIZE, size,
+			(const void *)address);
 	}
 	return TRUE;
 }
@@ -3175,7 +3301,7 @@ static unsigned long stream_upload(const void *data, unsigned long size)
 #ifdef HALO_ANDROID
 	host_gl_buffer_write(GL_ARRAY_BUFFER, (unsigned int)offset, (unsigned int)size, data);
 #else
-	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)size, data);
+	buffer_upload(GL_ARRAY_BUFFER, offset, size, data);
 #endif
 	device.stream_offset += reserved;
 	return offset;
@@ -3238,7 +3364,7 @@ static unsigned long index_upload(const void *data, unsigned long size)
 #ifdef HALO_ANDROID
 	host_gl_buffer_write(GL_ELEMENT_ARRAY_BUFFER, (unsigned int)offset, (unsigned int)size, data);
 #else
-	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)size, data);
+	buffer_upload(GL_ELEMENT_ARRAY_BUFFER, offset, size, data);
 #endif
 	device.index_offset += reserved;
 	return offset;
@@ -3350,7 +3476,6 @@ static void setup_streams(unsigned long first, unsigned long count)
 			stream_buffers[stream] = device.stream_buffer;
 			stats.streamed_bytes += bytes;
 		}
-#ifdef HALO_ANDROID
 		if (vertex_bindings_supported)
 		{
 			/* Bind each stream once; its attributes keep their formats. */
@@ -3368,7 +3493,6 @@ static void setup_streams(unsigned long first, unsigned long count)
 			}
 		}
 		else
-#endif
 		{
 			if (element->type == D3DVSDT_NORMPACKED3)
 			{
@@ -3561,7 +3685,6 @@ void WINAPI D3DDevice_End(void)
 		return;
 	trace_draw("immediate", type, count, device.immediate_vertices);
 	offset = stream_upload(device.immediate_vertices, count * stride);
-#ifdef HALO_ANDROID
 	if (vertex_bindings_supported)
 	{
 		/* Every attribute reads four floats from binding 0. */
@@ -3570,7 +3693,6 @@ void WINAPI D3DDevice_End(void)
 			state_attribute_format(index, 0, 4, GL_FLOAT, GL_FALSE, FALSE, (GLuint)(index * 4 * sizeof(float)));
 	}
 	else
-#endif
 	{
 		for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
 		{

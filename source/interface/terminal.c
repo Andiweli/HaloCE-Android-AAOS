@@ -363,22 +363,16 @@ void terminal_printf(
 
 		if (line_index!=NONE)
 		{
-			short count;
 			struct output_line_datum *line = output_line_get(line_index);
 			line->timer = 0;
 			line->color = !color ? default_terminal_printf_color : *color;
-			count = _vsnprintf(line->buffer, NUMBEROF(line->buffer)-2, format, arglist) - 1;
-			match_vassert(
-				"c:\\halo\\SOURCE\\interface\\terminal.c",
-				413,
-				count < (short)(NUMBEROF(line->buffer)-1),
-				csprintf(
-					temporary,
-					"terminal_printf call generated %d characters; the buffer size is %d characters.",
-					count,
-					NUMBEROF(line->buffer)-1
-				)
-			);
+			/* Native vsnprintf returns the full length even when it truncates.
+			Keep console output bounded without halting a cutscene's script. */
+			if (_vsnprintf(line->buffer, NUMBEROF(line->buffer)-2, format, arglist) < 0)
+			{
+				line->buffer[0] = '\0';
+			}
+			line->buffer[NUMBEROF(line->buffer)-3] = '\0';
 			line->tabstop = strstr(line->buffer, "|t") != 0;
 			telnet_console_print(line->buffer);
 		}

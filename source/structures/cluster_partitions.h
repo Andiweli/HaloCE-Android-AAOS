@@ -28,6 +28,11 @@ struct cluster_partition
 
 /* ---------- prototypes/CLUSTER_PARTITIONS.C */
 
+/* Runtime caches are deliberately kept outside the saved partition layout. */
+void cluster_partitions_port_forget(void);
+unsigned long long cluster_partition_port_modification_count(
+	struct cluster_partition const *partition);
+
 void cluster_partition_new(
 	struct cluster_partition *partition,
 	char const *name);

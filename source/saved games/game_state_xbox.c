@@ -102,6 +102,9 @@ symbols in this file:
 #include "saved games/game_state.h"
 #include "sound/sound_manager.h"
 #include <xtl.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* ---------- constants */
 
@@ -141,10 +144,27 @@ typedef char verify_xbox_game_state_globals_prefix_size[
 
 static HANDLE game_state_open_persistent_storage(
 	const char *directory);
+static boolean game_state_writer_ready(void);
+static void game_state_writer_wait(void);
+static void game_state_writer_dispose(void);
 
 /* ---------- globals */
 
 static struct xbox_game_state_globals_prefix xbox_game_state_globals = { 0 };
+
+/* Copy a checkpoint before the next game tick changes it. The worker only
+writes this snapshot; immediate reverts can read it while disk I/O continues.
+All writer state is outside the saved Xbox structures and file format. */
+static struct
+{
+	void *allocation;
+	void *snapshot;
+	boolean snapshot_valid;
+	HANDLE thread, work, idle;
+	boolean stop;
+	boolean failed;
+	DWORD last_error;
+} game_state_writer;
 
 /* ---------- public code */
 
@@ -205,6 +225,7 @@ void *game_state_allocate_buffer(
 void game_state_free_buffer(
 	void)
 {
+	game_state_writer_dispose();
 	match_assert(
 		"c:\\halo\\SOURCE\\saved games\\game_state_xbox.c",
 		75,
@@ -236,6 +257,10 @@ void game_state_create_or_open_file(
 		SetEndOfFile(xbox_game_state_globals.handle))
 	{
 		xbox_game_state_globals.file_open = TRUE;
+		xbox_game_state_globals.file_valid_for_read = FALSE;
+		/* Allocate, touch the snapshot's pages and start the thread during
+		loading, so the first checkpoint only copies the game state. */
+		game_state_writer_ready();
 	}
 	else
 	{
@@ -257,10 +282,90 @@ void game_state_close_file(
 		"c:\\halo\\SOURCE\\saved games\\game_state_xbox.c",
 		106,
 		xbox_game_state_globals.file_open);
+	game_state_writer_dispose();
 	CloseHandle(xbox_game_state_globals.handle);
 	xbox_game_state_globals.file_open = FALSE;
+	xbox_game_state_globals.file_valid_for_read = FALSE;
 
 	return;
+}
+
+static DWORD WINAPI game_state_writer_main(LPVOID unused)
+{
+	(void)unused;
+	for (;;)
+	{
+		unsigned long bytes_written = 0;
+
+		WaitForSingleObject(game_state_writer.work, INFINITE);
+		if (game_state_writer.stop)
+			break;
+		game_state_writer.failed =
+			SetFilePointer(xbox_game_state_globals.handle, 0, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER ||
+			!WriteFile(xbox_game_state_globals.handle, game_state_writer.snapshot,
+				xbox_game_state_globals.buffer_size, &bytes_written, NULL) ||
+			bytes_written != (unsigned long)xbox_game_state_globals.buffer_size;
+		game_state_writer.last_error = game_state_writer.failed ? GetLastError() : 0;
+		SetEvent(game_state_writer.idle);
+	}
+	return 0;
+}
+
+static boolean game_state_writer_ready(void)
+{
+	if (game_state_writer.thread)
+		return TRUE;
+	game_state_writer.allocation = malloc(xbox_game_state_globals.buffer_size + CPU_PAGE_SIZE);
+	if (!game_state_writer.allocation)
+		return FALSE;
+	game_state_writer.snapshot = (void *)(((uintptr_t)game_state_writer.allocation + CPU_PAGE_SIZE - 1) &
+		~(uintptr_t)(CPU_PAGE_SIZE - 1));
+	memset(game_state_writer.snapshot, 0, xbox_game_state_globals.buffer_size);
+	game_state_writer.work = CreateEventA(NULL, FALSE, FALSE, NULL);
+	game_state_writer.idle = CreateEventA(NULL, TRUE, TRUE, NULL);
+	if (game_state_writer.work && game_state_writer.idle)
+		game_state_writer.thread = CreateThread(NULL, 0, game_state_writer_main, NULL, 0, NULL);
+	if (!game_state_writer.thread)
+	{
+		/* Optional: allocation, event or thread failure keeps synchronous
+		checkpoint I/O available without retrying setup at each checkpoint. */
+		game_state_writer_dispose();
+		return FALSE;
+	}
+	return TRUE;
+}
+
+static void game_state_writer_wait(void)
+{
+	if (game_state_writer.thread)
+	{
+		WaitForSingleObject(game_state_writer.idle, INFINITE);
+		if (game_state_writer.failed)
+		{
+			/* Engine error logging belongs to the game thread. The memory
+			checkpoint is still valid after a short or failed disk write. */
+			error(_error_log, "couldn't write saved game file (#%lu)", game_state_writer.last_error);
+			game_state_writer.failed = FALSE;
+		}
+	}
+}
+
+static void game_state_writer_dispose(void)
+{
+	game_state_writer_wait();
+	if (game_state_writer.thread)
+	{
+		game_state_writer.stop = TRUE;
+		SetEvent(game_state_writer.work);
+		WaitForSingleObject(game_state_writer.thread, INFINITE);
+		CloseHandle(game_state_writer.thread);
+	}
+	if (game_state_writer.work)
+		CloseHandle(game_state_writer.work);
+	if (game_state_writer.idle)
+		CloseHandle(game_state_writer.idle);
+	free(game_state_writer.allocation);
+	memset(&game_state_writer, 0, sizeof(game_state_writer));
 }
 
 boolean game_state_write_to_file(
@@ -277,6 +382,17 @@ boolean game_state_write_to_file(
 		"c:\\halo\\SOURCE\\saved games\\game_state_xbox.c",
 		121,
 		xbox_game_state_globals.file_open);
+
+	if (game_state_writer.thread)
+	{
+		game_state_writer_wait();
+		memcpy(game_state_writer.snapshot, xbox_game_state_globals.buffer, xbox_game_state_globals.buffer_size);
+		game_state_writer.snapshot_valid = TRUE;
+		xbox_game_state_globals.file_valid_for_read = TRUE;
+		ResetEvent(game_state_writer.idle);
+		SetEvent(game_state_writer.work);
+		return TRUE;
+	}
 
 	if (SetFilePointer(xbox_game_state_globals.handle, 0, NULL, FILE_BEGIN) !=
 			INVALID_SET_FILE_POINTER &&
@@ -317,6 +433,12 @@ boolean game_state_read_from_file(
 		"c:\\halo\\SOURCE\\saved games\\game_state_xbox.c",
 		146,
 		xbox_game_state_globals.file_valid_for_read || recover_saved_games_hack);
+
+	if (game_state_writer.snapshot_valid)
+	{
+		memcpy(xbox_game_state_globals.buffer, game_state_writer.snapshot, xbox_game_state_globals.buffer_size);
+		return TRUE;
+	}
 
 	if (SetFilePointer(xbox_game_state_globals.handle, 0, NULL, FILE_BEGIN) !=
 			INVALID_SET_FILE_POINTER &&
