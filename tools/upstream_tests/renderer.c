@@ -29,10 +29,19 @@ static struct
     float query_area[VISIBILITY_TEST_SLOTS];
     GLuint visibility_counters, visibility_results_buffer;
     unsigned long counter_next, counter_active, counter_of_slot[VISIBILITY_TEST_SLOTS];
+    BOOL counter_test;
     volatile GLuint *visibility_results;
     float constants[XGPU_VERTEX_CONSTANT_COUNT][4];
 } device;
 static struct { BOOL atomic_counters; } xgpu_capabilities;
+/* the NVIDIA Shield test (d3d8_gl.c): other GPUs wait for the counts; NVIDIA
+reads the latest finished hardware result unless the overlay asks to wait */
+static BOOL nvidia, nvidia_waits;
+static BOOL android_visibility_wait(void) { return !nvidia || nvidia_waits; }
+static struct { BOOL active; double visibility; unsigned long visibility_reads; } android_perf;
+#define CLOCK_MONOTONIC 1
+static double fake_clock;
+static double android_clock_ms(int clock) { (void)clock; return fake_clock += 0.5; }
 static float target_scale[2] = {1, 1};
 static GLuint active_query, fake_samples[VISIBILITY_TEST_SLOTS + 2];
 static BOOL fake_available[VISIBILITY_TEST_SLOTS + 2];
@@ -160,6 +169,26 @@ int main(void)
     assert(result_of(0) == 12);
     fake_samples[device.queries[0]] = 0;
     assert(result_of(0) == 0);
+    /* NVIDIA: no counter, no wait; the latest finished hardware result */
+    nvidia = TRUE;
+    begin_test(2, 1, FALSE);
+    assert(!device.counter_test && device.counter_of_slot[2] == VISIBILITY_TEST_SLOTS);
+    reads = query_reads;
+    assert(result_of(2) == 0 && query_reads == reads);
+    fake_available[device.queries[2]] = TRUE;
+    assert(result_of(2) == VISIBILITY_ALL_SAMPLES && query_reads == reads + 1);
+    /* the overlay's wait: counters again, and a test begun without one */
+    nvidia_waits = TRUE;
+    assert(result_of(2) == VISIBILITY_ALL_SAMPLES);
+    begin_test(3, 1, TRUE);
+    assert(device.counter_test && device.counter_of_slot[3] < VISIBILITY_TEST_SLOTS);
+    counters[device.counter_of_slot[3]] = 7;
+    assert(result_of(3) == 7);
+    /* timing only while the frame timing is active */
+    android_perf.active = TRUE;
+    assert(result_of(3) == 7 && android_perf.visibility_reads == 1 && android_perf.visibility > 0.0);
+    android_perf.active = FALSE;
+    nvidia = nvidia_waits = FALSE;
     xgpu_capabilities.atomic_counters = FALSE;
 #else
     GLuint gpu_results[VISIBILITY_TEST_SLOTS] = {400};
@@ -199,7 +228,7 @@ int main(void)
     upload_constants(&program);
     assert(uploads == 1 && !memcmp(uploaded, device.constants, sizeof(uploaded)));
 #ifdef HALO_ANDROID
-    puts("Android visibility: independent slots 0/1, delayed/zero results and tutorial hardware fallback passed; constant serials cross 32 bits correctly.");
+    puts("Android visibility: independent slots 0/1, delayed/zero results, tutorial hardware fallback, NVIDIA reads without waiting and the overlay's wait passed; constant serials cross 32 bits correctly.");
 #else
     puts("Desktop visibility: delayed queries, pixel scaling and mapped results passed; constant serials cross 32 bits correctly.");
 #endif

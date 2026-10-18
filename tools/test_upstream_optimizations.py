@@ -81,7 +81,7 @@ def main():
         "CONSTANT_UPLOAD": block(renderer, "if (entry->constants >= 0 && entry->constants_serial != constants_serial)"),
         "VISIBILITY": "\n".join(function(renderer, name) for name in (
             "D3DDevice_BeginVisibilityTest", "D3DDevice_EndVisibilityTest", "visibility_unscaled",
-            "D3DDevice_GetVisibilityTestResult")),
+            "visibility_test_result", "D3DDevice_GetVisibilityTestResult")),
     }
     run_fixture("renderer", code, ("-DHALO_ANDROID=1",))
     run_fixture("renderer", code)

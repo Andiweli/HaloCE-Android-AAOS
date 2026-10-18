@@ -32,6 +32,11 @@ Conventions carried over from the Xbox:
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef HALO_ANDROID
+#include <pthread.h>
+#include <unistd.h>
+#include "halo_android_perf.h"
+#endif
 
 void d3d8_surface_initialize(D3DSurface *surface, D3DFORMAT format, unsigned long width, unsigned long height);
 void d3d8_surface_resize(D3DSurface *surface, D3DFORMAT format, unsigned long width, unsigned long height);
@@ -61,10 +66,62 @@ static GLuint android_cpu_vertex_shader;
 static BOOL android_cpu_vertex_shader_attempted;
 static struct nv2a_cpu_program *android_active_cpu_program;
 static double android_cpu_frame_ms, android_cpu_total_ms, android_cpu_worst_ms;
-/* input/setup, original shader execution, planar packing, upload/bindings */
-static double android_cpu_frame_parts[4], android_cpu_total_parts[4];
+/* setup, compute (input decoding, original program, attribute planes; on
+every thread taking part), upload/bindings */
+static double android_cpu_frame_parts[3], android_cpu_total_parts[3];
 static unsigned long android_cpu_frame_fixed_vertices, android_cpu_total_fixed_vertices;
 static unsigned long android_cpu_total_vertices, android_cpu_active_frames, android_cpu_frame_vertices;
+static unsigned long android_cpu_frame_draws;
+/* the NVIDIA Shield performance test (halo_android_perf.h): the overlay's
+settings, taken once a frame (android_perf_frame) */
+static unsigned int android_perf_settings;
+/* this draw: a skeletal program on the GPU test variant that uploads all of c[] */
+static BOOL android_full_constants_draw;
+
+static unsigned int android_skinning_mode(void)
+{
+	unsigned int mode = android_perf_settings & HALO_PERF_SKINNING_MASK;
+
+	return mode < HALO_PERF_SKINNING_COUNT ? mode : HALO_PERF_CPU_THREADS;
+}
+
+/* NVIDIA reads lens flare visibility without waiting for the GPU unless
+the test overlay asks for the earlier wait; every other GPU keeps it */
+static BOOL android_visibility_wait(void)
+{
+	return !android_cpu_skeletal_vertices || (android_perf_settings & HALO_PERF_VISIBILITY_WAIT);
+}
+
+/* Frame timing, on NVIDIA or with the test overlay's counter: where a
+frame's time goes - the game thread's own CPU time, the CPU skinning, and
+the waits the renderer sees (lens flare visibility reads, the stream ring's
+fence, the swap, Present's vertical blank pacing). android_perf_frame
+publishes it about once a second for the counter and logs it every 300
+frames (Logcat, halo-diagnostic.txt). */
+struct android_perf_window
+{
+	unsigned long frames, slow34, slow50, draws, skin_draws, skin_vertices, visibility_reads;
+	double wall, wall_maximum, cpu, skin, skin_parts[3], visibility, fence, swap, pace;
+};
+
+static struct
+{
+	BOOL active;
+	double frame_start, cpu_start;
+	/* the current frame's */
+	double visibility, fence, swap, pace;
+	unsigned long draws, visibility_reads;
+	struct android_perf_window second, log;
+	char renderer[128];
+} android_perf;
+
+static double android_clock_ms(clockid_t clock)
+{
+	struct timespec now;
+
+	clock_gettime(clock, &now);
+	return now.tv_sec * 1000.0 + now.tv_nsec / 1000000.0;
+}
 
 static BOOL android_is_nvidia(const char *vendor, const char *renderer)
 {
@@ -198,6 +255,9 @@ struct vertex_shader_object
 #ifdef HALO_ANDROID
 	BOOL cpu_checked;
 	struct nv2a_cpu_program *cpu_program;
+	/* the NVIDIA test variant reading c[] from a uniform buffer (0: none) */
+	GLuint block_shader[2];
+	BOOL block_attempted[2];
 #endif
 };
 
@@ -257,6 +317,10 @@ struct program_entry
 	unsigned long uniforms_serial;
 	/* what the program's other uniforms hold (all ones: unknown) */
 	struct draw_uniforms uniforms;
+#ifdef HALO_ANDROID
+	/* c[] is the uniform block nv2a_constant_block (NVIDIA test variant) */
+	BOOL constant_block;
+#endif
 };
 
 #define FRAGMENT_BUCKETS 1024
@@ -392,6 +456,12 @@ struct gl_device
 	unsigned long counter_next;
 	unsigned long counter_active;
 	unsigned long counter_of_slot[VISIBILITY_TEST_SLOTS];
+	/* the active test counts samples (not when NVIDIA reads without waiting) */
+	BOOL counter_test;
+	/* the NVIDIA test variant's c[] per draw, in the frame's ring slot */
+	GLuint uniform_buffers[STREAM_BUFFER_RING];
+	unsigned long uniform_offset;
+	GLint uniform_alignment;
 #else
 	/* each test's latest result, which the GPU writes (as a query buffer)
 	when the test's draws are done: the game waits for results at the start
@@ -1055,8 +1125,16 @@ static void gl_initialize(void)
 
 		vertex_bindings_supported = android_use_vertex_bindings(major, minor, vendor, renderer);
 		android_cpu_skeletal_vertices = android_is_nvidia(vendor, renderer);
+		snprintf(android_perf.renderer, sizeof(android_perf.renderer), "%s / %s",
+			vendor ? vendor : "unknown", renderer ? renderer : "unknown");
+		android_perf_settings = host_perf_settings();
+		android_perf.active = android_cpu_skeletal_vertices || (android_perf_settings & HALO_PERF_OVERLAY);
 		if (android_cpu_skeletal_vertices)
+		{
 			platform_log("NVIDIA skeletal compatibility: original NV2A vertex execution on CPU; GPU passthrough; other meshes unchanged");
+			platform_log("NVIDIA performance test v1: skinning mode %u, visibility %s (settings %08x); halo-perf lines every 300 frames",
+				android_skinning_mode(), android_visibility_wait() ? "waits" : "async", android_perf_settings);
+		}
 		if (android_is_nvidia(vendor, renderer))
 			platform_log("Shield vertex compatibility: classic attribute pointers (OpenGL ES %d.%d); vendor=%s; renderer=%s",
 				(int)major, (int)minor, vendor ? vendor : "unknown", renderer ? renderer : "unknown");
@@ -1554,7 +1632,9 @@ void WINAPI D3DDevice_BeginVisibilityTest(void)
 	readback on the current driver. The Vita uses hardware visibility tests. */
 	glBeginQuery(VISIBILITY_QUERY, device.queries[VISIBILITY_TEST_SLOTS]);
 #ifdef HALO_ANDROID
-	if (xgpu_capabilities.atomic_counters)
+	/* counting the samples is only of use to a reader that waits for them */
+	device.counter_test = xgpu_capabilities.atomic_counters && android_visibility_wait();
+	if (device.counter_test)
 	{
 		const GLuint zero = 0;
 
@@ -1581,7 +1661,8 @@ HRESULT WINAPI D3DDevice_EndVisibilityTest(DWORD index)
 #ifdef HALO_ANDROID
 	if (xgpu_capabilities.atomic_counters)
 	{
-		device.counter_of_slot[index] = device.counter_active;
+		/* (no counter: a test begun while NVIDIA did not wait) */
+		device.counter_of_slot[index] = device.counter_test ? device.counter_active : VISIBILITY_TEST_SLOTS;
 	}
 #endif
 	/* the target's pixels to a game pixel: the result is a count of the
@@ -1618,7 +1699,7 @@ static GLuint visibility_unscaled(GLuint samples, DWORD index)
 }
 
 #endif
-HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULONGLONG *time_stamp)
+static HRESULT visibility_test_result(DWORD index, UINT *result, ULONGLONG *time_stamp)
 {
 	GLuint available = 0, samples = 0;
 
@@ -1632,13 +1713,17 @@ HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULON
 		return S_OK;
 	}
 #ifdef HALO_ANDROID
-	if (xgpu_capabilities.atomic_counters)
+	/* NVIDIA, unless the test overlay asks to wait: the latest finished
+	hardware result below, as on ES 3.0, so the CPU never waits for the
+	whole previous frame on the GPU at the start of every frame */
+	if (xgpu_capabilities.atomic_counters && android_visibility_wait())
 	{
 		GLuint hardware_visible = 0;
 
 		/* reading the buffer waits for the draws that counted */
-		samples = host_gl_read_buffer_word(device.visibility_counters,
-			(unsigned int)(device.counter_of_slot[index] * sizeof(GLuint)));
+		if (device.counter_of_slot[index] < VISIBILITY_TEST_SLOTS)
+			samples = host_gl_read_buffer_word(device.visibility_counters,
+				(unsigned int)(device.counter_of_slot[index] * sizeof(GLuint)));
 		glGetQueryObjectuiv(device.queries[index], GL_QUERY_RESULT, &hardware_visible);
 		/* A hardware query still detects visible geometry if an atomic
 		counter was not written or could not be mapped. Preserve the exact
@@ -1682,6 +1767,23 @@ HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULON
 	if (result)
 		*result = device.visibility_known[index];
 	return S_OK;
+}
+
+HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULONGLONG *time_stamp)
+{
+#ifdef HALO_ANDROID
+	if (android_perf.active)
+	{
+		/* (the frame timing: what the game waits for here) */
+		double start = android_clock_ms(CLOCK_MONOTONIC);
+		HRESULT status = visibility_test_result(index, result, time_stamp);
+
+		android_perf.visibility += android_clock_ms(CLOCK_MONOTONIC) - start;
+		android_perf.visibility_reads++;
+		return status;
+	}
+#endif
+	return visibility_test_result(index, result, time_stamp);
 }
 
 /* ---------- render and texture stage state */
@@ -2005,12 +2107,94 @@ static unsigned long hash_words(const void *data, unsigned long size)
 	return hash;
 }
 
+#ifdef HALO_ANDROID
+/* the NVIDIA test variant of a skeletal program: the same GLSL, with c[] a
+uniform block that each draw points at its own copy of the constants
+(android_constant_block_bind). 0 if the driver rejects it. */
+static GLuint android_constant_block_shader(struct vertex_shader_object *program, int variant, BOOL immediate)
+{
+	static const char declaration[] = "uniform vec4 c[192];\n";
+
+	if (!program->block_attempted[variant])
+	{
+		char *source = nv2a_vertex_shader_to_glsl(program->instructions, program->instruction_count,
+			immediate ? 0 : device.vertex_shader->packed_mask);
+		char *found = strstr(source, declaration);
+		struct xgpu_text text = { 0 };
+
+		program->block_attempted[variant] = TRUE;
+		if (found)
+		{
+			xgpu_text_append(&text, "%.*s", (int)(found - source), source);
+			xgpu_text_append(&text, "layout(std140) uniform nv2a_constant_block\n{\n\tvec4 c[192];\n};\n");
+			xgpu_text_append(&text, "%s", found + sizeof(declaration) - 1);
+			program->block_shader[variant] = compile_shader(GL_VERTEX_SHADER, text.buffer, "vertex (uniform block)");
+			free(text.buffer);
+		}
+		free(source);
+		platform_log("NVIDIA skinning test A: shader %lu with a uniform block %s", program->id,
+			program->block_shader[variant] ? "compiled" : "unavailable; original shader");
+	}
+	return program->block_shader[variant];
+}
+
+/* c[] for this draw, in the next free range of the frame's uniform ring
+(released by the same fences as the stream ring, host_gl_wait_frame) */
+#define ANDROID_UNIFORM_RING_SIZE (2 * 1024 * 1024)
+
+static void android_constant_block_bind(void)
+{
+	static unsigned long long uploaded_serial;
+	static unsigned long uploaded_offset = ~0UL;
+	static GLuint uploaded_buffer;
+	const unsigned long size = sizeof(device.constants);
+	unsigned long reserved;
+	GLuint buffer;
+
+	if (!device.uniform_buffers[0])
+	{
+		int ring;
+
+		glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &device.uniform_alignment);
+		if (device.uniform_alignment < 16)
+			device.uniform_alignment = 256;
+		glGenBuffers(STREAM_BUFFER_RING, device.uniform_buffers);
+		for (ring = 0; ring < STREAM_BUFFER_RING; ring++)
+		{
+			glBindBuffer(GL_UNIFORM_BUFFER, device.uniform_buffers[ring]);
+			glBufferData(GL_UNIFORM_BUFFER, ANDROID_UNIFORM_RING_SIZE, NULL, GL_STREAM_DRAW);
+		}
+		device.uniform_offset = 0;
+	}
+	buffer = device.uniform_buffers[device.buffer_ring];
+	/* the same constants, in this frame's buffer: the range bound is current */
+	if (uploaded_buffer == buffer && uploaded_serial == constants_serial && uploaded_offset < device.uniform_offset)
+		return;
+	reserved = (size + (unsigned long)device.uniform_alignment - 1) / (unsigned long)device.uniform_alignment *
+		(unsigned long)device.uniform_alignment;
+	glBindBuffer(GL_UNIFORM_BUFFER, buffer);
+	if (device.uniform_offset + reserved > ANDROID_UNIFORM_RING_SIZE)
+	{
+		/* a new store for the rest of the frame; queued draws keep the old one */
+		glBufferData(GL_UNIFORM_BUFFER, ANDROID_UNIFORM_RING_SIZE, NULL, GL_STREAM_DRAW);
+		device.uniform_offset = 0;
+	}
+	host_gl_buffer_write(GL_UNIFORM_BUFFER, (unsigned int)device.uniform_offset, (unsigned int)size, device.constants);
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, buffer, (GLintptr)device.uniform_offset, (GLsizeiptr)size);
+	uploaded_buffer = buffer;
+	uploaded_serial = constants_serial;
+	uploaded_offset = device.uniform_offset;
+	device.uniform_offset += reserved;
+}
+#endif
+
 static GLuint vertex_shader_get(struct vertex_shader_object *program, BOOL immediate)
 {
 	int variant = immediate ? 1 : 0;
 
 #ifdef HALO_ANDROID
 	android_active_cpu_program = NULL;
+	android_full_constants_draw = FALSE;
 	if (android_cpu_skeletal_vertices)
 	{
 		BOOL declaration_supported = TRUE;
@@ -2029,7 +2213,24 @@ static GLuint vertex_shader_get(struct vertex_shader_object *program, BOOL immed
 				platform_log("NVIDIA CPU skeletal shader %lu: %lu original instructions, %s", program->id, program->instruction_count,
 					nv2a_cpu_program_is_specialized(program->cpu_program) ? "fixed CPU executor v1" : "interpreter fallback");
 		}
-		if (declaration_supported && program->cpu_program)
+		/* the Shield test's GPU variants (halo_android_perf.h): the original
+		GLSL, with c[] from a uniform block or uploaded whole for every draw */
+		if (program->cpu_program && android_skinning_mode() == HALO_PERF_GPU_UNIFORM_BLOCK)
+		{
+			GLuint shader = android_constant_block_shader(program, variant, immediate);
+
+			if (shader)
+				return shader;
+		}
+		else if (program->cpu_program && android_skinning_mode() == HALO_PERF_GPU_FULL_CONSTANTS)
+		{
+			android_full_constants_draw = TRUE;
+		}
+		else if (program->cpu_program && android_skinning_mode() == HALO_PERF_GPU_ORIGINAL)
+		{
+			/* the unchanged shader below, with its known artefacts */
+		}
+		else if (declaration_supported && program->cpu_program)
 		{
 			/* All skeletal shaders share one small GPU vertex shader. */
 			if (!android_cpu_vertex_shader_attempted)
@@ -2215,6 +2416,17 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 	entry->texture_scale = glGetUniformLocation(entry->program, "texture_scale");
 	entry->texture_lod_bias = glGetUniformLocation(entry->program, "texture_lod_bias");
 	entry->screen_offset = glGetUniformLocation(entry->program, "screen_offset");
+#ifdef HALO_ANDROID
+	{
+		GLuint block = glGetUniformBlockIndex(entry->program, "nv2a_constant_block");
+
+		if (block != GL_INVALID_INDEX)
+		{
+			glUniformBlockBinding(entry->program, block, 0);
+			entry->constant_block = TRUE;
+		}
+	}
+#endif
 	for (stage = 0; stage < D3DTSS_MAXSTAGES; stage++)
 	{
 		char name[8];
@@ -2792,7 +3004,7 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	key.fog_enable = D3D__RenderState[D3DRS_FOGENABLE] != 0;
 	key.fog_table_mode = (unsigned char)D3D__RenderState[D3DRS_FOGTABLEMODE];
 #ifdef HALO_ANDROID
-	key.count_samples = device.visibility_test_active && xgpu_capabilities.atomic_counters;
+	key.count_samples = device.visibility_test_active && xgpu_capabilities.atomic_counters && device.counter_test;
 #endif
 
 	entry = program_get(vertex_shader_get(program, immediate), fragment_shader_get(&key));
@@ -2866,6 +3078,16 @@ static struct program_entry *prepare_draw(BOOL immediate)
 		constants_checkpoint_first = XGPU_VERTEX_CONSTANT_COUNT;
 		constants_checkpoint_last = 0;
 	}
+#ifdef HALO_ANDROID
+	/* NVIDIA skinning tests (halo_android_perf.h): c[] whole from c[0]'s
+	location for every draw, or from this draw's own uniform buffer range */
+	if (android_full_constants_draw && entry->constants >= 0)
+		glUniform4fv(entry->constants, (GLsizei)(entry->constants_consecutive ? entry->constant_count :
+			XGPU_VERTEX_CONSTANT_COUNT), &device.constants[0][0]);
+	if (entry->constant_block)
+		android_constant_block_bind();
+	android_perf.draws++;
+#endif
 
 	/* the state the other uniforms come from: most draws share it with the
 	draw before them, and so share its uniforms */
@@ -3594,75 +3816,312 @@ static void setup_streams(unsigned long first, unsigned long count)
 }
 
 #ifdef HALO_ANDROID
+/* ---------- NVIDIA CPU skeletal vertices
+
+A draw's vertices are cut into chunks, which the render thread and up to
+ANDROID_CPU_WORKERS_MAXIMUM worker threads take in turn: a chunk's inputs
+are decoded column by column (only the registers the program reads), the
+original program runs for each vertex, and the attributes it writes go
+straight into their planes of one upload. The workers touch neither GL nor
+any state but the job's; only the render thread uploads and binds. Every
+vertex gives the same result whichever thread runs it, and a draw is
+finished before the next one starts. */
+
+#define ANDROID_CPU_CHUNK 64
+/* smaller draws stay on the render thread: waking a worker costs more */
+#define ANDROID_CPU_PARALLEL_MINIMUM 192
+#define ANDROID_CPU_WORKERS_MAXIMUM 3
+/* how long a worker looks for the next draw before it sleeps; a model's
+draws follow each other within microseconds, frames come milliseconds
+apart */
+#define ANDROID_CPU_WORKER_SPINS 20000
+/* the attributes of a vertex the GPU reads: nine float4, fog and point size */
+#define ANDROID_CPU_VERTEX_BYTES (9 * 4 * sizeof(float) + 2 * sizeof(float))
+
+struct android_cpu_stream
+{
+	const unsigned char *data;
+	unsigned long stride, type, reg;
+};
+
+struct android_cpu_job
+{
+	const struct nv2a_cpu_program *program;
+	const float (*constants)[4];
+	const float *viewport_scale, *viewport_offset;
+	float screen_offset, point_size;
+	/* every input register of every vertex (immediate mode), or decoded
+	from the streams into the job's own array */
+	const float (*inputs)[16][4];
+	float (*decoded)[16][4];
+	struct android_cpu_stream streams[16];
+	unsigned long stream_count;
+	/* read registers no stream gives: one value for every vertex */
+	float defaults[16][4];
+	unsigned default_registers;
+	/* attribute a's float4 plane is planes + plane_offset[a] (written
+	attributes only); the fog/point size pairs at auxiliary_offset */
+	unsigned char *planes;
+	unsigned long plane_offset[9], auxiliary_offset;
+	unsigned written;
+	BOOL auxiliary;
+	unsigned long count, chunk_count;
+	unsigned long next_chunk, done_chunks;
+};
+
+static struct
+{
+	pthread_mutex_t lock;
+	pthread_cond_t wake;
+	struct android_cpu_job *job;
+	/* a new job was opened (workers look for this), and whether one is
+	open; workers inside a job are busy, and the render thread waits for
+	them to leave before the job's memory is used again */
+	unsigned int generation, open, busy, sleepers;
+	unsigned long workers;
+	BOOL started;
+} android_cpu_pool = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER };
+
+static inline void android_cpu_relax(void)
+{
+#if defined(__aarch64__) || defined(__arm64__)
+	__asm__ __volatile__("yield" ::: "memory");
+#else
+	__asm__ __volatile__("" ::: "memory");
+#endif
+}
+
+static void android_cpu_chunk(struct android_cpu_job *job, unsigned long chunk)
+{
+	unsigned long first = chunk * ANDROID_CPU_CHUNK;
+	unsigned long count = job->count - first < ANDROID_CPU_CHUNK ? job->count - first : ANDROID_CPU_CHUNK;
+	const float (*inputs)[16][4] = job->inputs;
+	unsigned long vertex, index;
+	unsigned reg;
+
+	if (!inputs)
+	{
+		float (*decoded)[16][4] = job->decoded + first;
+
+		for (reg = 0; reg < 16; reg++)
+		{
+			if (job->default_registers & (1U << reg))
+			{
+				for (vertex = 0; vertex < count; vertex++)
+					memcpy(decoded[vertex][reg], job->defaults[reg], sizeof(job->defaults[reg]));
+			}
+		}
+		for (index = 0; index < job->stream_count; index++)
+		{
+			const struct android_cpu_stream *stream = &job->streams[index];
+
+			nv2a_cpu_attribute_decode_column(stream->type, stream->data + first * stream->stride,
+				stream->stride, count, decoded, (unsigned)stream->reg);
+		}
+		inputs = (const float (*)[16][4])job->decoded;
+	}
+	for (vertex = first; vertex < first + count; vertex++)
+	{
+		struct nv2a_cpu_vertex result;
+
+		nv2a_cpu_vertex_execute(job->program, inputs[vertex], job->constants, job->viewport_scale,
+			job->viewport_offset, job->screen_offset, job->point_size, &result);
+		for (index = 0; index < 9; index++)
+		{
+			if (job->written & (1U << index))
+				memcpy(job->planes + job->plane_offset[index] + vertex * 4 * sizeof(float), result.value[index],
+					4 * sizeof(float));
+		}
+		if (job->auxiliary)
+			memcpy(job->planes + job->auxiliary_offset + vertex * 2 * sizeof(float), &result.fog, 2 * sizeof(float));
+	}
+}
+
+static void android_cpu_job_work(struct android_cpu_job *job)
+{
+	for (;;)
+	{
+		unsigned long chunk = __atomic_fetch_add(&job->next_chunk, 1, __ATOMIC_SEQ_CST);
+
+		if (chunk >= job->chunk_count)
+			return;
+		android_cpu_chunk(job, chunk);
+		__atomic_fetch_add(&job->done_chunks, 1, __ATOMIC_RELEASE);
+	}
+}
+
+static void *android_cpu_worker(void *unused)
+{
+	unsigned int seen = __atomic_load_n(&android_cpu_pool.generation, __ATOMIC_SEQ_CST);
+
+	(void)unused;
+	for (;;)
+	{
+		unsigned int generation = seen;
+		unsigned long spins;
+
+		for (spins = 0; spins < ANDROID_CPU_WORKER_SPINS; spins++)
+		{
+			generation = __atomic_load_n(&android_cpu_pool.generation, __ATOMIC_SEQ_CST);
+			if (generation != seen)
+				break;
+			android_cpu_relax();
+		}
+		if (generation == seen)
+		{
+			pthread_mutex_lock(&android_cpu_pool.lock);
+			__atomic_add_fetch(&android_cpu_pool.sleepers, 1, __ATOMIC_SEQ_CST);
+			while ((generation = __atomic_load_n(&android_cpu_pool.generation, __ATOMIC_SEQ_CST)) == seen)
+				pthread_cond_wait(&android_cpu_pool.wake, &android_cpu_pool.lock);
+			__atomic_sub_fetch(&android_cpu_pool.sleepers, 1, __ATOMIC_SEQ_CST);
+			pthread_mutex_unlock(&android_cpu_pool.lock);
+		}
+		seen = generation;
+		/* enter, then check the job is still open: the render thread closes
+		it, then waits for every worker inside to leave */
+		__atomic_add_fetch(&android_cpu_pool.busy, 1, __ATOMIC_SEQ_CST);
+		if (__atomic_load_n(&android_cpu_pool.open, __ATOMIC_SEQ_CST))
+			android_cpu_job_work(android_cpu_pool.job);
+		__atomic_sub_fetch(&android_cpu_pool.busy, 1, __ATOMIC_SEQ_CST);
+	}
+	return NULL;
+}
+
+/* the workers, started once: two fewer than the processors (the render
+thread and the GL driver's own), at least one */
+static unsigned long android_cpu_workers(void)
+{
+	if (!android_cpu_pool.started)
+	{
+		long processors = sysconf(_SC_NPROCESSORS_ONLN);
+		unsigned long wanted = processors > 3 ? (unsigned long)processors - 2 : 1, index;
+
+		android_cpu_pool.started = TRUE;
+		if (wanted > ANDROID_CPU_WORKERS_MAXIMUM)
+			wanted = ANDROID_CPU_WORKERS_MAXIMUM;
+		for (index = 0; index < wanted; index++)
+		{
+			pthread_t thread;
+
+			if (pthread_create(&thread, NULL, android_cpu_worker, NULL) != 0)
+				break;
+			pthread_detach(thread);
+			android_cpu_pool.workers++;
+		}
+		platform_log("NVIDIA CPU skeletal workers: %lu of %lu started (%ld processors online)",
+			android_cpu_pool.workers, wanted, processors);
+	}
+	return android_cpu_pool.workers;
+}
+
+static void android_cpu_job_run(struct android_cpu_job *job, BOOL parallel)
+{
+	job->next_chunk = 0;
+	job->done_chunks = 0;
+	if (!parallel)
+	{
+		android_cpu_job_work(job);
+		return;
+	}
+	android_cpu_pool.job = job;
+	__atomic_store_n(&android_cpu_pool.open, 1, __ATOMIC_SEQ_CST);
+	__atomic_add_fetch(&android_cpu_pool.generation, 1, __ATOMIC_SEQ_CST);
+	if (__atomic_load_n(&android_cpu_pool.sleepers, __ATOMIC_SEQ_CST))
+	{
+		pthread_mutex_lock(&android_cpu_pool.lock);
+		pthread_cond_broadcast(&android_cpu_pool.wake);
+		pthread_mutex_unlock(&android_cpu_pool.lock);
+	}
+	android_cpu_job_work(job);
+	while (__atomic_load_n(&job->done_chunks, __ATOMIC_ACQUIRE) < job->chunk_count)
+		android_cpu_relax();
+	__atomic_store_n(&android_cpu_pool.open, 0, __ATOMIC_SEQ_CST);
+	while (__atomic_load_n(&android_cpu_pool.busy, __ATOMIC_SEQ_CST))
+		android_cpu_relax();
+}
+
+static double android_elapsed_ms(const struct timespec *from, const struct timespec *to)
+{
+	return (to->tv_sec - from->tv_sec) * 1000.0 + (to->tv_nsec - from->tv_nsec) / 1000000.0;
+}
+
 static BOOL android_cpu_setup_vertices(unsigned long first, unsigned long count, const float *immediate)
 {
-	static struct nv2a_cpu_vertex *scratch;
-	static unsigned long capacity;
-	static unsigned char *upload;
-	static unsigned long upload_capacity;
+	static struct android_cpu_job job;
 	static float (*decoded)[16][4];
 	static unsigned long decoded_capacity;
-	struct { const unsigned char *data; unsigned long stride, type, reg; } streams[16];
-	unsigned long stream_count = 0;
-	float defaults[16][4];
+	static unsigned char *planes;
+	static unsigned long planes_capacity;
+	static const float initial[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	struct vertex_shader_object *declaration = device.vertex_shader;
-	unsigned long vertex, index, offset, bytes;
-	struct timespec stamp[5];
+	const struct nv2a_cpu_program *program = android_active_cpu_program;
+	unsigned inputs = nv2a_cpu_program_inputs(program), outputs = nv2a_cpu_program_outputs(program);
+	unsigned long index, offset, bytes, stream_registers = 0, planes_written = 0;
+	BOOL parallel;
+	struct timespec stamp[4];
+
 	clock_gettime(CLOCK_MONOTONIC, &stamp[0]);
-	if (count > STREAM_BUFFER_SIZE / sizeof(*scratch))
+	if (count > STREAM_BUFFER_SIZE / ANDROID_CPU_VERTEX_BYTES)
 	{
 		platform_log("NVIDIA CPU skeletal draw rejected: %lu vertices exceed the streaming buffer", count);
 		return FALSE;
 	}
-	bytes = count * sizeof(*scratch);
-	if (count > capacity)
+	bytes = count * ANDROID_CPU_VERTEX_BYTES;
+	if (bytes > planes_capacity)
 	{
-		struct nv2a_cpu_vertex *larger = realloc(scratch, bytes);
-		if (!larger)
-		{
-			platform_log("NVIDIA CPU skeletal vertex allocation failed (%lu bytes)", bytes);
-			return FALSE;
-		}
-		scratch = larger; capacity = count;
-	}
-	bytes = count * 38 * sizeof(float);
-	if (bytes > upload_capacity)
-	{
-		unsigned char *larger = realloc(upload, bytes);
+		unsigned char *larger = realloc(planes, bytes);
+
 		if (!larger)
 		{
 			platform_log("NVIDIA CPU skeletal upload allocation failed (%lu bytes)", bytes);
 			return FALSE;
 		}
-		upload = larger; upload_capacity = bytes;
+		planes = larger;
+		planes_capacity = bytes;
 	}
-	if (count > decoded_capacity)
+	if (!immediate && count > decoded_capacity)
 	{
 		void *larger = realloc(decoded, count * sizeof(*decoded));
+
 		if (!larger)
 		{
 			platform_log("NVIDIA CPU skeletal input allocation failed (%lu vertices)", count);
 			return FALSE;
 		}
-		decoded = larger; decoded_capacity = count;
+		decoded = larger;
+		decoded_capacity = count;
 	}
-	if (immediate)
-		memcpy(decoded, immediate, count * sizeof(*decoded));
-	else
+
+	job.program = program;
+	job.constants = (const float (*)[4])device.constants;
+	job.viewport_scale = draw_uniforms.viewport_scale;
+	job.viewport_offset = draw_uniforms.viewport_offset;
+	job.screen_offset = draw_uniforms.screen_offset;
+	job.point_size = draw_uniforms.point_size;
+	job.inputs = (const float (*)[16][4])immediate;
+	job.decoded = decoded;
+	job.stream_count = 0;
+	job.count = count;
+	job.chunk_count = (count + ANDROID_CPU_CHUNK - 1) / ANDROID_CPU_CHUNK;
+	if (!immediate)
 	{
 		/* Resolve addresses and constant streams once per draw. Only the last
-valid element for a register matters, as in the original element loop. */
+		valid element for a register matters, as in the original element loop. */
 		const struct vertex_element *last[16] = { NULL };
-		memcpy(defaults, device.attributes, sizeof(defaults));
+
+		memcpy(job.defaults, device.attributes, sizeof(job.defaults));
 		for (index = 0; index < 16; index++)
+		{
 			if (declaration->packed_mask & (1UL << index))
 			{
-				defaults[index][0] = defaults[index][1] = defaults[index][2] = 0.0f;
-				defaults[index][3] = 1.0f;
+				job.defaults[index][0] = job.defaults[index][1] = job.defaults[index][2] = 0.0f;
+				job.defaults[index][3] = 1.0f;
 			}
+		}
 		for (index = 0; index < declaration->element_count; index++)
 		{
 			const struct vertex_element *element = &declaration->elements[index];
+
 			if (element->type != D3DVSDT_NONE && device.streams[element->stream].data)
 				last[element->reg] = element;
 		}
@@ -3671,62 +4130,78 @@ valid element for a register matters, as in the original element loop. */
 			const struct vertex_element *element = last[index];
 			const unsigned char *base;
 			unsigned long stride;
-			if (!element) continue;
+
+			if (!element || !(inputs & (1U << index)))
+				continue;
 			stride = device.streams[element->stream].stride;
 			base = PLATFORM_PHYSICAL_TO_VIRTUAL(device.streams[element->stream].data);
 			base += first * stride + element->offset;
 			if (!stride)
-				nv2a_cpu_attribute_decode(element->type, base, defaults[index]);
+			{
+				nv2a_cpu_attribute_decode(element->type, base, job.defaults[index]);
+			}
 			else
 			{
-				streams[stream_count].data = base;
-				streams[stream_count].stride = stride;
-				streams[stream_count].type = element->type;
-				streams[stream_count++].reg = index;
+				job.streams[job.stream_count].data = base;
+				job.streams[job.stream_count].stride = stride;
+				job.streams[job.stream_count].type = element->type;
+				job.streams[job.stream_count++].reg = index;
+				stream_registers |= 1UL << index;
 			}
 		}
-		for (vertex = 0; vertex < count; vertex++)
-		{
-			memcpy(decoded[vertex], defaults, sizeof(defaults));
-			for (index = 0; index < stream_count; index++)
-				nv2a_cpu_attribute_decode(streams[index].type,
-					streams[index].data + vertex * streams[index].stride, decoded[vertex][streams[index].reg]);
-		}
+		job.default_registers = inputs & ~(unsigned)stream_registers;
 	}
-	clock_gettime(CLOCK_MONOTONIC, &stamp[1]);
+	/* the planes of the attributes the program writes, one after another */
+	job.written = outputs & 0x1ffU;
+	for (index = 0; index < 9; index++)
+	{
+		if (job.written & (1U << index))
+			job.plane_offset[index] = planes_written++ * count * 4 * sizeof(float);
+	}
+	job.auxiliary = (outputs & (NV2A_CPU_OUTPUT_FOG | NV2A_CPU_OUTPUT_POINT_SIZE)) != 0;
+	job.auxiliary_offset = planes_written * count * 4 * sizeof(float);
+	job.planes = planes;
+	bytes = job.auxiliary_offset + (job.auxiliary ? count * 2 * sizeof(float) : 0);
 	nv2a_cpu_program_prepare_constants(android_active_cpu_program, device.constants);
-	for (vertex = 0; vertex < count; vertex++)
-		nv2a_cpu_vertex_execute(android_active_cpu_program, decoded[vertex], device.constants,
-			draw_uniforms.viewport_scale, draw_uniforms.viewport_offset, draw_uniforms.screen_offset,
-			draw_uniforms.point_size, &scratch[vertex]);
+	parallel = android_skinning_mode() == HALO_PERF_CPU_THREADS && count >= ANDROID_CPU_PARALLEL_MINIMUM &&
+		android_cpu_workers() > 0;
+	clock_gettime(CLOCK_MONOTONIC, &stamp[1]);
+
+	android_cpu_job_run(&job, parallel);
 	clock_gettime(CLOCK_MONOTONIC, &stamp[2]);
 
-	/* Pack ten contiguous attribute blocks into one upload. Apart from
-aligned float4 fetches, this lets GFX record each attribute without
-duplicating the entire interleaved buffer ten times. */
-	for (index = 0; index < 9; index++)
-		for (vertex = 0; vertex < count; vertex++)
-			memcpy(upload + (index * count + vertex) * 4 * sizeof(float), scratch[vertex].value[index], 4 * sizeof(float));
-	for (vertex = 0; vertex < count; vertex++)
-		memcpy(upload + count * 36 * sizeof(float) + vertex * 2 * sizeof(float), &scratch[vertex].fog, 2 * sizeof(float));
 	/* One reservation/upload: orphaning cannot invalidate a second stream.
-The existing ring and index rebasing still govern this draw. */
-	clock_gettime(CLOCK_MONOTONIC, &stamp[3]);
-	offset = stream_upload(upload, bytes);
+	The existing ring and index rebasing still govern this draw. Attributes
+	the program never writes read their constant value instead. */
+	offset = stream_upload(planes, bytes);
 	stats.streamed_bytes += bytes;
 	for (index = 0; index < 9; index++)
-		state_attribute_pointer((GLuint)index, device.stream_buffer, 4, GL_FLOAT, GL_FALSE, FALSE,
-			4 * sizeof(float), offset + index * count * 4 * sizeof(float));
-	state_attribute_pointer(9, device.stream_buffer, 2, GL_FLOAT, GL_FALSE, FALSE,
-		2 * sizeof(float), offset + count * 36 * sizeof(float));
+	{
+		if (job.written & (1U << index))
+			state_attribute_pointer((GLuint)index, device.stream_buffer, 4, GL_FLOAT, GL_FALSE, FALSE,
+				4 * sizeof(float), offset + job.plane_offset[index]);
+		else
+			state_attribute_value((GLuint)index, initial);
+	}
+	if (job.auxiliary)
+	{
+		state_attribute_pointer(9, device.stream_buffer, 2, GL_FLOAT, GL_FALSE, FALSE,
+			2 * sizeof(float), offset + job.auxiliary_offset);
+	}
+	else
+	{
+		const float auxiliary[4] = { 1.0f, draw_uniforms.point_size, 0.0f, 1.0f };
+
+		state_attribute_value(9, auxiliary);
+	}
 	for (index = 10; index < 16; index++) state_attribute_value(index, device.attributes[index]);
-	clock_gettime(CLOCK_MONOTONIC, &stamp[4]);
-	for (index = 0; index < 4; index++)
-		android_cpu_frame_parts[index] += (stamp[index + 1].tv_sec - stamp[index].tv_sec) * 1000.0 +
-			(stamp[index + 1].tv_nsec - stamp[index].tv_nsec) / 1000000.0;
-	android_cpu_frame_ms += (stamp[4].tv_sec - stamp[0].tv_sec) * 1000.0 + (stamp[4].tv_nsec - stamp[0].tv_nsec) / 1000000.0;
+	clock_gettime(CLOCK_MONOTONIC, &stamp[3]);
+	for (index = 0; index < 3; index++)
+		android_cpu_frame_parts[index] += android_elapsed_ms(&stamp[index], &stamp[index + 1]);
+	android_cpu_frame_ms += android_elapsed_ms(&stamp[0], &stamp[3]);
 	if (nv2a_cpu_program_is_specialized(android_active_cpu_program)) android_cpu_frame_fixed_vertices += count;
 	android_cpu_frame_vertices += count;
+	android_cpu_frame_draws++;
 	return TRUE;
 }
 #endif
@@ -4133,6 +4608,149 @@ static void write_screenshot(struct render_target_entry *target)
 	free(pixels);
 }
 
+#ifdef HALO_ANDROID
+/* the frame's CPU skinning totals, logged every 300 frames on NVIDIA */
+static void android_cpu_present(void)
+{
+	if (android_cpu_frame_vertices)
+	{
+		unsigned part;
+		android_cpu_total_ms += android_cpu_frame_ms;
+		for (part = 0; part < 3; part++) android_cpu_total_parts[part] += android_cpu_frame_parts[part];
+		android_cpu_total_fixed_vertices += android_cpu_frame_fixed_vertices;
+		if (android_cpu_frame_ms > android_cpu_worst_ms) android_cpu_worst_ms = android_cpu_frame_ms;
+		android_cpu_total_vertices += android_cpu_frame_vertices;
+		android_cpu_active_frames++;
+	}
+	if (android_perf.active)
+	{
+		struct android_perf_window *windows[2] = { &android_perf.second, &android_perf.log };
+		unsigned which, part;
+
+		for (which = 0; which < 2; which++)
+		{
+			windows[which]->skin += android_cpu_frame_ms;
+			for (part = 0; part < 3; part++) windows[which]->skin_parts[part] += android_cpu_frame_parts[part];
+			windows[which]->skin_draws += android_cpu_frame_draws;
+			windows[which]->skin_vertices += android_cpu_frame_vertices;
+		}
+	}
+	android_cpu_frame_ms = 0.0; android_cpu_frame_vertices = 0;
+	android_cpu_frame_fixed_vertices = 0; android_cpu_frame_draws = 0;
+	memset(android_cpu_frame_parts, 0, sizeof(android_cpu_frame_parts));
+	if (android_cpu_skeletal_vertices && device.frame % 300 == 0 && android_cpu_active_frames)
+	{
+		platform_log("NVIDIA CPU skeletal timing: %lu active frames, %lu vertices/frame, %.2f ms/frame, worst %.2f ms (includes stream upload)",
+			android_cpu_active_frames, android_cpu_total_vertices / android_cpu_active_frames,
+			android_cpu_total_ms / android_cpu_active_frames, android_cpu_worst_ms);
+		platform_log("NVIDIA CPU skeletal breakdown v2: setup %.3f, compute %.3f (decode, execute, planes; %lu threads), upload/bind %.3f ms/active frame; fixed %lu/%lu vertices",
+			android_cpu_total_parts[0] / android_cpu_active_frames, android_cpu_total_parts[1] / android_cpu_active_frames,
+			android_skinning_mode() == HALO_PERF_CPU_THREADS ? android_cpu_pool.workers + 1 : 1,
+			android_cpu_total_parts[2] / android_cpu_active_frames,
+			android_cpu_total_fixed_vertices, android_cpu_total_vertices);
+		memset(android_cpu_total_parts, 0, sizeof(android_cpu_total_parts));
+		android_cpu_total_fixed_vertices = 0;
+		android_cpu_total_ms = android_cpu_worst_ms = 0.0;
+		android_cpu_total_vertices = android_cpu_active_frames = 0;
+	}
+}
+
+static const char *android_skinning_name(void)
+{
+	static char threads[24];
+
+	if (!android_cpu_skeletal_vertices)
+		return "standard GPU path";
+	switch (android_skinning_mode())
+	{
+	case HALO_PERF_CPU_THREADS:
+		snprintf(threads, sizeof(threads), "CPU x%lu", android_cpu_pool.workers + 1);
+		return threads;
+	case HALO_PERF_CPU_SINGLE: return "CPU x1";
+	case HALO_PERF_GPU_UNIFORM_BLOCK: return "GPU test A (uniform buffer)";
+	case HALO_PERF_GPU_FULL_CONSTANTS: return "GPU test B (full constants)";
+	default: return "GPU original";
+	}
+}
+
+/* ends a frame's timing, after Present's pacing; takes the overlay's
+settings for the next frame */
+static void android_perf_frame(void)
+{
+	double now = android_clock_ms(CLOCK_MONOTONIC), cpu_now = android_clock_ms(CLOCK_THREAD_CPUTIME_ID);
+	struct android_perf_window *second = &android_perf.second, *log = &android_perf.log;
+
+	android_perf_settings = host_perf_settings();
+	if (android_perf.active && android_perf.frame_start > 0.0)
+	{
+		struct android_perf_window *windows[2] = { second, log };
+		double wall = now - android_perf.frame_start, cpu = cpu_now - android_perf.cpu_start;
+		unsigned which;
+
+		for (which = 0; which < 2; which++)
+		{
+			struct android_perf_window *window = windows[which];
+
+			window->frames++;
+			window->wall += wall;
+			if (wall > window->wall_maximum) window->wall_maximum = wall;
+			window->slow34 += wall > 34.0;
+			window->slow50 += wall > 50.0;
+			window->cpu += cpu;
+			window->visibility += android_perf.visibility;
+			window->visibility_reads += android_perf.visibility_reads;
+			window->fence += android_perf.fence;
+			window->swap += android_perf.swap;
+			window->pace += android_perf.pace;
+			window->draws += android_perf.draws;
+		}
+		if (second->frames >= 30)
+		{
+			double frames = (double)second->frames;
+			char text[512];
+
+			snprintf(text, sizeof(text),
+				"%.1f FPS  %.1f ms (max %.0f)  CPU %.1f ms\n"
+				"Skin %.1f ms  %.0f draws %.0f vertices\n"
+				"Vis %.1f  Fence %.1f  Swap %.1f  Pace %.1f ms\n"
+				"%s | %s",
+				frames * 1000.0 / second->wall, second->wall / frames, second->wall_maximum, second->cpu / frames,
+				second->skin / frames, second->skin_draws / frames, second->skin_vertices / frames,
+				second->visibility / frames, second->fence / frames, second->swap / frames, second->pace / frames,
+				android_skinning_name(), !android_cpu_skeletal_vertices ? "visibility as before" :
+				android_visibility_wait() ? "visibility waits" : "visibility async");
+			host_perf_publish(text, NULL);
+			memset(second, 0, sizeof(*second));
+		}
+		if (log->frames >= 300)
+		{
+			double frames = (double)log->frames;
+			char line[1024];
+
+			snprintf(line, sizeof(line),
+				"halo-perf v1: %lu frames in %.2f s, %.1f fps; frame avg %.1f max %.1f ms, over 34 ms %lu, over 50 ms %lu; "
+				"game thread cpu %.2f ms; skinning %.2f ms (setup %.2f compute %.2f upload %.2f) %.0f draws %.0f vertices; "
+				"visibility %.2f ms (%.1f reads); fence %.2f swap %.2f pace %.2f ms; %.0f draws; %s; %s; GL %s",
+				log->frames, log->wall / 1000.0, frames * 1000.0 / log->wall, log->wall / frames, log->wall_maximum,
+				log->slow34, log->slow50, log->cpu / frames,
+				log->skin / frames, log->skin_parts[0] / frames, log->skin_parts[1] / frames, log->skin_parts[2] / frames,
+				log->skin_draws / frames, log->skin_vertices / frames,
+				log->visibility / frames, log->visibility_reads / frames,
+				log->fence / frames, log->swap / frames, log->pace / frames, log->draws / frames,
+				android_skinning_name(), !android_cpu_skeletal_vertices ? "visibility as before" :
+				android_visibility_wait() ? "visibility waits" : "visibility async", android_perf.renderer);
+			host_perf_publish(NULL, line);
+			memset(log, 0, sizeof(*log));
+		}
+	}
+	android_perf.active = android_cpu_skeletal_vertices || (android_perf_settings & HALO_PERF_OVERLAY);
+	android_perf.frame_start = now;
+	android_perf.cpu_start = cpu_now;
+	android_perf.visibility = android_perf.fence = android_perf.swap = android_perf.pace = 0.0;
+	android_perf.draws = android_perf.visibility_reads = 0;
+}
+#endif
+
 void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destination_rectangle,
 	void *unused, void *unused2)
 {
@@ -4195,17 +4813,36 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 #ifdef HALO_ANDROID
         }
 #endif
+#ifdef HALO_ANDROID
+		if (android_perf.active)
+		{
+			double start = android_clock_ms(CLOCK_MONOTONIC);
+
+			platform_video_swap();
+			android_perf.swap += android_clock_ms(CLOCK_MONOTONIC) - start;
+		}
+		else
+#endif
 		platform_video_swap();
 		xgpu_gl_state_invalidate();
 		xgpu_texture_cache_begin_frame();
 #ifdef HALO_ANDROID
 		host_gl_fence_frame((unsigned int)device.buffer_ring);
 		device.buffer_ring = (device.buffer_ring + 1) % STREAM_BUFFER_RING;
-		host_gl_wait_frame((unsigned int)device.buffer_ring);
+		if (android_perf.active)
+		{
+			double start = android_clock_ms(CLOCK_MONOTONIC);
+
+			host_gl_wait_frame((unsigned int)device.buffer_ring);
+			android_perf.fence += android_clock_ms(CLOCK_MONOTONIC) - start;
+		}
+		else
+			host_gl_wait_frame((unsigned int)device.buffer_ring);
 		device.stream_buffer = device.stream_buffers[device.buffer_ring];
 		device.index_buffer = device.index_buffers[device.buffer_ring];
 		device.stream_offset = 0;
 		device.index_offset = 0;
+		device.uniform_offset = 0;
 #else
 		device.stream_offset = STREAM_BUFFER_SIZE; /* orphan next frame */
 		device.index_offset = INDEX_BUFFER_SIZE;
@@ -4214,33 +4851,7 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 	device.frame++;
 	stats.presents++;
 #ifdef HALO_ANDROID
-	if (android_cpu_frame_vertices)
-	{
-		unsigned part;
-		android_cpu_total_ms += android_cpu_frame_ms;
-		for (part = 0; part < 4; part++) android_cpu_total_parts[part] += android_cpu_frame_parts[part];
-		android_cpu_total_fixed_vertices += android_cpu_frame_fixed_vertices;
-		if (android_cpu_frame_ms > android_cpu_worst_ms) android_cpu_worst_ms = android_cpu_frame_ms;
-		android_cpu_total_vertices += android_cpu_frame_vertices;
-		android_cpu_active_frames++;
-	}
-	android_cpu_frame_ms = 0.0; android_cpu_frame_vertices = 0;
-	android_cpu_frame_fixed_vertices = 0;
-	memset(android_cpu_frame_parts, 0, sizeof(android_cpu_frame_parts));
-	if (android_cpu_skeletal_vertices && device.frame % 300 == 0 && android_cpu_active_frames)
-	{
-		platform_log("NVIDIA CPU skeletal timing: %lu active frames, %lu vertices/frame, %.2f ms/frame, worst %.2f ms (includes stream upload)",
-			android_cpu_active_frames, android_cpu_total_vertices / android_cpu_active_frames,
-			android_cpu_total_ms / android_cpu_active_frames, android_cpu_worst_ms);
-		platform_log("NVIDIA CPU skeletal breakdown v1: input/setup %.3f, execute %.3f, pack %.3f, upload/bind %.3f ms/active frame; fixed %lu/%lu vertices",
-			android_cpu_total_parts[0] / android_cpu_active_frames, android_cpu_total_parts[1] / android_cpu_active_frames,
-			android_cpu_total_parts[2] / android_cpu_active_frames, android_cpu_total_parts[3] / android_cpu_active_frames,
-			android_cpu_total_fixed_vertices, android_cpu_total_vertices);
-		memset(android_cpu_total_parts, 0, sizeof(android_cpu_total_parts));
-		android_cpu_total_fixed_vertices = 0;
-		android_cpu_total_ms = android_cpu_worst_ms = 0.0;
-		android_cpu_total_vertices = android_cpu_active_frames = 0;
-	}
+	android_cpu_present();
 #endif
 	if (debug_settings.statistics && device.frame % 60 == 0)
 	{
@@ -4263,11 +4874,21 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 	}
 	else
 	{
+#ifdef HALO_ANDROID
+		double start = android_perf.active && pending_flips >= 2 ? android_clock_ms(CLOCK_MONOTONIC) : 0.0;
+#endif
 		while (pending_flips >= 2)
 			pthread_cond_wait(&vertical_blank_condition, &vertical_blank_lock);
 		pending_flips++;
+#ifdef HALO_ANDROID
+		if (start > 0.0)
+			android_perf.pace += android_clock_ms(CLOCK_MONOTONIC) - start;
+#endif
 	}
 	pthread_mutex_unlock(&vertical_blank_lock);
+#ifdef HALO_ANDROID
+	android_perf_frame();
+#endif
 }
 
 HRESULT WINAPI D3DDevice_PersistDisplay(void)

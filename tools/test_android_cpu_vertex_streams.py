@@ -3,6 +3,8 @@
 Strict recorded GL state, production attribute decoder and NV2A executor.
 Covers draw offsets, multiple streams, stride zero, current attributes,
 changed constants, immediate inputs, and oversized draws. No game assets.
+Attributes the program never writes are constant values (Shield performance
+test v1); tools/test_android_cpu_parallel.py covers the worker threads.
 """
 from pathlib import Path
 import contextlib, io, os, re, runpy, shutil, subprocess, tempfile
@@ -13,11 +15,16 @@ source = (ROOT/'port/linux/src/d3d8_gl.c').read_text()
 with contextlib.redirect_stdout(io.StringIO()):
     existing = runpy.run_path(str(ROOT/'tools/test_android_nvidia_vertices.py'))
 prefix = re.sub(r'enum \{ .*? \};\n', '', existing['prefix'], count=1)
-prefix = '#include "xgpu.h"\n#include <math.h>\n#include <time.h>\n' + prefix
+prefix = '#include "xgpu.h"\n#include "halo_android_perf.h"\n#include <math.h>\n#include <time.h>\n#include <pthread.h>\n#include <unistd.h>\n' + prefix
+# the attributes' current values, which unwritten CPU outputs read
+prefix = prefix.replace('static void glVertexAttrib4fv(GLuint i, const float *v) { (void)i; (void)v; }',
+    'static float current_values[16][4];\nstatic void glVertexAttrib4fv(GLuint i, const float *v) { memcpy(current_values[i], v, 16); }')
+assert 'current_values' in prefix
 prefix = prefix.replace('float attributes[16][4];', 'float attributes[16][4]; float constants[192][4];')
 prefix = prefix.replace('struct vertex_shader_object { unsigned long element_count, packed_mask; struct vertex_element elements[16]; };',
     'struct vertex_shader_object { unsigned long element_count,packed_mask; struct vertex_element elements[16]; '
-    'unsigned long id,instruction_count; DWORD *instructions; GLuint shader[2]; BOOL cpu_checked; struct nv2a_cpu_program *cpu_program; };')
+    'unsigned long id,instruction_count; DWORD *instructions; GLuint shader[2]; BOOL cpu_checked; struct nv2a_cpu_program *cpu_program; '
+    'GLuint block_shader[2]; BOOL block_attempted[2]; };')
 prefix += r'''
 #define STREAM_BUFFER_SIZE 4096
 static struct nv2a_cpu_program *android_active_cpu_program;
@@ -25,9 +32,11 @@ static BOOL android_cpu_skeletal_vertices;
 static GLuint android_cpu_vertex_shader;
 static BOOL android_cpu_vertex_shader_attempted;
 static double android_cpu_frame_ms;
-static double android_cpu_frame_parts[4];
+static double android_cpu_frame_parts[3];
 static unsigned long android_cpu_frame_fixed_vertices;
-static unsigned long android_cpu_frame_vertices;
+static unsigned long android_cpu_frame_vertices, android_cpu_frame_draws;
+static unsigned int android_perf_settings;
+static BOOL android_full_constants_draw;
 static struct { float viewport_scale[4],viewport_offset[4],screen_offset,point_size; } draw_uniforms;
 static unsigned rejected;
 static void platform_log(const char *format,...){(void)format;rejected++;}
@@ -45,15 +54,21 @@ void xgpu_text_append(struct xgpu_text *t,const char *f,...){
 static struct { const char *dump_shaders; } debug_settings;
 static unsigned cpu_compiles,gpu_compiles;
 static BOOL fail_cpu_compile;
+static char last_source[65536];
 static GLuint compile_shader(GLenum type,const char *text,const char *label){
  static GLuint id=100;(void)label;assert(type==GL_VERTEX_SHADER);
+ snprintf(last_source,sizeof(last_source),"%s",text);
  if(strstr(text,"NVIDIA CPU skeletal vertex path")){cpu_compiles++;if(fail_cpu_compile)return 0;}else gpu_compiles++;
  return ++id;
 }
 char *nv2a_vertex_shader_to_glsl(const DWORD *,unsigned long,unsigned long);
 '''
-production = existing['production'] + '\n' + function(source,'android_cpu_setup_vertices')
-production += '\n' + function(source,'vertex_type_bytes') + '\n' + function(source,'vertex_shader_get')
+start = source.index('/* ---------- NVIDIA CPU skeletal vertices')
+cpu = source[start:source.index('static GLenum primitive_mode')].rstrip()
+assert cpu.endswith('#endif')
+production = existing['production'] + '\n' + function(source,'android_skinning_mode') + '\n' + cpu[:-len('#endif')]
+production += '\n' + function(source,'vertex_type_bytes') + '\n' + function(source,'android_constant_block_shader')
+production += '\n' + function(source,'vertex_shader_get')
 fixture = r'''
 struct operand { unsigned mux,index,swizzle,negate; };
 #define V(i,s) ((struct operand){2,i,s,0})
@@ -94,8 +109,13 @@ static struct nv2a_cpu_program *program(void){
 DWORD *shader_words;
 static struct nv2a_cpu_vertex *output(unsigned vertex){
  static struct nv2a_cpu_vertex v;
- for(unsigned a=0;a<9;a++)memcpy(v.value[a],gpu_bytes+actual.pointers[a].offset+vertex*actual.pointers[a].stride,16);
- memcpy(&v.fog,gpu_bytes+actual.pointers[9].offset+vertex*actual.pointers[9].stride,8);return &v;
+ for(unsigned a=0;a<9;a++){
+  if(actual.enabled[a])memcpy(v.value[a],gpu_bytes+actual.pointers[a].offset+vertex*actual.pointers[a].stride,16);
+  else memcpy(v.value[a],current_values[a],16);
+ }
+ if(actual.enabled[9])memcpy(&v.fog,gpu_bytes+actual.pointers[9].offset+vertex*actual.pointers[9].stride,8);
+ else memcpy(&v.fog,current_values[9],8);
+ return &v;
 }
 static void near(float a,float b){assert(fabsf(a-b)<0.0001f);}
 static void check(struct nv2a_cpu_vertex *v,const float *p,float weight,float tx,float ty,float tz){
@@ -131,12 +151,16 @@ int main(void){
  float weight=16384.0f/32767;
  assert(android_cpu_setup_vertices(1,2,NULL));
  for(unsigned i=0;i<2;i++)check(output(i),p[1+i],weight,10,20,30);
- for(unsigned a=0;a<10;a++)assert(actual.enabled[a] && !actual.pointers[a].integer && actual.pointers[a].stride==(a<9?16:8));
+ // Written: position, oD0, oD1, oT0. The rest, fog and point size are constants.
+ for(unsigned a=0;a<10;a++)assert(actual.enabled[a]==(a==0 || a==1 || a==2 || a==5));
+ for(unsigned a=0;a<10;a++)assert(!actual.enabled[a] || (!actual.pointers[a].integer && actual.pointers[a].stride==16));
  for(unsigned a=10;a<16;a++)assert(!actual.enabled[a]);
  device.constants[60][3]=20;device.attributes[9][0]=0.125f;
  assert(android_cpu_setup_vertices(2,2,NULL));
  for(unsigned i=0;i<2;i++)check(output(i),p[2+i],weight,20,20,30);
  // Switching through an ordinary GPU stream setup must clear CPU attributes.
+ assert(android_cpu_setup_vertices(2,2,NULL));
+ for(unsigned i=0;i<2;i++)check(output(i),p[2+i],weight,20,20,30);
  setup_streams(1,2);assert(actual.enabled[0] && actual.enabled[4] && actual.enabled[5] && actual.enabled[6]);
  assert(!actual.enabled[1] && !actual.enabled[2] && !actual.enabled[3] && !actual.enabled[7] && !actual.enabled[8] && !actual.enabled[9]);
  assert(android_cpu_setup_vertices(3,2,NULL));
@@ -151,8 +175,8 @@ int main(void){
  assert(android_cpu_setup_vertices(0,2,&immediate[0][0][0]));
  for(unsigned i=0;i<2;i++)check(output(i),p[i],weight,20,20,30);
  unsigned calls=upload_calls;assert(!android_cpu_setup_vertices(0,100000,NULL));assert(upload_calls==calls && rejected==1);
- assert(android_cpu_frame_vertices==8 && android_cpu_frame_ms>0);
- double parts=0;for(unsigned i=0;i<4;i++){assert(android_cpu_frame_parts[i]>=0);parts+=android_cpu_frame_parts[i];}
+ assert(android_cpu_frame_vertices==10 && android_cpu_frame_draws==5 && android_cpu_frame_ms>0);
+ double parts=0;for(unsigned i=0;i<3;i++){assert(android_cpu_frame_parts[i]>=0);parts+=android_cpu_frame_parts[i];}
  assert(fabs(parts-android_cpu_frame_ms)<1e-9 && !android_cpu_frame_fixed_vertices);
  free(android_active_cpu_program);
  // Other vendors retain their original shader/cache. NVIDIA uses one shared
@@ -178,9 +202,29 @@ int main(void){
  assert(vertex_shader_get(&object,FALSE)==original && !android_active_cpu_program);
  unsigned compiled=cpu_compiles;
  assert(vertex_shader_get(&object,FALSE)==original && cpu_compiles==compiled && !android_active_cpu_program);
+ // The Shield test's GPU variants (halo_android_perf.h), NVIDIA skeletal programs only.
+ fail_cpu_compile=FALSE;android_cpu_vertex_shader_attempted=FALSE;
+ android_perf_settings=HALO_PERF_GPU_ORIGINAL;
+ assert(vertex_shader_get(&object,FALSE)==original && !android_active_cpu_program && !android_full_constants_draw);
+ android_perf_settings=HALO_PERF_GPU_FULL_CONSTANTS;
+ assert(vertex_shader_get(&object,FALSE)==original && !android_active_cpu_program && android_full_constants_draw);
+ vertex_shader_get(&ordinary,FALSE);assert(!android_full_constants_draw && !android_active_cpu_program);
+ android_perf_settings=HALO_PERF_GPU_UNIFORM_BLOCK;unsigned before=gpu_compiles;
+ GLuint block=vertex_shader_get(&object,FALSE);
+ assert(block && block!=original && object.block_shader[0]==block && gpu_compiles==before+1 && !android_active_cpu_program);
+ assert(strstr(last_source,"layout(std140) uniform nv2a_constant_block") && !strstr(last_source,"uniform vec4 c[192];"));
+ assert(strstr(last_source,"c[clamp(a0 + 60, 0, 191)]"));
+ assert(vertex_shader_get(&object,FALSE)==block && gpu_compiles==before+1);
+ assert(vertex_shader_get(&ordinary,FALSE)!=block && !ordinary.block_attempted[0]);
+ android_perf_settings=HALO_PERF_CPU_SINGLE;
+ GLuint passthrough=vertex_shader_get(&object,FALSE);
+ assert(android_active_cpu_program && passthrough!=original && passthrough!=block);
+ android_cpu_skeletal_vertices=FALSE;android_perf_settings=HALO_PERF_GPU_UNIFORM_BLOCK;
+ assert(vertex_shader_get(&object,FALSE)==original && !android_active_cpu_program && !android_full_constants_draw);
  free(object.cpu_program);free(other.cpu_program);
  puts("PASS: production CPU/GPU stream switching, first/base range, multiple/constant streams, changed uniforms/current attributes, immediate mode and buffer bounds.");
  puts("PASS: NVIDIA-only shader routing, shared passthrough, original cache preservation, unsupported/static fallback and no repeated failed compilations.");
+ puts("PASS: Shield test variants: GPU original, full constants and uniform block only for NVIDIA skeletal programs; one compile each.");
 }
 '''
 header = (ROOT/'port/linux/src/xgpu.h').read_text()
@@ -189,6 +233,7 @@ xdk = (ROOT/'port/include/xdk/xdk_d3d8.h').read_text()
 formats='\n'.join(re.findall(r'^#define D3DVSDT_\w+ .*$',xdk,re.M))
 with tempfile.TemporaryDirectory(prefix='halo-cpu-streams-') as name:
     tmp=Path(name)
+    shutil.copyfile(ROOT/'port/android/include/halo_android_perf.h',tmp/'halo_android_perf.h')
     (tmp/'xgpu.h').write_text('#include <stdint.h>\n#include <stdlib.h>\n'
         '#define HALO_ANDROID 1\n#define TRUE 1\n#define FALSE 0\ntypedef uint32_t DWORD;\ntypedef int BOOL;\n'
         '#define XGPU_VERTEX_ATTRIBUTE_COUNT 16\n#define XGPU_VERTEX_CONSTANT_COUNT 192\n#define XGPU_VERTEX_CONSTANT_BIAS 96\n'
@@ -200,7 +245,7 @@ with tempfile.TemporaryDirectory(prefix='halo-cpu-streams-') as name:
     (tmp/'test.c').write_text(prefix+production+fixture)
     binary=tmp/'test'
     subprocess.run(['cc','-std=gnu11','-O2','-ffp-contract=off','-g','-fsanitize=address,undefined',
-                    str(tmp/'test.c'),str(tmp/'nv2a_vsh.c'),'-lm','-o',str(binary)],check=True)
+                    str(tmp/'test.c'),str(tmp/'nv2a_vsh.c'),'-pthread','-lm','-o',str(binary)],check=True)
     # LeakSanitizer cannot enumerate threads in the traced Work runtime;
     # keep AddressSanitizer bounds checks and UBSan enabled.
     env=dict(os.environ,ASAN_OPTIONS=os.environ.get('ASAN_OPTIONS','')+':detect_leaks=0')

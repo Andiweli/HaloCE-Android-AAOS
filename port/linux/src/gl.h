@@ -129,6 +129,8 @@ this list to generate the guest's entry points */
 	X(glUniform1f) \
 	X(glUniform4fv) \
 	X(glUniform2f) \
+	X(glGetUniformBlockIndex) \
+	X(glUniformBlockBinding) \
 	X(glGenQueries) \
 	X(glBeginQuery) \
 	X(glEndQuery) \
@@ -353,6 +355,8 @@ pointers, sees the declarations without these aliases */
 #define glUniform1f halo_glUniform1f
 #define glUniform4fv halo_glUniform4fv
 #define glUniform2f halo_glUniform2f
+#define glGetUniformBlockIndex halo_glGetUniformBlockIndex
+#define glUniformBlockBinding halo_glUniformBlockBinding
 #define glGenQueries halo_glGenQueries
 #define glBeginQuery halo_glBeginQuery
 #define glEndQuery halo_glEndQuery
