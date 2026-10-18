@@ -167,12 +167,51 @@ int host_sdl_gl_swap_window(uint32_t window)
 
 /* ---------- events */
 
+/* The first presses of the pads' buttons and axes, for the diagnostic file:
+which joystick button or axis each key of a handheld reaches (the pad's
+mapping is logged when it is opened). An axis counts when it passes three
+quarters of its travel. */
+static void log_joystick_input(const SDL_Event *event)
+{
+	static struct { SDL_JoystickID id; Uint32 pushed; } pads[8];
+	static int lines;
+	int slot;
+
+	if (lines >= 64)
+		return;
+	if (event->type == SDL_EVENT_JOYSTICK_BUTTON_DOWN)
+	{
+		lines++;
+		host_logf(HOST_LOG_INFO, "gamepad %u: joystick button %d", (unsigned)event->jbutton.which,
+			event->jbutton.button);
+		return;
+	}
+	if (event->type != SDL_EVENT_JOYSTICK_AXIS_MOTION || event->jaxis.axis >= 32)
+		return;
+	for (slot = 0; slot < 7 && pads[slot].id && pads[slot].id != event->jaxis.which; slot++)
+		;
+	pads[slot].id = event->jaxis.which;
+	if (event->jaxis.value <= -24576 || event->jaxis.value >= 24576)
+	{
+		if (!(pads[slot].pushed & (1u << event->jaxis.axis)))
+		{
+			lines++;
+			host_logf(HOST_LOG_INFO, "gamepad %u: joystick axis %d at %d", (unsigned)event->jaxis.which,
+				event->jaxis.axis, event->jaxis.value);
+		}
+		pads[slot].pushed |= 1u << event->jaxis.axis;
+	}
+	else if (event->jaxis.value > -8192 && event->jaxis.value < 8192)
+		pads[slot].pushed &= ~(1u << event->jaxis.axis);
+}
+
 int host_sdl_poll_event(void *event)
 {
 	SDL_Event host_event;
 
 	if (!SDL_PollEvent(&host_event))
 		return 0;
+	log_joystick_input(&host_event);
 	/* the layouts agree except for the pointers of text, drop and user
 	events, which the guest does not read */
 	memcpy(event, &host_event, sizeof(host_event));
@@ -201,8 +240,18 @@ uint32_t host_sdl_open_gamepad(uint32_t id)
 	SDL_Gamepad *gamepad = SDL_OpenGamepad((SDL_JoystickID)id);
 
 	if (gamepad)
+	{
+		SDL_Joystick *joystick = SDL_GetGamepadJoystick(gamepad);
+		char *mapping = SDL_GetGamepadMapping(gamepad);
+
 		host_logf(HOST_LOG_INFO, "gamepad %u: %s (type %d, %04x:%04x)", (unsigned)id, SDL_GetGamepadName(gamepad),
 			(int)SDL_GetGamepadType(gamepad), SDL_GetGamepadVendor(gamepad), SDL_GetGamepadProduct(gamepad));
+		/* what its keys reach the game as (host_sdl_gamepad_digital_triggers) */
+		host_logf(HOST_LOG_INFO, "gamepad %u: %d axes, %d buttons, %d hats, mapping %s", (unsigned)id,
+			SDL_GetNumJoystickAxes(joystick), SDL_GetNumJoystickButtons(joystick), SDL_GetNumJoystickHats(joystick),
+			mapping ? mapping : "none");
+		SDL_free(mapping);
+	}
 	return handle_new(_handle_gamepad, gamepad);
 }
 
