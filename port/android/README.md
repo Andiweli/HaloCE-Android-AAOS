@@ -394,10 +394,76 @@ one to two minutes, then press the top-centre GFX button; ADB is unnecessary.
 recorded microcode semantics, requires byte-identical original GLSL, then
 compares all outputs against real software GLES transform feedback and
 tests the GPU passthrough itself.
+
+## NVIDIA Shield performance test v1
+
+The frame rate on the Shield fell with the CPU skinning path. Two causes are
+addressed, NVIDIA only; every other GPU keeps its path and timing:
+
+- **Lens flare visibility without waiting.** At the start of every frame the
+  game reads the previous frame's lens flare tests. On ES 3.1+ the port read
+  exact sample counts from an atomic counter buffer: a synchronous buffer map
+  plus `GL_QUERY_RESULT`, so the CPU waited until the GPU had finished the
+  whole previous frame, every frame - CPU and GPU time added up instead of
+  overlapping. NVIDIA now reads the latest finished hardware query result
+  (`GL_QUERY_RESULT_AVAILABLE`, as ES 3.0 devices always did) and keeps the
+  last known value until a new one is ready; no sample counter is written.
+  A flare is then either visible or not, without partial dimming, and
+  follows the occlusion a frame or two later.
+- **Faster CPU skinning.** A draw's vertices are cut into chunks of 64 that
+  the render thread and worker threads (processors minus two, at most three;
+  two on the Shield) take in turn. Each chunk decodes only the input
+  registers the program reads, column by column, runs the unchanged program
+  and writes the attribute planes directly. Attributes a program never
+  writes are no longer uploaded: they are constant values (0, 0, 0, 1), fog
+  1 and the draw's point size, exactly what the planes held before. Draws
+  below 192 vertices stay on the render thread. Results are bit-identical
+  to the single-threaded path (`tools/test_android_cpu_parallel.py`).
+
+Diagnostic builds show a section **NVIDIA Shield test** in the settings
+overlay (hold SELECT for half a second, D-pad and A/B on a controller). Its
+settings apply at once, live, and are saved with OK:
+
+| Setting | Values |
+|---|---|
+| Skinning mode | CPU, several cores (default) - CPU, one core - GPU test A: uniform buffer - GPU test B: full constants - GPU original (known artefacts; frame-rate comparison only) |
+| Visibility tests without waiting | on (default) / off: the earlier waiting read |
+| Show FPS / frame time | the counter at the bottom centre (default on) |
+| Save GFX diagnostic | the GFX capture, reachable with a controller |
+
+GPU test A compiles the original GLSL of a skeletal program with `c[]` as a
+std140 uniform block and gives every draw its own copy of the constants in a
+per-frame uniform ring (`android_constant_block_bind`). GPU test B keeps the
+original shader and uploads all of `c[]` from `c[0]`'s location for every
+skeletal draw. Both test the remaining hypothesis that the Tegra driver
+loses partial per-draw updates of the uniform array while earlier draws are
+in flight; neither was tried before. If one of them draws the NPCs
+correctly, skinning can return to the GPU at full speed.
+
+The counter shows, averaged over about a second: FPS, frame time (and its
+maximum), the game thread's own CPU time, the CPU skinning time with draws
+and vertices, and the waits for visibility reads, the stream ring's fence,
+the swap and Present's vertical-blank pacing. Every 300 frames a line
+`halo-perf v1: ...` with the same figures, frames over 34 and 50 ms, the
+mode and the GL renderer goes to Logcat and `halo-diagnostic.txt`, which the
+GFX ZIP contains; its `device.txt` names the saved settings and the counter.
+`NVIDIA CPU skeletal breakdown v2` replaces v1: setup, compute (decoding,
+program and planes on all threads) and upload/bind.
+
+`tools/test_android_cpu_parallel.py` compares 5.7 million vertices of all
+skeletal programs, interpreter fallbacks, random declarations, immediate
+mode and chunk/parallel limits with the reference, also under Address-,
+Undefined- and ThreadSanitizer. `tools/test_android_glsl_variants.py`
+validates the original, uniform-block and passthrough GLSL with
+glslangValidator. Neither replaces a test on the Shield.
+
+The native payload in `port/android/native` is staged by the build
+workflow (artifact `halo-android-native`) and must match these sources:
+build the APK with the workflow, or `ninja android` with the NDK.
 ## Find problems
 
 - This Shield matrix diagnostic package enables the top-centre `GFX`
-  button by default. Click it with touch or a mouse while a stretched NPC
+  button by default (also in the settings overlay, for controllers). Click it with touch or a mouse while a stretched NPC
   is visible, wait for the saved-path message, then send
   `Android/media/com.halo.decomp/halo-gfx-<timestamp>.zip`.
   It contains shader sources, the captured frame, all enabled vertex
