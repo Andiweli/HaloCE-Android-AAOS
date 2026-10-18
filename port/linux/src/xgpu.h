@@ -37,6 +37,9 @@ unsigned int host_gl_read_buffer_word(unsigned int buffer, unsigned int offset);
 void host_gl_buffer_write(unsigned int target, unsigned int offset, unsigned int size, const void *data);
 void host_gl_fence_frame(unsigned int slot);
 void host_gl_wait_frame(unsigned int slot);
+/* the NVIDIA Shield performance test (port/android/include/halo_android_perf.h) */
+unsigned int host_perf_settings(void);
+void host_perf_publish(const char *overlay, const char *line);
 #endif
 
 /* ---------- GL state

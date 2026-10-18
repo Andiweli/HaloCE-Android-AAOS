@@ -74,3 +74,7 @@ host_settings_active
 host_settings_present
 host_settings_sticks
 host_settings_stick_look_mask
+
+# NVIDIA Shield performance test (port/android/include/halo_android_perf.h)
+host_perf_settings
+host_perf_publish

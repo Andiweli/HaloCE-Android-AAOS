@@ -11,7 +11,8 @@ root=Path(__file__).resolve().parents[1]
 source=(root/'port/android/app/src/main/java/com/halo/decomp/SettingsOverlay.java').read_text()
 def method(start,end):
     return source[source.index(start):source.index(end,source.index(start))]
-constants=next(line.strip() for line in source.splitlines() if 'int GYRO_TOGGLE=' in line)
+constants='\n'.join(line.strip() for line in source.splitlines()
+    if 'private static final int' in line and ('GYRO_TOGGLE=' in line or 'OK=' in line or 'PERF_MODES=' in line))
 direction=method('    private void direction(', '    boolean key(')
 keys=method('    boolean key(', '    void motion(')
 fixture=r'''
@@ -39,15 +40,25 @@ class OverlayNavigationTest {
         void setChecked(boolean value){checked=value;}
         @Override void performClick(){super.performClick();checked=!checked;}
     }
-    int selected;boolean open=true,save;
-    Slider[] sliders=new Slider[6];Widget[] targets=new Widget[10];
+    int selected,perfMode;boolean open=true,save;
+    Slider[] sliders=new Slider[8];Widget[] targets=new Widget[CANCEL+1];
     Toggle gyroSwitch=new Toggle(),gyroInvertSwitch=new Toggle();
-    OverlayNavigationTest(boolean gyro){
-        for(int i=0;i<6;i++){sliders[i]=new Slider();targets[i==5?7:i]=sliders[i];}
-        targets[5]=gyroSwitch;targets[6]=gyroInvertSwitch;
-        targets[8]=new Widget();targets[9]=new Widget();
-        targets[5].enabled=targets[6].enabled=targets[7].enabled=gyro;
+    Toggle perfAsyncSwitch,perfOverlaySwitch;
+    void perfModeStep(int step){perfMode=(perfMode+step+PERF_MODES)%PERF_MODES;}
+    /* perf: the NVIDIA test section of diagnostic builds (null targets otherwise) */
+    OverlayNavigationTest(boolean gyro,boolean perf){
+        for(int i=0;i<8;i++){sliders[i]=new Slider();targets[i<5?i:i+2]=sliders[i];}
+        targets[GYRO_TOGGLE]=gyroSwitch;targets[GYRO_INVERT]=gyroInvertSwitch;
+        if(perf){
+            targets[PERF_MODE]=new Widget();
+            targets[PERF_VISIBILITY]=perfAsyncSwitch=new Toggle();
+            targets[PERF_OVERLAY]=perfOverlaySwitch=new Toggle();
+            targets[PERF_CAPTURE]=new Widget();
+        }
+        targets[OK]=new Widget();targets[CANCEL]=new Widget();
+        targets[GYRO_TOGGLE].enabled=targets[GYRO_INVERT].enabled=targets[GYRO_SLIDER].enabled=gyro;
     }
+    OverlayNavigationTest(boolean gyro){this(gyro,false);}
     boolean isOpen(){return open;}void close(boolean save){this.save=save;open=false;}
     void press(int code){assert key(new KeyEvent(code));}
 '''
@@ -77,18 +88,21 @@ checks=r'''
         t.press(KeyEvent.KEYCODE_DPAD_UP);assert t.selected==6;
         t.press(KeyEvent.KEYCODE_DPAD_UP);assert t.selected==5;
         t.press(KeyEvent.KEYCODE_DPAD_DOWN);t.press(KeyEvent.KEYCODE_DPAD_DOWN);
-        t.press(KeyEvent.KEYCODE_BUTTON_A);assert t.selected==8;
-        t.press(KeyEvent.KEYCODE_BUTTON_A);assert t.targets[8].clicked==1;
-        t.press(KeyEvent.KEYCODE_DPAD_RIGHT);assert t.selected==9;
-        t.press(KeyEvent.KEYCODE_BUTTON_A);assert t.targets[9].clicked==1;
-        t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==9;
-        t.press(KeyEvent.KEYCODE_DPAD_LEFT);assert t.selected==8;
-        t.press(KeyEvent.KEYCODE_DPAD_LEFT);assert t.selected==8;
+        t.press(KeyEvent.KEYCODE_BUTTON_A);assert t.selected==OK;
+        t.press(KeyEvent.KEYCODE_BUTTON_A);assert t.targets[OK].clicked==1;
+        t.press(KeyEvent.KEYCODE_DPAD_RIGHT);assert t.selected==CANCEL;
+        t.press(KeyEvent.KEYCODE_BUTTON_A);assert t.targets[CANCEL].clicked==1;
+        t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==CANCEL;
+        t.press(KeyEvent.KEYCODE_DPAD_LEFT);assert t.selected==OK;
+        t.press(KeyEvent.KEYCODE_DPAD_LEFT);assert t.selected==OK;
+        /* without the test section, the last stick slider leads to OK */
+        t.selected=RIGHT_STICK;t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==OK;
+        t.press(KeyEvent.KEYCODE_DPAD_UP);assert t.selected==RIGHT_STICK;
         t.press(KeyEvent.KEYCODE_BUTTON_B);assert !t.open && !t.save;
         assert !t.key(new KeyEvent(KeyEvent.KEYCODE_ENTER));
         t=new OverlayNavigationTest(false);
         for(int i=0;i<5;i++)t.press(KeyEvent.KEYCODE_DPAD_DOWN);
-        assert t.selected==8; /* Skip all three unavailable gyro controls. */
+        assert t.selected==LEFT_STICK; /* Skip all three unavailable gyro controls. */
         t.press(KeyEvent.KEYCODE_DPAD_UP);assert t.selected==4;
         t.press(KeyEvent.KEYCODE_DPAD_LEFT);assert t.sliders[4].progress==70;
         for(int code:new int[]{KeyEvent.KEYCODE_VOLUME_UP,KeyEvent.KEYCODE_VOLUME_DOWN,KeyEvent.KEYCODE_VOLUME_MUTE})
@@ -97,6 +111,23 @@ checks=r'''
         for(int code:new int[]{KeyEvent.KEYCODE_BUTTON_B,KeyEvent.KEYCODE_BACK,KeyEvent.KEYCODE_ESCAPE}){
             t=new OverlayNavigationTest(true);t.press(code);assert !t.open && !t.save;
         }
+        /* the NVIDIA test section: mode, two switches, GFX, then OK */
+        t=new OverlayNavigationTest(true,true);t.selected=RIGHT_STICK;
+        t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==PERF_MODE;
+        t.press(KeyEvent.KEYCODE_DPAD_RIGHT);assert t.perfMode==1;
+        t.press(KeyEvent.KEYCODE_DPAD_LEFT);t.press(KeyEvent.KEYCODE_DPAD_LEFT);assert t.perfMode==PERF_MODES-1;
+        t.press(KeyEvent.KEYCODE_BUTTON_A);assert t.targets[PERF_MODE].clicked==1 && t.selected==PERF_MODE;
+        t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==PERF_VISIBILITY;
+        t.press(KeyEvent.KEYCODE_DPAD_RIGHT);assert t.perfAsyncSwitch.checked;
+        t.press(KeyEvent.KEYCODE_BUTTON_A);assert !t.perfAsyncSwitch.checked;
+        t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==PERF_OVERLAY;
+        t.press(KeyEvent.KEYCODE_DPAD_LEFT);assert !t.perfOverlaySwitch.checked;
+        t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==PERF_CAPTURE;
+        t.press(KeyEvent.KEYCODE_DPAD_RIGHT);assert t.selected==PERF_CAPTURE;
+        t.press(KeyEvent.KEYCODE_BUTTON_A);assert t.targets[PERF_CAPTURE].clicked==1;
+        t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==OK;
+        t.press(KeyEvent.KEYCODE_DPAD_UP);assert t.selected==PERF_CAPTURE;
+        System.out.println("NVIDIA test section: mode steps both ways, switches, GFX button and the way to OK passed.");
         System.out.println("Production overlay keys: enable/invert/sensitivity order, independent toggles, repeat/release safety, confirm/cancel dispatch, disabled gyro and volume keys passed.");
     }
 }

@@ -17,9 +17,14 @@ final class SettingsOverlay {
     static native void nativeDisplay(int brightness, int gamma);
     static native void nativeSticks(int left, int right);
     static native int nativeLookSticks();
+    static native void nativePerf(int settings);
     private static final int TEXT_SP=16, HEADING_SP=14;
     private static final int LEFT_LOOK=1, RIGHT_LOOK=2;
-    private static final int GYRO_TOGGLE=5, GYRO_INVERT=6, GYRO_SLIDER=7, LEFT_STICK=8, RIGHT_STICK=9, OK=10, CANCEL=11;
+    private static final int GYRO_TOGGLE=5, GYRO_INVERT=6, GYRO_SLIDER=7, LEFT_STICK=8, RIGHT_STICK=9;
+    // NVIDIA Shield performance test (diagnostic builds only)
+    private static final int PERF_MODE=10, PERF_VISIBILITY=11, PERF_OVERLAY=12, PERF_CAPTURE=13, OK=14, CANCEL=15;
+    // port/android/include/halo_android_perf.h
+    private static final int PERF_MODES=5, PERF_VISIBILITY_WAIT=0x100, PERF_SHOW_OVERLAY=0x200;
     private static final String[] KEYS={"master","effects","music","brightness","gamma","gyro_sensitivity","left_stick_sensitivity","right_stick_sensitivity"};
     private static final int[] MIN={0,0,0,50,50,25,50,50}, MAX={100,100,100,150,200,200,150,150};
     private static final int[] SLIDER_TARGETS={0,1,2,3,4,GYRO_SLIDER,LEFT_STICK,RIGHT_STICK};
@@ -32,6 +37,10 @@ final class SettingsOverlay {
     private final View[] stickRows=new View[2];
     private boolean gyroEnabled, originalGyro, gyroInvertPitch, originalGyroInvert;
     private Switch gyroSwitch, gyroInvertSwitch;
+    private int perfMode, originalPerfMode;
+    private boolean perfAsync, originalPerfAsync, perfOverlay, originalPerfOverlay;
+    private Switch perfAsyncSwitch, perfOverlaySwitch;
+    private Button perfModeButton;
     private FrameLayout root;
     private int selected;
     private int stickLookMask;
@@ -52,6 +61,9 @@ final class SettingsOverlay {
             values[i]=Math.max(MIN[i],Math.min(MAX[i],prefs.getInt(KEYS[i],100)));
         gyroEnabled=prefs.getBoolean("gyro_aim",false) && activity.motionAvailable();
         gyroInvertPitch=prefs.getBoolean("gyro_invert_pitch",false);
+        perfMode=Math.max(0,Math.min(PERF_MODES-1,prefs.getInt("nvidia_skinning_mode",0)));
+        perfAsync=prefs.getBoolean("nvidia_visibility_async",true);
+        perfOverlay=prefs.getBoolean("perf_overlay",true);
         apply();
     }
     boolean isOpen(){return root!=null;}
@@ -59,10 +71,10 @@ final class SettingsOverlay {
     private String[] strings(){
         String language=android.content.res.Resources.getSystem().getConfiguration().getLocales().get(0).getLanguage();
         switch(language){
-            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyroskop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung","Gyro Rauf/Runter invertieren","Linker Stick Empfindlichkeit","Rechter Stick Empfindlichkeit"};
-            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes","Inverser haut/bas du gyroscope","Sensibilité du stick gauche","Sensibilité du stick droit"};
-            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli","Inverti su/giù del giroscopio","Sensibilità stick sinistro","Sensibilità stick destro"};
-            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls","Invert gyro up/down","Left stick sensitivity","Right stick sensitivity"};
+            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyroskop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung","Gyro Rauf/Runter invertieren","Linker Stick Empfindlichkeit","Rechter Stick Empfindlichkeit","NVIDIA-Shield-Test (nur NVIDIA)","Skinning-Modus","Sichtbarkeitstests ohne Warten","FPS/Bildzeit anzeigen","GFX-Diagnose speichern","CPU, mehrere Kerne (Standard)","CPU, ein Kern","GPU-Test A: Uniform-Buffer","GPU-Test B: volle Konstanten","GPU original (fehlerhaft, nur FPS)"};
+            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes","Inverser haut/bas du gyroscope","Sensibilité du stick gauche","Sensibilité du stick droit","Test NVIDIA Shield (NVIDIA uniquement)","Mode de skinning","Tests de visibilité sans attente","Afficher FPS / temps d'image","Enregistrer le diagnostic GFX","CPU, plusieurs cœurs (défaut)","CPU, un cœur","Test GPU A : uniform buffer","Test GPU B : constantes complètes","GPU d'origine (défauts, FPS seul.)"};
+            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli","Inverti su/giù del giroscopio","Sensibilità stick sinistro","Sensibilità stick destro","Test NVIDIA Shield (solo NVIDIA)","Modalità skinning","Test di visibilità senza attesa","Mostra FPS / tempo fotogramma","Salva diagnostica GFX","CPU, più core (predefinito)","CPU, un core","Test GPU A: uniform buffer","Test GPU B: costanti complete","GPU originale (difetti, solo FPS)"};
+            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls","Invert gyro up/down","Left stick sensitivity","Right stick sensitivity","NVIDIA Shield test (NVIDIA only)","Skinning mode","Visibility tests without waiting","Show FPS / frame time","Save GFX diagnostic","CPU, several cores (default)","CPU, one core","GPU test A: uniform buffer","GPU test B: full constants","GPU original (faulty, FPS only)"};
         }
     }
     private TextView text(String caption,int size) {
@@ -157,12 +169,40 @@ final class SettingsOverlay {
         row.addView(toggle,new LinearLayout.LayoutParams(-2,dp(48)));
         return toggle;
     }
+    private Switch perfToggle(LinearLayout rows,int target,String caption,boolean checked) {
+        Switch toggle=gyroToggle(rows,target,caption,checked);
+        toggle.setEnabled(true);
+        return toggle;
+    }
+    private Button perfButton(LinearLayout rows,int target,String caption,String text) {
+        LinearLayout row=row(rows);
+        TextView label=text(caption,TEXT_SP);label.setPadding(0,0,dp(8),0);
+        row.addView(label,new LinearLayout.LayoutParams(0,-2,0.42f));
+        Button button=new Button(activity);targets[target]=button;
+        button.setText(text);button.setAllCaps(false);button.setSingleLine(true);button.setIncludeFontPadding(false);
+        button.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE);
+        button.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP,TEXT_SP);
+        button.setMinHeight(0);button.setMinimumHeight(0);button.setPadding(dp(8),0,dp(8),0);
+        button.setFocusableInTouchMode(true);button.setContentDescription(caption);
+        button.setOnFocusChangeListener((v,focused)->{if(focused)selected=target;});
+        row.addView(button,new LinearLayout.LayoutParams(0,dp(48),0.58f));
+        return button;
+    }
+    /** halo_android_perf.h, as the overlay applies it */
+    int perfSettings(){return perfMode|(perfAsync?0:PERF_VISIBILITY_WAIT)|(perfOverlay?PERF_SHOW_OVERLAY:0);}
+    private String perfModeText(){return "\u25c0 "+strings()[22+perfMode]+" \u25b6";}
+    private void perfModeStep(int step){
+        perfMode=(perfMode+step+PERF_MODES)%PERF_MODES;
+        if(perfModeButton!=null)perfModeButton.setText(perfModeText());
+        apply();
+    }
     void show(){
         if(isOpen() || suspended)return;
         activity.releaseGameKeys();
         stickLookMask=nativeLookSticks();
         System.arraycopy(values,0,original,0,values.length);originalGyro=gyroEnabled;
         originalGyroInvert=gyroInvertPitch;
+        originalPerfMode=perfMode;originalPerfAsync=perfAsync;originalPerfOverlay=perfOverlay;
         nativeOpen(true);activity.settingsVisibility(true);
         String[] labels=strings();
         root=new FrameLayout(activity);root.setBackgroundColor(Color.TRANSPARENT);root.setClickable(true);
@@ -200,6 +240,17 @@ final class SettingsOverlay {
         slider(rows,5,labels[6]);
         slider(rows,6,labels[15]);
         slider(rows,7,labels[16]);
+        if(BuildConfig.HALO_DIAGNOSTICS_ENABLED){
+            heading(rows,labels[17]);
+            perfModeButton=perfButton(rows,PERF_MODE,labels[18],perfModeText());
+            perfModeButton.setOnClickListener(v->perfModeStep(1));
+            perfAsyncSwitch=perfToggle(rows,PERF_VISIBILITY,labels[19],perfAsync);
+            perfAsyncSwitch.setOnCheckedChangeListener((v,checked)->{perfAsync=checked;apply();});
+            perfOverlaySwitch=perfToggle(rows,PERF_OVERLAY,labels[20],perfOverlay);
+            perfOverlaySwitch.setOnCheckedChangeListener((v,checked)->{perfOverlay=checked;apply();});
+            Button capture=perfButton(rows,PERF_CAPTURE,labels[21],"GFX");
+            capture.setOnClickListener(v->{close(true);activity.captureGraphics();});
+        }
         LinearLayout buttons=new LinearLayout(activity);buttons.setGravity(Gravity.END);panel.addView(buttons);
         for(int i=0;i<2;i++){
             final int index=i+OK;Button button=new Button(activity);
@@ -226,11 +277,15 @@ final class SettingsOverlay {
             SharedPreferences.Editor e=prefs.edit();
             for(int i=0;i<values.length;i++)e.putInt(KEYS[i],values[i]);
             e.putBoolean("gyro_aim",gyroEnabled);
-            e.putBoolean("gyro_invert_pitch",gyroInvertPitch);e.apply();
+            e.putBoolean("gyro_invert_pitch",gyroInvertPitch);
+            e.putInt("nvidia_skinning_mode",perfMode);e.putBoolean("nvidia_visibility_async",perfAsync);
+            e.putBoolean("perf_overlay",perfOverlay);e.apply();
         } else {
             System.arraycopy(original,0,values,0,values.length);gyroEnabled=originalGyro;
-            gyroInvertPitch=originalGyroInvert;apply();
+            gyroInvertPitch=originalGyroInvert;
+            perfMode=originalPerfMode;perfAsync=originalPerfAsync;perfOverlay=originalPerfOverlay;apply();
         }
+        perfModeButton=null;perfAsyncSwitch=perfOverlaySwitch=null;
         parent.removeView(root);root=null;nativeOpen(false);activity.settingsVisibility(false);
     }
     void suspend(){suspended=true;close(false);}
@@ -239,12 +294,19 @@ final class SettingsOverlay {
         HaloPort.nativeVolumes(values[0],values[1],values[2]);nativeDisplay(values[3],values[4]);
         activity.motionSettings(gyroEnabled,values[5],gyroInvertPitch);
         nativeSticks(values[6],values[7]);
+        // Diagnostic builds only; the native side applies the skinning and
+        // visibility settings on NVIDIA GPUs alone.
+        if(BuildConfig.HALO_DIAGNOSTICS_ENABLED){
+            // (a libmain.so older than this overlay simply keeps its defaults)
+            try{nativePerf(perfSettings());}catch(UnsatisfiedLinkError e){}
+            activity.perfOverlay(perfOverlay);
+        }
     }
     private void direction(int key){
         if(key==KeyEvent.KEYCODE_DPAD_UP || key==KeyEvent.KEYCODE_DPAD_DOWN){
             int step=key==KeyEvent.KEYCODE_DPAD_UP?-1:1;
             int next=selected+step;
-            while(next>=0 && next<targets.length && !targets[next].isEnabled())next+=step;
+            while(next>=0 && next<targets.length && (targets[next]==null || !targets[next].isEnabled()))next+=step;
             if(next>=0 && next<targets.length)selected=next;
         } else if(selected<GYRO_TOGGLE || (selected>=GYRO_SLIDER && selected<=RIGHT_STICK)){
             int index=selected>=GYRO_SLIDER?selected-GYRO_SLIDER+5:selected;
@@ -252,6 +314,10 @@ final class SettingsOverlay {
             sliders[index].setProgress(sliders[index].getProgress()+delta);
         } else if(selected==GYRO_TOGGLE)gyroSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
         else if(selected==GYRO_INVERT)gyroInvertSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
+        else if(selected==PERF_MODE)perfModeStep(key==KeyEvent.KEYCODE_DPAD_LEFT?-1:1);
+        else if(selected==PERF_VISIBILITY)perfAsyncSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
+        else if(selected==PERF_OVERLAY)perfOverlaySwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
+        else if(selected==PERF_CAPTURE)return;
         else selected=key==KeyEvent.KEYCODE_DPAD_LEFT?OK:CANCEL;
         targets[selected].requestFocus();
     }
@@ -263,7 +329,7 @@ final class SettingsOverlay {
         if(key==KeyEvent.KEYCODE_BUTTON_B || key==KeyEvent.KEYCODE_BACK || key==KeyEvent.KEYCODE_ESCAPE){close(false);return true;}
         if(key>=KeyEvent.KEYCODE_DPAD_UP && key<=KeyEvent.KEYCODE_DPAD_RIGHT)direction(key);
         else if((key==KeyEvent.KEYCODE_BUTTON_A || key==KeyEvent.KEYCODE_DPAD_CENTER || key==KeyEvent.KEYCODE_ENTER) && event.getRepeatCount()==0){
-            if(selected==GYRO_TOGGLE || selected==GYRO_INVERT || selected>=OK)targets[selected].performClick();
+            if(selected==GYRO_TOGGLE || selected==GYRO_INVERT || selected>=PERF_MODE)targets[selected].performClick();
             else{selected=OK;targets[selected].requestFocus();}
         }
         return true;

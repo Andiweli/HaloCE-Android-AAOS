@@ -113,4 +113,9 @@ void host_audio_profile(const char *key);
 int host_audio_level(int category);
 int host_audio_set_level(int category, int value);
 
+/* the NVIDIA Shield performance test (halo_android_perf.h): the overlay's
+settings, and the frame timing for the on-screen counter and the log */
+unsigned int host_perf_settings(void);
+void host_perf_publish(const char *overlay, const char *line);
+
 #endif

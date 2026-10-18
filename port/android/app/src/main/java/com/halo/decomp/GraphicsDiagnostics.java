@@ -72,6 +72,10 @@ final class GraphicsDiagnostics {
                     + "\nNative breakdown v1: input/setup, execute, pack and upload/bind in ms per active frame; fixed/total vertex counts."
                     + "\nCPU timing export: guest-log bridge v1; timing samples are included in halo-diagnostic.txt."
                     + "\nModel selection is a shader heuristic; capture bounds and skipped data are listed in report.txt."
+                    + "\nShield performance test v1: overlay settings " + perfSettings()
+                    + " (skinning mode 0 CPU threads, 1 CPU one core, 2 GPU uniform block, 3 GPU full constants, 4 GPU original;"
+                    + " 0x100 visibility waits; 0x200 counter). halo-perf lines every 300 frames in halo-diagnostic.txt."
+                    + "\nCounter now:\n" + PerfOverlay.text()
                     + "\nNative MIRROR_UPLOAD_POLICY describes an unused mirror helper."
                     + "\nNative report labels Patch18/Patch23 are legacy labels, not APK revision identifiers.\n");
             }
@@ -131,6 +135,13 @@ final class GraphicsDiagnostics {
     }
     private void message(String text) { Toast.makeText(activity,text,Toast.LENGTH_LONG).show(); }
     void close() { closed = true; handler.removeCallbacksAndMessages(null); }
+    /** the NVIDIA Shield test settings as saved by the settings overlay */
+    private String perfSettings() {
+        android.content.SharedPreferences prefs = activity.getSharedPreferences("halo_android_controls", 0);
+        return "mode=" + prefs.getInt("nvidia_skinning_mode", 0)
+            + " visibility_async=" + prefs.getBoolean("nvidia_visibility_async", true)
+            + " counter=" + prefs.getBoolean("perf_overlay", true);
+    }
     private static native boolean nativeRequest(String directory);
     private static native int nativeState();
 }

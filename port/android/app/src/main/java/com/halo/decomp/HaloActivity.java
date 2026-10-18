@@ -25,6 +25,7 @@ public class HaloActivity extends SDLActivity {
     private MotionAim motionAim;
     private SettingsOverlay settings;
     private GraphicsDiagnostics graphicsDiagnostics;
+    private PerfOverlay perfOverlay;
     private final android.os.Handler settingsHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private boolean selectHeld, selectOpened, selectTouch;
     private int selectDevice;
@@ -51,6 +52,14 @@ public class HaloActivity extends SDLActivity {
         if (!visible) restoreFullscreen();
     }
     boolean motionAvailable() { return motionAim != null && motionAim.available(); }
+    /** the NVIDIA Shield test's frame-time counter (diagnostic builds) */
+    void perfOverlay(boolean visible) {
+        if (perfOverlay != null) perfOverlay.enable(visible);
+    }
+    /** GFX capture from the settings overlay, for controller-only devices */
+    void captureGraphics() {
+        if (graphicsDiagnostics != null) graphicsDiagnostics.capture();
+    }
     void motionSettings(boolean enabled, int sensitivity, boolean invertPitch) {
         if (motionAim != null) motionAim.configure(enabled, sensitivity, invertPitch);
     }
@@ -92,6 +101,9 @@ public class HaloActivity extends SDLActivity {
         if (BuildConfig.HALO_DIAGNOSTICS_ENABLED) StartDiagnostics.connect(this);
         haloPort = new HaloPort(this, mLayout);
         motionAim = new MotionAim(this);
+        // before the settings, which apply the saved counter setting
+        if (BuildConfig.HALO_DIAGNOSTICS_ENABLED)
+            perfOverlay = new PerfOverlay(this, mLayout);
         settings = new SettingsOverlay(this, mLayout);
         if (BuildConfig.HALO_DIAGNOSTICS_ENABLED)
             graphicsDiagnostics = new GraphicsDiagnostics(this, mLayout);
@@ -152,6 +164,7 @@ public class HaloActivity extends SDLActivity {
         cancelSelect();
         if (motionAim != null) motionAim.suspend();
         if (graphicsDiagnostics != null) graphicsDiagnostics.close();
+        if (perfOverlay != null) perfOverlay.close();
         if (settings != null) settings.suspend();
         if (multicastLock != null && multicastLock.isHeld()) multicastLock.release();
         multicastLock = null;

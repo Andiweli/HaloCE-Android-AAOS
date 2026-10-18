@@ -124,7 +124,7 @@ def main():
     static class Color {static final int TRANSPARENT=0;}
     static class Typeface {static final Typeface DEFAULT=new Typeface();static Typeface create(Typeface value,int weight,boolean italic){return DEFAULT;}}
     static class android {static class util {static class TypedValue {static final int COMPLEX_UNIT_SP=2;}}}
-    static class BuildConfig {static final String VERSION_NAME="1.0.8";}
+    static class BuildConfig {static final String VERSION_NAME="1.0.8";static boolean HALO_DIAGNOSTICS_ENABLED=false;}
     static class SharedPreferences {
         static class Editor {
             Editor putInt(String key,int value){return this;}
@@ -138,6 +138,9 @@ def main():
         boolean motionAvailable(){return gyro;}
         void settingsVisibility(boolean value){}
         void releaseGameKeys(){}
+        int captures;boolean overlay;
+        void captureGraphics(){captures++;}
+        void perfOverlay(boolean value){overlay=value;}
     }
     static class KeyEvent {
         static final int KEYCODE_DPAD_UP=19,KEYCODE_DPAD_DOWN=20,
@@ -152,22 +155,26 @@ def main():
     final SeekBar[] sliders=new SeekBar[KEYS.length];
     final View[] targets=new View[CANCEL+1],stickRows=new View[2];
     final int[] values=new int[KEYS.length],original=new int[KEYS.length];
-    Switch gyroSwitch,gyroInvertSwitch;
+    Switch gyroSwitch,gyroInvertSwitch,perfAsyncSwitch,perfOverlaySwitch;
+    Button perfModeButton;
     boolean gyroEnabled,originalGyro,gyroInvertPitch,originalGyroInvert,suspended;
+    int perfMode,originalPerfMode;boolean perfAsync=true,originalPerfAsync,perfOverlay=true,originalPerfOverlay;
     int selected,stickLookMask,applyCount;
     long lastMotion;
     FrameLayout root;
     boolean isOpen(){return root!=null;}
     void apply(){applyCount++;}
     int dp(int value){return value;}
-    String[] strings(){String[] labels=new String[17];java.util.Arrays.fill(labels,"caption");return labels;}
+    String[] strings(){String[] labels=new String[27];java.util.Arrays.fill(labels,"caption");return labels;}
     TextView text(String caption,int size){return new TextView(activity);}
     void heading(LinearLayout rows,String caption){rows.addView(text(caption,14));}
 '''
     fixture += block(overlay, "private final Runnable refreshStickRoles=", True)
     for marker in ("private boolean sliderEnabled(", "private void refreshStickSliders(",
                    "private void direction(", "private LinearLayout row(", "private void slider(",
-                   "private Switch gyroToggle(", "void show(", "void close(", "void suspend(", "void resume("):
+                   "private Switch gyroToggle(", "private Switch perfToggle(", "private Button perfButton(",
+                   "private String perfModeText(", "private void perfModeStep(",
+                   "void show(", "void close(", "void suspend(", "void resume("):
         fixture += block(overlay, marker)
     fixture += r'''
     OverlayStickRefreshCheck(){
@@ -217,6 +224,20 @@ def main():
         x.refreshStickRoles.run();check(oldRoot.pending==null);
         x.resume();check(!x.suspended);
         for(int mask=0;mask<4;mask++){nativeMask=mask;new OverlayStickRefreshCheck().checkMask(mask);}
+        // The NVIDIA test section (diagnostic builds) comes after the stick rows.
+        BuildConfig.HALO_DIAGNOSTICS_ENABLED=true;nativeMask=RIGHT_LOOK;
+        x=new OverlayStickRefreshCheck();
+        check(x.targets[PERF_MODE]!=null&&x.targets[PERF_VISIBILITY]!=null&&x.targets[PERF_OVERLAY]!=null&&x.targets[PERF_CAPTURE]!=null);
+        x.selected=RIGHT_STICK;x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_MODE);
+        x.direction(KeyEvent.KEYCODE_DPAD_RIGHT);check(x.perfMode==1);
+        x.direction(KeyEvent.KEYCODE_DPAD_LEFT);x.direction(KeyEvent.KEYCODE_DPAD_LEFT);check(x.perfMode==PERF_MODES-1);
+        x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_VISIBILITY);
+        x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_OVERLAY);
+        x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_CAPTURE);
+        x.direction(KeyEvent.KEYCODE_DPAD_LEFT);check(x.selected==PERF_CAPTURE);
+        x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==OK);
+        x.close(false);check(x.perfMode==0&&x.perfModeButton==null);
+        BuildConfig.HALO_DIAGNOSTICS_ENABLED=false;
         System.out.println("Actual overlay construction: both stick rows remain inside the scroll content after gyro sensitivity for all roles; live enable/disable, focus, values and close/suspend cleanup passed.");
     }
 }
