@@ -428,7 +428,10 @@ addressed, NVIDIA only; every other GPU keeps its path and timing:
 
 Diagnostic builds show a section **NVIDIA Shield test** in the settings
 overlay (hold SELECT for half a second, D-pad and A/B on a controller). Its
-settings apply at once, live, and are saved with OK:
+settings apply at once, live, and are saved with OK. The overlay opens on
+the skinning mode. Controllers without SELECT (the Shield controller, TV
+remotes) hold their Back button instead; a short Back stays Back. The
+counter says so in its last line:
 
 | Setting | Values |
 |---|---|

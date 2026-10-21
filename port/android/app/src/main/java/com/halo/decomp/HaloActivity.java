@@ -76,7 +76,7 @@ public class HaloActivity extends SDLActivity {
         if (!selectHeld || selectTouch != touch) return;
         boolean shortPress=!selectOpened && !canceled;
         cancelSelect();
-        // Physical SELECT retains its short Back action. The touch button is
+        // Physical SELECT (or a gamepad's Back) retains its short Back action. The touch button is
         // an overlay shortcut; cancel/release events must not navigate the game.
         if (shortPress && !touch && !nativeMovieSkip()) {
             HaloPort.nativeAction(9,true);HaloPort.nativeAction(9,false);
@@ -230,7 +230,13 @@ public class HaloActivity extends SDLActivity {
             if (settings != null && settings.isOpen()) settings.key(event);
             return true;
         }
-        if (key == android.view.KeyEvent.KEYCODE_BUTTON_SELECT && settings != null) {
+        // The Shield controller and TV remotes have no SELECT: a gamepad's Back
+        // (KEYCODE_BACK) opens the settings the same way and keeps its short
+        // Back action. A Back that did not open the overlay closes it.
+        boolean gamepadBack = key == android.view.KeyEvent.KEYCODE_BACK &&
+            event.isFromSource(android.view.InputDevice.SOURCE_GAMEPAD);
+        if (settings != null && (key == android.view.KeyEvent.KEYCODE_BUTTON_SELECT ||
+                gamepadBack && (selectHeld || !settings.isOpen()))) {
             if (down && event.getRepeatCount() == 0 && !settings.isOpen()) {
                 beginSelect(false,event.getDeviceId());
             } else if (!down) {

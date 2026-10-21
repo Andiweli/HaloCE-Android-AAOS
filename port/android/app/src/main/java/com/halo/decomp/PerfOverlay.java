@@ -39,13 +39,15 @@ final class PerfOverlay {
             return "FPS: libmain.so predates the frame-time counter";
         }
     }
+    /** how a tester reaches the modes (HaloActivity: SELECT, or a gamepad's Back) */
+    static final String HINT = "\nHold Back ◁ or SELECT: test settings";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final TextView view;
     private boolean enabled, closed;
     private final Runnable refresh = new Runnable() {
         public void run() {
             if (!enabled || closed) return;
-            view.setText(text());
+            view.setText(text() + HINT);
             handler.postDelayed(this, 500);
         }
     };

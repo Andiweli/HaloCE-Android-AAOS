@@ -267,7 +267,8 @@ final class SettingsOverlay {
             buttons.addView(button,new LinearLayout.LayoutParams(0,dp(48),1));
         }
         parent.addView(root,new ViewGroup.LayoutParams(-1,-1));
-        selected=0;targets[0].requestFocus();lastMotion=0;
+        // A test build opens on the skinning mode, which a tester comes for.
+        selected=targets[PERF_MODE]!=null?PERF_MODE:0;targets[selected].requestFocus();lastMotion=0;
         root.post(refreshStickRoles);
     }
     void close(boolean save){

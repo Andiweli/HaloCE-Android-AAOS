@@ -31,7 +31,7 @@ fields = activity[activity.index("    private final android.os.Handler settingsH
 methods = "\n".join(block(activity, marker) for marker in (
     "    private void cancelSelect()", "    private void beginSelect(",
     "    private void endSelect(", "    void touchSelect(", "    void cancelTouchSelect()"))
-dispatch = block(activity, "        if (key == android.view.KeyEvent.KEYCODE_BUTTON_SELECT")
+dispatch = block(activity, "        boolean gamepadBack =")
 shell = '''package com.halo.decomp;
 public class HaloActivity extends android.content.Context {
     final android.view.Window window=new android.view.Window();
@@ -40,6 +40,7 @@ public class HaloActivity extends android.content.Context {
     android.view.Window getWindow(){return window;}
     boolean nativeMovieSkip(){return movie;}
     void cancelAll(){cancelSelect();}
+    boolean held(){return selectHeld;}
 ''' + fields + methods + '''
     boolean physical(android.view.KeyEvent event){
         int key=event.getKeyCode();boolean down=event.getAction()==0;
@@ -130,14 +131,18 @@ stubs = {
         public int getActionMasked(){return action;}
     }''',
     "android/view/InputDevice": '''public class InputDevice {
+        public static final int SOURCE_GAMEPAD=0x401;
         public static boolean present=true;
         public static InputDevice getDevice(int id){return present && id==1?new InputDevice():null;}
     }''',
     "android/view/KeyEvent": '''public class KeyEvent {
-        public static final int ACTION_DOWN=0,KEYCODE_BUTTON_SELECT=109;
-        private final int action;private final boolean canceled;private final int repeat;
-        public KeyEvent(int action,boolean canceled,int repeat){this.action=action;this.canceled=canceled;this.repeat=repeat;}
-        public int getKeyCode(){return KEYCODE_BUTTON_SELECT;}public int getAction(){return action;}
+        public static final int ACTION_DOWN=0,KEYCODE_BACK=4,KEYCODE_BUTTON_SELECT=109;
+        private final int action,key,source;private final boolean canceled;private final int repeat;
+        public KeyEvent(int action,boolean canceled,int repeat){this(KEYCODE_BUTTON_SELECT,0x401,action,canceled,repeat);}
+        public KeyEvent(int key,int source,int action,boolean canceled,int repeat){
+            this.key=key;this.source=source;this.action=action;this.canceled=canceled;this.repeat=repeat;}
+        public boolean isFromSource(int s){return (source&s)==s;}
+        public int getKeyCode(){return key;}public int getAction(){return action;}
         public int getRepeatCount(){return repeat;}public int getDeviceId(){return 1;}
         public boolean isCanceled(){return canceled;}
     }''',
@@ -184,6 +189,9 @@ class TouchSelectTest {
         return layout.getControls().stream().anyMatch(c->"select".equals(c.getActionId()));
     }
     static KeyEvent key(boolean down,boolean canceled,int repeat){return new KeyEvent(down?0:1,canceled,repeat);}
+    /* Back of a gamepad (the Shield controller), or of the phone's navigation (keyboard source) */
+    static KeyEvent back(boolean down,boolean gamepad,int repeat){
+        return new KeyEvent(KeyEvent.KEYCODE_BACK,gamepad?InputDevice.SOURCE_GAMEPAD:0x101,down?0:1,false,repeat);}
     public static void main(String[] args){
         HaloActivity a=new HaloActivity();HaloPort p=new HaloPort(a,new ViewGroup());a.port=p;
         RetroTouchView v=RetroTouchView.last;
@@ -238,8 +246,24 @@ class TouchSelectTest {
         check(a.settings.opens==4,"other input source cannot release touch hold");
         a.settings.close();Handler.advance(100);
         check(HaloPort.actions.isEmpty(),"no unintended gameplay actions after cancellation");
+        // a gamepad's Back stands in for SELECT (the Shield controller has none)
+        HaloPort.actions.clear();check(a.physical(back(true,true,0)),"gamepad Back taken");Handler.advance(100);
+        check(a.physical(back(false,true,0)),"its release taken");
+        check(a.settings.opens==4 && HaloPort.actions.equals(java.util.Arrays.asList("9:true","9:false")),
+            "short gamepad Back keeps Back");
+        HaloPort.actions.clear();a.physical(back(true,true,0));a.physical(back(true,true,1));Handler.advance(500);
+        check(a.settings.opens==5 && a.settings.open,"long gamepad Back opens the overlay");
+        check(a.physical(back(false,true,0)) && HaloPort.actions.isEmpty() && !a.held(),
+            "its release after opening injects nothing and ends the hold");
+        check(!a.physical(back(true,true,0)),"a new gamepad Back reaches the open overlay (closes it)");
+        a.settings.close();Handler.advance(100);
+        a.physical(key(true,false,0));Handler.advance(500);check(a.settings.opens==6,"SELECT still opens after a Back hold");
+        a.physical(key(false,false,0));a.settings.close();Handler.advance(100);
+        check(!a.physical(back(true,false,0)) && !a.physical(back(false,false,0)) && !a.held(),
+            "the phone's Back (no gamepad) is left alone");
+        Handler.advance(600);check(a.settings.opens==6 && HaloPort.actions.isEmpty(),"and opens nothing");
         p.suspend();
-        System.out.println("Production SELECT adapter: both layouts/editor, 500 ms, reentrant release, cancel, focus, lifecycle, editor, controller, mode and physical SELECT passed.");
+        System.out.println("Production SELECT adapter: both layouts/editor, 500 ms, reentrant release, cancel, focus, lifecycle, editor, controller, mode, physical SELECT and gamepad Back passed.");
     }
 }
 '''

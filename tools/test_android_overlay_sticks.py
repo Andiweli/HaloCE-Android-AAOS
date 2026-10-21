@@ -205,6 +205,7 @@ def main():
     }
     public static void main(String[] args){
         OverlayStickRefreshCheck x=new OverlayStickRefreshCheck();x.checkMask(RIGHT_LOOK);
+        check(x.selected==0);
         x.selected=RIGHT_STICK;
         nativeMask=LEFT_LOOK;x.refreshStickRoles.run();x.checkMask(LEFT_LOOK);
         check(x.selected==OK&&x.root.pending==x.refreshStickRoles&&x.root.delay==100);
@@ -228,6 +229,8 @@ def main():
         BuildConfig.HALO_DIAGNOSTICS_ENABLED=true;nativeMask=RIGHT_LOOK;
         x=new OverlayStickRefreshCheck();
         check(x.targets[PERF_MODE]!=null&&x.targets[PERF_VISIBILITY]!=null&&x.targets[PERF_OVERLAY]!=null&&x.targets[PERF_CAPTURE]!=null);
+        // a test build opens on the skinning mode
+        check(x.selected==PERF_MODE);
         x.selected=RIGHT_STICK;x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_MODE);
         x.direction(KeyEvent.KEYCODE_DPAD_RIGHT);check(x.perfMode==1);
         x.direction(KeyEvent.KEYCODE_DPAD_LEFT);x.direction(KeyEvent.KEYCODE_DPAD_LEFT);check(x.perfMode==PERF_MODES-1);
