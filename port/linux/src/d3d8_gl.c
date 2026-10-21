@@ -97,11 +97,15 @@ frame's time goes - the game thread's own CPU time, the CPU skinning, and
 the waits the renderer sees (lens flare visibility reads, the stream ring's
 fence, the swap, Present's vertical blank pacing). android_perf_frame
 publishes it about once a second for the counter and logs it every 300
-frames (Logcat, halo-diagnostic.txt). */
+frames (Logcat, halo-diagnostic.txt). Test 2 adds the draws' own time
+(D3DDevice_Draw*, of it prepare_draw's state, shaders and constants), the
+constants, programs and geometry they send, and Halo's own profiler
+(profile.c profile_android_summary): game update against render. */
 struct android_perf_window
 {
 	unsigned long frames, slow34, slow50, draws, skin_draws, skin_vertices, visibility_reads;
 	double wall, wall_maximum, cpu, skin, skin_parts[3], visibility, fence, swap, pace;
+	double draw, prepare, constant_vectors, programs, streamed, mirrored;
 };
 
 static struct
@@ -111,9 +115,49 @@ static struct
 	/* the current frame's */
 	double visibility, fence, swap, pace;
 	unsigned long draws, visibility_reads;
+	unsigned long long draw_ticks, prepare_ticks;
+	unsigned long constant_vectors, programs, streamed_start, mirrored_start;
 	struct android_perf_window second, log;
 	char renderer[128];
 } android_perf;
+
+void profile_android_enable(unsigned char enable);
+void profile_android_summary(char *buffer, long size, short maximum_section_count);
+
+/* the CPU's generic timer for the draws' timing: a register read, where
+clock_gettime is a system call through the host (host_syscall.c) */
+static unsigned long long android_ticks(void)
+{
+#ifdef __aarch64__
+	unsigned long long value;
+
+	__asm__ volatile("isb\n\tmrs %0, cntvct_el0" : "=r"(value));
+	return value;
+#else
+	struct timespec now;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return (unsigned long long)now.tv_sec * 1000000000ULL + (unsigned long long)now.tv_nsec;
+#endif
+}
+
+static double android_ticks_ms(unsigned long long ticks)
+{
+	static double per_tick;
+
+	if (per_tick == 0.0)
+	{
+#ifdef __aarch64__
+		unsigned long long frequency;
+
+		__asm__ volatile("mrs %0, cntfrq_el0" : "=r"(frequency));
+		per_tick = frequency ? 1000.0 / (double)frequency : 1.0e-6;
+#else
+		per_tick = 1.0e-6;
+#endif
+	}
+	return (double)ticks * per_tick;
+}
 
 static double android_clock_ms(clockid_t clock)
 {
@@ -630,6 +674,9 @@ static void state_program(GLuint program)
 	{
 		gl_state.program = program;
 		glUseProgram(program);
+#ifdef HALO_ANDROID
+		android_perf.programs++;
+#endif
 	}
 }
 
@@ -2950,7 +2997,7 @@ static void uniform_float(GLint location, float *shadow, float value)
 	glUniform1f(location, value);
 }
 
-static struct program_entry *prepare_draw(BOOL immediate)
+static struct program_entry *prepare_draw_state(BOOL immediate)
 {
 	struct vertex_shader_object *program = current_program();
 	struct nv2a_pixel_shader_key key;
@@ -3072,6 +3119,9 @@ static struct program_entry *prepare_draw(BOOL immediate)
 				glUniform4fv(entry->constants + (GLint)first, (GLsizei)(last - first + 1), device.constants[first]);
 			else
 				glUniform4fv(entry->constants, XGPU_VERTEX_CONSTANT_COUNT, &device.constants[0][0]);
+#ifdef HALO_ANDROID
+			android_perf.constant_vectors += entry->constants_consecutive ? last - first + 1 : XGPU_VERTEX_CONSTANT_COUNT;
+#endif
 		}
 		entry->constants_serial = constants_serial;
 		constants_checkpoint_serial = constants_serial;
@@ -3188,6 +3238,20 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	uniform_vec4(entry->texture_lod_bias, entry->uniforms.texture_lod_bias, draw_uniforms.texture_lod_bias, 1);
 	return entry;
 }
+
+#ifdef HALO_ANDROID
+/* the NVIDIA performance test's state time (android_perf) */
+static struct program_entry *prepare_draw(BOOL immediate)
+{
+	unsigned long long start = android_ticks();
+	struct program_entry *entry = prepare_draw_state(immediate);
+
+	android_perf.prepare_ticks += android_ticks() - start;
+	return entry;
+}
+#else
+#define prepare_draw prepare_draw_state
+#endif
 
 /* ---------- tracing (debug.gpu_trace_frame) */
 
@@ -4264,7 +4328,11 @@ void WINAPI D3DDevice_SetIndices(D3DIndexBuffer *index_data, UINT base_vertex_in
 	D3D__IndexData = index_data ? (WORD *)PORT_WINDOW_REBASE(index_data->Data) : NULL;
 }
 
+#ifdef HALO_ANDROID
+static void draw_vertices(D3DPRIMITIVETYPE primitive_type, UINT start_vertex, UINT vertex_count)
+#else
 void WINAPI D3DDevice_DrawVertices(D3DPRIMITIVETYPE primitive_type, UINT start_vertex, UINT vertex_count)
+#endif
 {
 	if (!vertex_count || !prepare_draw(FALSE))
 		return;
@@ -4293,7 +4361,22 @@ void WINAPI D3DDevice_DrawVertices(D3DPRIMITIVETYPE primitive_type, UINT start_v
 	gl_check_errors("draw");
 }
 
+#ifdef HALO_ANDROID
+/* the NVIDIA performance test's draw time (android_perf) */
+void WINAPI D3DDevice_DrawVertices(D3DPRIMITIVETYPE primitive_type, UINT start_vertex, UINT vertex_count)
+{
+	unsigned long long start = android_ticks();
+
+	draw_vertices(primitive_type, start_vertex, vertex_count);
+	android_perf.draw_ticks += android_ticks() - start;
+}
+#endif
+
+#ifdef HALO_ANDROID
+static void draw_indexed_vertices(D3DPRIMITIVETYPE primitive_type, UINT vertex_count, CONST WORD *index_data)
+#else
 void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT vertex_count, CONST WORD *index_data)
+#endif
 {
 	unsigned long minimum, maximum, index, count, generation = 0, index_offset = 0;
 	WORD *indices = NULL;
@@ -4356,6 +4439,17 @@ void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT 
 	free(indices);
 }
 
+#ifdef HALO_ANDROID
+/* the NVIDIA performance test's draw time (android_perf) */
+void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT vertex_count, CONST WORD *index_data)
+{
+	unsigned long long start = android_ticks();
+
+	draw_indexed_vertices(primitive_type, vertex_count, index_data);
+	android_perf.draw_ticks += android_ticks() - start;
+}
+#endif
+
 /* ---------- immediate mode */
 
 void WINAPI D3DDevice_Begin(D3DPRIMITIVETYPE primitive_type)
@@ -4379,7 +4473,11 @@ static void immediate_emit(void)
 	device.immediate_count++;
 }
 
+#ifdef HALO_ANDROID
+static void draw_immediate(void)
+#else
 void WINAPI D3DDevice_End(void)
+#endif
 {
 	unsigned long stride = XGPU_VERTEX_ATTRIBUTE_COUNT * 4 * sizeof(float);
 	unsigned long offset, index, count = device.immediate_count;
@@ -4429,6 +4527,17 @@ void WINAPI D3DDevice_End(void)
 	}
 	gl_check_errors("immediate draw");
 }
+
+#ifdef HALO_ANDROID
+/* the NVIDIA performance test's draw time (android_perf) */
+void WINAPI D3DDevice_End(void)
+{
+	unsigned long long start = android_ticks();
+
+	draw_immediate();
+	android_perf.draw_ticks += android_ticks() - start;
+}
+#endif
 
 static void set_attribute(INT reg, float a, float b, float c, float d)
 {
@@ -4703,6 +4812,12 @@ static void android_perf_frame(void)
 			window->swap += android_perf.swap;
 			window->pace += android_perf.pace;
 			window->draws += android_perf.draws;
+			window->draw += android_ticks_ms(android_perf.draw_ticks);
+			window->prepare += android_ticks_ms(android_perf.prepare_ticks);
+			window->constant_vectors += android_perf.constant_vectors;
+			window->programs += android_perf.programs;
+			window->streamed += (double)(stats.streamed_bytes - android_perf.streamed_start);
+			window->mirrored += (double)(stats.mirrored_bytes - android_perf.mirrored_start);
 		}
 		if (second->frames >= 30)
 		{
@@ -4712,10 +4827,12 @@ static void android_perf_frame(void)
 			snprintf(text, sizeof(text),
 				"%.1f FPS  %.1f ms (max %.0f)  CPU %.1f ms\n"
 				"Skin %.1f ms  %.0f draws %.0f vertices\n"
+				"Draws %.1f ms (state %.1f)  %.0f KB  %.0f programs\n"
 				"Vis %.1f  Fence %.1f  Swap %.1f  Pace %.1f ms\n"
 				"%s | %s",
 				frames * 1000.0 / second->wall, second->wall / frames, second->wall_maximum, second->cpu / frames,
 				second->skin / frames, second->skin_draws / frames, second->skin_vertices / frames,
+				second->draw / frames, second->prepare / frames, second->streamed / frames / 1024.0, second->programs / frames,
 				second->visibility / frames, second->fence / frames, second->swap / frames, second->pace / frames,
 				android_skinning_name(), !android_cpu_skeletal_vertices ? "visibility as before" :
 				android_visibility_wait() ? "visibility waits" : "visibility async");
@@ -4728,26 +4845,39 @@ static void android_perf_frame(void)
 			char line[1024];
 
 			snprintf(line, sizeof(line),
-				"halo-perf v1: %lu frames in %.2f s, %.1f fps; frame avg %.1f max %.1f ms, over 34 ms %lu, over 50 ms %lu; "
+				"halo-perf v2: %lu frames in %.2f s, %.1f fps; frame avg %.1f max %.1f ms, over 34 ms %lu, over 50 ms %lu; "
 				"game thread cpu %.2f ms; skinning %.2f ms (setup %.2f compute %.2f upload %.2f) %.0f draws %.0f vertices; "
+				"draws %.2f ms (state %.2f, of the rest skinning above); %.0f constant vec4, %.0f programs, "
+				"%.0f KB streamed, %.0f KB mirrored; "
 				"visibility %.2f ms (%.1f reads); fence %.2f swap %.2f pace %.2f ms; %.0f draws; %s; %s; GL %s",
 				log->frames, log->wall / 1000.0, frames * 1000.0 / log->wall, log->wall / frames, log->wall_maximum,
 				log->slow34, log->slow50, log->cpu / frames,
 				log->skin / frames, log->skin_parts[0] / frames, log->skin_parts[1] / frames, log->skin_parts[2] / frames,
 				log->skin_draws / frames, log->skin_vertices / frames,
+				log->draw / frames, log->prepare / frames, log->constant_vectors / frames, log->programs / frames,
+				log->streamed / frames / 1024.0, log->mirrored / frames / 1024.0,
 				log->visibility / frames, log->visibility_reads / frames,
 				log->fence / frames, log->swap / frames, log->pace / frames, log->draws / frames,
 				android_skinning_name(), !android_cpu_skeletal_vertices ? "visibility as before" :
 				android_visibility_wait() ? "visibility waits" : "visibility async", android_perf.renderer);
 			host_perf_publish(NULL, line);
+			profile_android_summary(line, sizeof(line), 18);
+			host_perf_publish(NULL, line);
 			memset(log, 0, sizeof(*log));
 		}
 	}
 	android_perf.active = android_cpu_skeletal_vertices || (android_perf_settings & HALO_PERF_OVERLAY);
+	/* Halo's own profiler sections, while measuring (the console turns it off) */
+	if (android_perf.active)
+		profile_android_enable(TRUE);
 	android_perf.frame_start = now;
 	android_perf.cpu_start = cpu_now;
 	android_perf.visibility = android_perf.fence = android_perf.swap = android_perf.pace = 0.0;
 	android_perf.draws = android_perf.visibility_reads = 0;
+	android_perf.draw_ticks = android_perf.prepare_ticks = 0;
+	android_perf.constant_vectors = android_perf.programs = 0;
+	android_perf.streamed_start = stats.streamed_bytes;
+	android_perf.mirrored_start = stats.mirrored_bytes;
 }
 #endif
 

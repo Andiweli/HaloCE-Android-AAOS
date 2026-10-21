@@ -418,7 +418,9 @@ addressed, NVIDIA only; every other GPU keeps its path and timing:
   follows the occlusion a frame or two later.
 - **Faster CPU skinning.** A draw's vertices are cut into chunks of 64 that
   the render thread and worker threads (processors minus two, at most three;
-  two on the Shield) take in turn. Each chunk decodes only the input
+  two on the Shield) take in turn. The guest counts the processors with
+  `sched_getaffinity`, which the host now passes on: without it, test 1
+  counted one processor and started a single worker. Each chunk decodes only the input
   registers the program reads, column by column, runs the unchanged program
   and writes the attribute planes directly. Attributes a program never
   writes are no longer uploaded: they are constant values (0, 0, 0, 1), fog
@@ -453,9 +455,24 @@ The counter shows, averaged over about a second: FPS, frame time (and its
 maximum), the game thread's own CPU time, the CPU skinning time with draws
 and vertices, and the waits for visibility reads, the stream ring's fence,
 the swap and Present's vertical-blank pacing. Every 300 frames a line
-`halo-perf v1: ...` with the same figures, frames over 34 and 50 ms, the
+`halo-perf v2: ...` with the same figures, frames over 34 and 50 ms, the
 mode and the GL renderer goes to Logcat and `halo-diagnostic.txt`, which the
 GFX ZIP contains; its `device.txt` names the saved settings and the counter.
+
+Test 1 showed the GPU never waited: the game thread itself took 26-40 ms
+in large fights besides the skinning. Test 2 splits that time. The counter
+and `halo-perf v2` add the time inside the draw calls (`D3DDevice_Draw*`,
+skinning included) and of it `prepare_draw`'s state, shaders and
+constants, with the constant vectors, program switches and the geometry
+streamed and mirrored per frame. The CPU's generic timer
+(`cntvct_el0`) times these, a register read where `clock_gettime` is a
+system call through the host. A second line, `halo-profile v1`, comes
+from Halo's own profiler (`source/cseries/profile.c`), switched on while
+the test measures and on the same timer: the frame split into render, idle
+and the rest (game update, sound, network), then the sections taking most
+time per frame - `game_update` and the updates inside it (`ai_update`,
+`unit_update`, `projectile_update`...), `render_objects`, `render_model`,
+`render_structure_*`... - with their calls per frame.
 `NVIDIA CPU skeletal breakdown v2` replaces v1: setup, compute (decoding,
 program and planes on all threads) and upload/bind.
 

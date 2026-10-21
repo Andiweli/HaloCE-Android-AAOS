@@ -374,6 +374,9 @@ long long host_syscall(long long number, long long a, long long b, long long c,
 	case SYS_getgid:
 	case SYS_getegid:
 	case SYS_sched_yield:
+	/* (musl's sysconf counts the processors with it: without it, one, and
+	the NVIDIA CPU skinning started a single worker on the Shield's four) */
+	case SYS_sched_getaffinity:
 	case SYS_getrandom:
 	case SYS_kill:
 	case SYS_tkill:

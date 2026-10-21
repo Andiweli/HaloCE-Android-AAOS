@@ -325,13 +325,25 @@ enum profile_frame_value
 /* ---------- macros */
 
 /* the native ports: the platform's performance counter stands in for the
-time stamp counter, at its own rate (profile_initialize) */
+time stamp counter, at its own rate (profile_initialize). Android: the
+CPU's generic timer, a register read, where the performance counter is a
+system call through the host (host_syscall.c), too slow for the sections
+the NVIDIA performance test turns on (port/linux/src/d3d8_gl.c) */
+#if defined(HALO_ANDROID) && defined(__aarch64__)
+#define QUERY_TIMEBASE(timebase) \
+{ \
+	unsigned long long halo_counter; \
+	__asm__ volatile("isb\n\tmrs %0, cntvct_el0" : "=r"(halo_counter)); \
+	*(__int64 *)&(timebase) = (__int64)halo_counter; \
+}
+#else
 #define QUERY_TIMEBASE(timebase) \
 { \
 	LARGE_INTEGER halo_counter; \
 	QueryPerformanceCounter(&halo_counter); \
 	*(__int64 *)&(timebase) = halo_counter.QuadPart; \
 }
+#endif
 
 /* ---------- structures */
 
@@ -1053,12 +1065,21 @@ void profile_initialize(
 {
 	short section_index = 0;
 
+#if defined(HALO_ANDROID) && defined(__aarch64__)
+	{
+		unsigned long long frequency;
+
+		__asm__ volatile("mrs %0, cntfrq_el0" : "=r"(frequency));
+		profile_globals.timebase_frequency = (__int64)frequency;
+	}
+#else
 	{
 		LARGE_INTEGER frequency;
 
 		QueryPerformanceFrequency(&frequency);
 		profile_globals.timebase_frequency = frequency.QuadPart;
 	}
+#endif
 
 	while (section_index<profile_globals.section_count)
 	{
@@ -1279,6 +1300,76 @@ void profile_exit_private(
 
 	return;
 }
+
+#ifdef HALO_ANDROID
+/* the NVIDIA performance test (port/linux/src/d3d8_gl.c): the sections on
+while it measures, and a line for its log: the last frames' frame, render
+and idle times, then the sections taking most, in ms and calls per frame
+(nested: game_update holds ai_update and the other updates) */
+void profile_android_enable(
+	boolean enable)
+{
+	profile_global_enable = enable;
+
+	return;
+}
+
+static int profile_android_compare(
+	void const *a,
+	void const *b)
+{
+	struct profile_section const *section0 = *(struct profile_section *const *)a;
+	struct profile_section const *section1 = *(struct profile_section *const *)b;
+
+	return section0->recent_elapsed_timebase < section1->recent_elapsed_timebase ? 1 :
+		section0->recent_elapsed_timebase > section1->recent_elapsed_timebase ? -1 : 0;
+}
+
+void profile_android_summary(
+	char *buffer,
+	long size,
+	short maximum_section_count)
+{
+	struct profile_section *sections[MAXIMUM_PROFILE_SECTIONS];
+	double frame = 0.0, render = 0.0, idle = 0.0;
+	short count = 0, index, frames = profile_globals.current_frame_history_count;
+	long length;
+
+	for (index = 0; index<frames; index++)
+	{
+		frame += profile_globals.frames[index].frame.total;
+		render += profile_globals.frames[index].render.total;
+		idle += profile_globals.frames[index].idle.total;
+	}
+	if (frames>0)
+	{
+		frame /= frames;
+		render /= frames;
+		idle /= frames;
+	}
+	length = snprintf(buffer, size,
+		"halo-profile v1 (last %d frames): frame %.2f ms = render %.2f + idle %.2f + rest (game update, sound, network) %.2f; "
+		"sections, ms (calls) per frame:",
+		frames, frame, render, idle, frame-render-idle);
+	for (index = 0; index<profile_globals.section_count; index++)
+	{
+		if (profile_globals.sections[index]->active && profile_globals.sections[index]->sample_count>0)
+			sections[count++] = profile_globals.sections[index];
+	}
+	qsort(sections, count, sizeof(sections[0]), profile_android_compare);
+	for (index = 0; index<count && index<maximum_section_count && length>0 && length<size; index++)
+	{
+		struct profile_section *section = sections[index];
+		long samples = MIN(section->sample_count, MAXIMUM_PROFILE_HISTORY);
+
+		length += snprintf(buffer+length, size-length, " %s %.2f (%.1f)", section->name,
+			(double)section->recent_elapsed_timebase*1000.0/profile_globals.timebase_frequency/samples,
+			(double)section->recent_call_count/samples);
+	}
+
+	return;
+}
+#endif
 
 static void profile_timesection_inherit(
 	struct profile_timer *parent_timesection,

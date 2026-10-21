@@ -38,7 +38,7 @@ static struct { BOOL atomic_counters; } xgpu_capabilities;
 reads the latest finished hardware result unless the overlay asks to wait */
 static BOOL nvidia, nvidia_waits;
 static BOOL android_visibility_wait(void) { return !nvidia || nvidia_waits; }
-static struct { BOOL active; double visibility; unsigned long visibility_reads; } android_perf;
+static struct { BOOL active; double visibility; unsigned long visibility_reads, constant_vectors; } android_perf;
 #define CLOCK_MONOTONIC 1
 static double fake_clock;
 static double android_clock_ms(int clock) { (void)clock; return fake_clock += 0.5; }
