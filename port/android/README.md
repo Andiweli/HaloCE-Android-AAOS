@@ -440,6 +440,7 @@ counter says so in its last line:
 | Skinning mode | CPU, several cores (default) - CPU, one core - GPU test A: uniform buffer - GPU test B: full constants - GPU original (known artefacts; frame-rate comparison only) |
 | Visibility tests without waiting | on (default) / off: the earlier waiting read |
 | Show FPS / frame time | the counter at the bottom centre (default on) |
+| Character and object shadows | on (default) / off: Halo's `render_shadows` (test 3) |
 | Save GFX diagnostic | the GFX capture, reachable with a controller |
 
 GPU test A compiles the original GLSL of a skeletal program with `c[]` as a
@@ -473,6 +474,19 @@ and the rest (game update, sound, network), then the sections taking most
 time per frame - `game_update` and the updates inside it (`ai_update`,
 `unit_update`, `projectile_update`...), `render_objects`, `render_model`,
 `render_structure_*`... - with their calls per frame.
+
+Test 2 (Shield, large fights at 24-29 FPS) found the game update small,
+2-4 ms with 1-3 ms of object updates, and the render 22-34 ms: about
+7-8 ms Halo's own render code, the rest the draw calls, which hold
+skinning (~7 ms), state and constants (~6 ms, 7,000 constant vectors) and
+uploads and draws (~13 ms, 5-8 MB streamed: the geometry mirror stays off
+on Android since Patch42). Character and object shadows took 5-9 ms of
+the render, their shadows on the level included (`structure_render_shadow`
+is called only for them); visibility reads that wait (switch off) cost
+about a third of the frame rate. Frames over 10 s in the log are GFX
+captures. Test 3 adds the switch **Character and object shadows**: off,
+the renderer clears Halo's own `render_shadows` (the console global of the
+same name) once a frame, and sets it again when switched back on.
 `NVIDIA CPU skeletal breakdown v2` replaces v1: setup, compute (decoding,
 program and planes on all threads) and upload/bind.
 

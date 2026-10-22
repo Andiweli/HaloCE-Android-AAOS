@@ -155,17 +155,17 @@ def main():
     final SeekBar[] sliders=new SeekBar[KEYS.length];
     final View[] targets=new View[CANCEL+1],stickRows=new View[2];
     final int[] values=new int[KEYS.length],original=new int[KEYS.length];
-    Switch gyroSwitch,gyroInvertSwitch,perfAsyncSwitch,perfOverlaySwitch;
+    Switch gyroSwitch,gyroInvertSwitch,perfAsyncSwitch,perfOverlaySwitch,perfShadowsSwitch;
     Button perfModeButton;
     boolean gyroEnabled,originalGyro,gyroInvertPitch,originalGyroInvert,suspended;
-    int perfMode,originalPerfMode;boolean perfAsync=true,originalPerfAsync,perfOverlay=true,originalPerfOverlay;
+    int perfMode,originalPerfMode;boolean perfAsync=true,originalPerfAsync,perfOverlay=true,originalPerfOverlay,perfShadows=true,originalPerfShadows;
     int selected,stickLookMask,applyCount;
     long lastMotion;
     FrameLayout root;
     boolean isOpen(){return root!=null;}
     void apply(){applyCount++;}
     int dp(int value){return value;}
-    String[] strings(){String[] labels=new String[27];java.util.Arrays.fill(labels,"caption");return labels;}
+    String[] strings(){String[] labels=new String[28];java.util.Arrays.fill(labels,"caption");return labels;}
     TextView text(String caption,int size){return new TextView(activity);}
     void heading(LinearLayout rows,String caption){rows.addView(text(caption,14));}
 '''
@@ -173,7 +173,7 @@ def main():
     for marker in ("private boolean sliderEnabled(", "private void refreshStickSliders(",
                    "private void direction(", "private LinearLayout row(", "private void slider(",
                    "private Switch gyroToggle(", "private Switch perfToggle(", "private Button perfButton(",
-                   "private String perfModeText(", "private void perfModeStep(",
+                   "private String perfModeText(", "private void perfModeStep(", "int perfSettings(",
                    "void show(", "void close(", "void suspend(", "void resume("):
         fixture += block(overlay, marker)
     fixture += r'''
@@ -228,7 +228,7 @@ def main():
         // The NVIDIA test section (diagnostic builds) comes after the stick rows.
         BuildConfig.HALO_DIAGNOSTICS_ENABLED=true;nativeMask=RIGHT_LOOK;
         x=new OverlayStickRefreshCheck();
-        check(x.targets[PERF_MODE]!=null&&x.targets[PERF_VISIBILITY]!=null&&x.targets[PERF_OVERLAY]!=null&&x.targets[PERF_CAPTURE]!=null);
+        check(x.targets[PERF_MODE]!=null&&x.targets[PERF_VISIBILITY]!=null&&x.targets[PERF_OVERLAY]!=null&&x.targets[PERF_SHADOWS]!=null&&x.targets[PERF_CAPTURE]!=null);
         // a test build opens on the skinning mode
         check(x.selected==PERF_MODE);
         x.selected=RIGHT_STICK;x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_MODE);
@@ -236,10 +236,14 @@ def main():
         x.direction(KeyEvent.KEYCODE_DPAD_LEFT);x.direction(KeyEvent.KEYCODE_DPAD_LEFT);check(x.perfMode==PERF_MODES-1);
         x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_VISIBILITY);
         x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_OVERLAY);
+        x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_SHADOWS);
+        /* (the fixture's Switch does not call its listener: the setting directly) */
+        x.perfShadows=true;check((x.perfSettings()&0x400)==0);
+        x.perfShadows=false;check((x.perfSettings()&0x400)!=0);
         x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==PERF_CAPTURE);
         x.direction(KeyEvent.KEYCODE_DPAD_LEFT);check(x.selected==PERF_CAPTURE);
         x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==OK);
-        x.close(false);check(x.perfMode==0&&x.perfModeButton==null);
+        x.close(false);check(x.perfMode==0&&x.perfShadows&&x.perfModeButton==null&&x.perfShadowsSwitch==null);
         BuildConfig.HALO_DIAGNOSTICS_ENABLED=false;
         System.out.println("Actual overlay construction: both stick rows remain inside the scroll content after gyro sensitivity for all roles; live enable/disable, focus, values and close/suspend cleanup passed.");
     }

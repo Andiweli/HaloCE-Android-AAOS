@@ -123,6 +123,8 @@ static struct
 
 void profile_android_enable(unsigned char enable);
 void profile_android_summary(char *buffer, long size, short maximum_section_count);
+/* Halo's switch for the shadows of characters and objects (render_objects.c) */
+extern unsigned char render_shadows;
 
 /* the CPU's generic timer for the draws' timing: a register read, where
 clock_gettime is a system call through the host (host_syscall.c) */
@@ -4829,13 +4831,14 @@ static void android_perf_frame(void)
 				"Skin %.1f ms  %.0f draws %.0f vertices\n"
 				"Draws %.1f ms (state %.1f)  %.0f KB  %.0f programs\n"
 				"Vis %.1f  Fence %.1f  Swap %.1f  Pace %.1f ms\n"
-				"%s | %s",
+				"%s | %s%s",
 				frames * 1000.0 / second->wall, second->wall / frames, second->wall_maximum, second->cpu / frames,
 				second->skin / frames, second->skin_draws / frames, second->skin_vertices / frames,
 				second->draw / frames, second->prepare / frames, second->streamed / frames / 1024.0, second->programs / frames,
 				second->visibility / frames, second->fence / frames, second->swap / frames, second->pace / frames,
 				android_skinning_name(), !android_cpu_skeletal_vertices ? "visibility as before" :
-				android_visibility_wait() ? "visibility waits" : "visibility async");
+				android_visibility_wait() ? "visibility waits" : "visibility async",
+				(android_perf_settings & HALO_PERF_NO_OBJECT_SHADOWS) ? " | no shadows" : "");
 			host_perf_publish(text, NULL);
 			memset(second, 0, sizeof(*second));
 		}
@@ -4849,7 +4852,7 @@ static void android_perf_frame(void)
 				"game thread cpu %.2f ms; skinning %.2f ms (setup %.2f compute %.2f upload %.2f) %.0f draws %.0f vertices; "
 				"draws %.2f ms (state %.2f, of the rest skinning above); %.0f constant vec4, %.0f programs, "
 				"%.0f KB streamed, %.0f KB mirrored; "
-				"visibility %.2f ms (%.1f reads); fence %.2f swap %.2f pace %.2f ms; %.0f draws; %s; %s; GL %s",
+				"visibility %.2f ms (%.1f reads); fence %.2f swap %.2f pace %.2f ms; %.0f draws; %s; %s; %s; GL %s",
 				log->frames, log->wall / 1000.0, frames * 1000.0 / log->wall, log->wall / frames, log->wall_maximum,
 				log->slow34, log->slow50, log->cpu / frames,
 				log->skin / frames, log->skin_parts[0] / frames, log->skin_parts[1] / frames, log->skin_parts[2] / frames,
@@ -4859,7 +4862,9 @@ static void android_perf_frame(void)
 				log->visibility / frames, log->visibility_reads / frames,
 				log->fence / frames, log->swap / frames, log->pace / frames, log->draws / frames,
 				android_skinning_name(), !android_cpu_skeletal_vertices ? "visibility as before" :
-				android_visibility_wait() ? "visibility waits" : "visibility async", android_perf.renderer);
+				android_visibility_wait() ? "visibility waits" : "visibility async",
+				(android_perf_settings & HALO_PERF_NO_OBJECT_SHADOWS) ? "object shadows off" : "object shadows on",
+				android_perf.renderer);
 			host_perf_publish(NULL, line);
 			profile_android_summary(line, sizeof(line), 18);
 			host_perf_publish(NULL, line);
@@ -4870,6 +4875,21 @@ static void android_perf_frame(void)
 	/* Halo's own profiler sections, while measuring (the console turns it off) */
 	if (android_perf.active)
 		profile_android_enable(TRUE);
+	/* test 3's object shadows switch; back on only if it turned them off */
+	{
+		static BOOL shadows_off;
+
+		if (android_perf_settings & HALO_PERF_NO_OBJECT_SHADOWS)
+		{
+			render_shadows = FALSE;
+			shadows_off = TRUE;
+		}
+		else if (shadows_off)
+		{
+			render_shadows = TRUE;
+			shadows_off = FALSE;
+		}
+	}
 	android_perf.frame_start = now;
 	android_perf.cpu_start = cpu_now;
 	android_perf.visibility = android_perf.fence = android_perf.swap = android_perf.pace = 0.0;
