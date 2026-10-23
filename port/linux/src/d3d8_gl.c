@@ -1179,8 +1179,9 @@ static void gl_initialize(void)
 		if (android_cpu_skeletal_vertices)
 		{
 			platform_log("NVIDIA skeletal compatibility: original NV2A vertex execution on CPU; GPU passthrough; other meshes unchanged");
-			platform_log("NVIDIA performance test v1: skinning mode %u, visibility %s (settings %08x); halo-perf lines every 300 frames",
-				android_skinning_mode(), android_visibility_wait() ? "waits" : "async", android_perf_settings);
+			platform_log("NVIDIA performance test 4: skinning mode %u (%s), visibility %s (settings %08x); halo-perf lines every 300 frames",
+				android_skinning_mode(), android_perf_settings & HALO_PERF_ONE_VERTEX ? "one vertex at a time" : "four vertices at once",
+				android_visibility_wait() ? "waits" : "async", android_perf_settings);
 		}
 		if (android_is_nvidia(vendor, renderer))
 			platform_log("Shield vertex compatibility: classic attribute pointers (OpenGL ES %d.%d); vendor=%s; renderer=%s",
@@ -3929,6 +3930,8 @@ struct android_cpu_job
 	unsigned long plane_offset[9], auxiliary_offset;
 	unsigned written;
 	BOOL auxiliary;
+	/* four vertices at once (nv2a_cpu_vertex_execute4), test 4 */
+	BOOL quad;
 	unsigned long count, chunk_count;
 	unsigned long next_chunk, done_chunks;
 };
@@ -3953,6 +3956,22 @@ static inline void android_cpu_relax(void)
 #else
 	__asm__ __volatile__("" ::: "memory");
 #endif
+}
+
+/* a vertex's written attributes into their planes */
+static inline void android_cpu_store(struct android_cpu_job *job, unsigned long vertex,
+	const struct nv2a_cpu_vertex *result)
+{
+	unsigned index;
+
+	for (index = 0; index < 9; index++)
+	{
+		if (job->written & (1U << index))
+			memcpy(job->planes + job->plane_offset[index] + vertex * 4 * sizeof(float), result->value[index],
+				4 * sizeof(float));
+	}
+	if (job->auxiliary)
+		memcpy(job->planes + job->auxiliary_offset + vertex * 2 * sizeof(float), &result->fog, 2 * sizeof(float));
 }
 
 static void android_cpu_chunk(struct android_cpu_job *job, unsigned long chunk)
@@ -3984,20 +4003,29 @@ static void android_cpu_chunk(struct android_cpu_job *job, unsigned long chunk)
 		}
 		inputs = (const float (*)[16][4])job->decoded;
 	}
-	for (vertex = first; vertex < first + count; vertex++)
+	/* a chunk is a multiple of four vertices; only a draw's last chunk can
+	leave one to three to the end */
+	vertex = first;
+	if (job->quad)
+	{
+		for (; vertex + 4 <= first + count; vertex += 4)
+		{
+			struct nv2a_cpu_vertex results[4];
+			unsigned lane;
+
+			nv2a_cpu_vertex_execute4(job->program, inputs + vertex, job->constants, job->viewport_scale,
+				job->viewport_offset, job->screen_offset, job->point_size, results);
+			for (lane = 0; lane < 4; lane++)
+				android_cpu_store(job, vertex + lane, &results[lane]);
+		}
+	}
+	for (; vertex < first + count; vertex++)
 	{
 		struct nv2a_cpu_vertex result;
 
 		nv2a_cpu_vertex_execute(job->program, inputs[vertex], job->constants, job->viewport_scale,
 			job->viewport_offset, job->screen_offset, job->point_size, &result);
-		for (index = 0; index < 9; index++)
-		{
-			if (job->written & (1U << index))
-				memcpy(job->planes + job->plane_offset[index] + vertex * 4 * sizeof(float), result.value[index],
-					4 * sizeof(float));
-		}
-		if (job->auxiliary)
-			memcpy(job->planes + job->auxiliary_offset + vertex * 2 * sizeof(float), &result.fog, 2 * sizeof(float));
+		android_cpu_store(job, vertex, &result);
 	}
 }
 
@@ -4227,6 +4255,7 @@ static BOOL android_cpu_setup_vertices(unsigned long first, unsigned long count,
 	job.planes = planes;
 	bytes = job.auxiliary_offset + (job.auxiliary ? count * 2 * sizeof(float) : 0);
 	nv2a_cpu_program_prepare_constants(android_active_cpu_program, device.constants);
+	job.quad = !(android_perf_settings & HALO_PERF_ONE_VERTEX) && nv2a_cpu_program_is_quad(program);
 	parallel = android_skinning_mode() == HALO_PERF_CPU_THREADS && count >= ANDROID_CPU_PARALLEL_MINIMUM &&
 		android_cpu_workers() > 0;
 	clock_gettime(CLOCK_MONOTONIC, &stamp[1]);
@@ -4766,16 +4795,19 @@ static void android_cpu_present(void)
 
 static const char *android_skinning_name(void)
 {
-	static char threads[24];
+	static char threads[32];
+	const char *lanes = android_perf_settings & HALO_PERF_ONE_VERTEX ? "1 vertex" : "NEON x4";
 
 	if (!android_cpu_skeletal_vertices)
 		return "standard GPU path";
 	switch (android_skinning_mode())
 	{
 	case HALO_PERF_CPU_THREADS:
-		snprintf(threads, sizeof(threads), "CPU x%lu", android_cpu_pool.workers + 1);
+		snprintf(threads, sizeof(threads), "CPU x%lu %s", android_cpu_pool.workers + 1, lanes);
 		return threads;
-	case HALO_PERF_CPU_SINGLE: return "CPU x1";
+	case HALO_PERF_CPU_SINGLE:
+		snprintf(threads, sizeof(threads), "CPU x1 %s", lanes);
+		return threads;
 	case HALO_PERF_GPU_UNIFORM_BLOCK: return "GPU test A (uniform buffer)";
 	case HALO_PERF_GPU_FULL_CONSTANTS: return "GPU test B (full constants)";
 	default: return "GPU original";

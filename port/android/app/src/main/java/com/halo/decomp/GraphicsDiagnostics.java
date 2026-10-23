@@ -74,7 +74,8 @@ final class GraphicsDiagnostics {
                     + "\nModel selection is a shader heuristic; capture bounds and skipped data are listed in report.txt."
                     + "\nShield performance test v1: overlay settings " + perfSettings()
                     + " (skinning mode 0 CPU threads, 1 CPU one core, 2 GPU uniform block, 3 GPU full constants, 4 GPU original;"
-                    + " 0x100 visibility waits; 0x200 counter). halo-perf lines every 300 frames in halo-diagnostic.txt."
+                    + " 0x100 visibility waits; 0x200 counter; 0x400 one vertex at a time). halo-perf v2 and halo-profile v1 lines"
+                    + " every 300 frames in halo-diagnostic.txt."
                     + "\nCounter now:\n" + PerfOverlay.text()
                     + "\nNative MIRROR_UPLOAD_POLICY describes an unused mirror helper."
                     + "\nNative report labels Patch18/Patch23 are legacy labels, not APK revision identifiers.\n");
@@ -140,7 +141,8 @@ final class GraphicsDiagnostics {
         android.content.SharedPreferences prefs = activity.getSharedPreferences("halo_android_controls", 0);
         return "mode=" + prefs.getInt("nvidia_skinning_mode", 0)
             + " visibility_async=" + prefs.getBoolean("nvidia_visibility_async", true)
-            + " counter=" + prefs.getBoolean("perf_overlay", true);
+            + " counter=" + prefs.getBoolean("perf_overlay", true)
+            + " neon_skinning=" + prefs.getBoolean("nvidia_neon_skinning", true);
     }
     private static native boolean nativeRequest(String directory);
     private static native int nativeState();

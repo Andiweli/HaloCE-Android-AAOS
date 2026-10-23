@@ -9,7 +9,9 @@ mode and draws on both sides of the chunk and parallel limits. Whatever a
 GPU attribute reads - its uploaded plane, or the constant value an unwritten
 attribute keeps - must be bit for bit what the reference gives: every input
 register decoded per vertex and the same nv2a_cpu_vertex_execute, as the
-earlier single-threaded path did.
+earlier single-threaded path did. Test 4's four vertices at once (NEON
+lanes) and one at a time both run; four at once may give a NaN the other
+sign, nothing else.
 
 Built three times: optimized, with AddressSanitizer/UBSan, and with
 ThreadSanitizer for the pool's synchronisation. No device, no game assets.
@@ -138,7 +140,7 @@ static void gpu_vertex(unsigned long vertex, float out[38]) {
   } else memcpy(out + a * 4, current[a], n * 4);
  }
 }
-static unsigned long checked_vertices, parallel_draws, single_draws, immediate_draws, written_planes, constant_attributes;
+static unsigned long checked_vertices, parallel_draws, single_draws, immediate_draws, quad_draws, written_planes, constant_attributes, nan_signs;
 static void draw(struct nv2a_cpu_program *program, BOOL immediate_mode, unsigned long count, unsigned mode) {
  static unsigned char memory[8][320 * 1024];
  static BOOL filled;
@@ -180,8 +182,9 @@ static void draw(struct nv2a_cpu_program *program, BOOL immediate_mode, unsigned
  android_active_cpu_program = program;
  gpu_used = 0;
  assert(android_cpu_setup_vertices(first, count, immediate_mode ? &immediate[0][0][0] : NULL));
+ if (!(mode & HALO_PERF_ONE_VERTEX) && nv2a_cpu_program_is_quad(program)) quad_draws++;
  if (immediate_mode) immediate_draws++;
- else if (mode == HALO_PERF_CPU_THREADS && count >= ANDROID_CPU_PARALLEL_MINIMUM) parallel_draws++;
+ else if ((mode & HALO_PERF_SKINNING_MASK) == HALO_PERF_CPU_THREADS && count >= ANDROID_CPU_PARALLEL_MINIMUM) parallel_draws++;
  else single_draws++;
  for (index = 0; index < 10; index++) { if (enabled[index]) written_planes++; else constant_attributes++; }
  /* the reference: every register decoded for every vertex */
@@ -213,12 +216,18 @@ static void draw(struct nv2a_cpu_program *program, BOOL immediate_mode, unsigned
    draw_uniforms.screen_offset, draw_uniforms.point_size, &reference);
   memcpy(expected, reference.value, sizeof(reference.value)); expected[36] = reference.fog; expected[37] = reference.point_size;
   gpu_vertex(vertex, actual);
-  if (memcmp(expected, actual, sizeof(expected))) {
-   for (index = 0; index < 38; index++) if (memcmp(&expected[index], &actual[index], 4))
-    fprintf(stderr, "vertex %lu of %lu (first %lu, mode %u, immediate %d) value %lu: expected %.9g, got %.9g (written %03x)\n",
-     vertex, count, first, mode, immediate_mode, index, expected[index], actual[index], nv2a_cpu_program_outputs(program));
-   abort();
+  /* Four at once: the same bits, but where two NaNs meet (random input
+  bytes) each path may keep the other's sign. A NaN changes no other result
+  either way: min, max, comparisons, clamps and the address ignore its sign. */
+  BOOL quad = !(mode & HALO_PERF_ONE_VERTEX) && nv2a_cpu_program_is_quad(program), differs = FALSE;
+  for (index = 0; index < 38; index++) {
+   if (!memcmp(&expected[index], &actual[index], 4)) continue;
+   if (quad && isnan(expected[index]) && isnan(actual[index])) { nan_signs++; continue; }
+   fprintf(stderr, "vertex %lu of %lu (first %lu, mode %u, immediate %d) value %lu: expected %.9g, got %.9g (written %03x)\n",
+    vertex, count, first, mode, immediate_mode, index, expected[index], actual[index], nv2a_cpu_program_outputs(program));
+   differs = TRUE;
   }
+  if (differs) abort();
   checked_vertices++;
  }
 }
@@ -239,13 +248,14 @@ int main(int argc, char **argv) {
     for (unsigned long c = 0; c < sizeof(counts) / sizeof(counts[0]); c++) {
      draw(program, FALSE, counts[c], HALO_PERF_CPU_THREADS);
      draw(program, FALSE, counts[c], HALO_PERF_CPU_SINGLE);
+     draw(program, FALSE, counts[c], HALO_PERF_CPU_THREADS | HALO_PERF_ONE_VERTEX);
      if (c % 4 == 0) draw(program, TRUE, counts[c], HALO_PERF_CPU_THREADS);
     }
    free(program);
   }
  }
  assert(programs_used == 21 && interpreters > 0);
- assert(android_cpu_pool.workers >= 1 && parallel_draws && single_draws && immediate_draws);
+ assert(android_cpu_pool.workers >= 1 && parallel_draws && single_draws && immediate_draws && quad_draws);
  assert(written_planes && constant_attributes);
  /* the streaming limit still rejects without uploading */
  android_active_cpu_program = NULL;
@@ -253,9 +263,10 @@ int main(int argc, char **argv) {
  struct vertex_shader_object empty = { 0 }; device.vertex_shader = &empty; gpu_used = 0;
  assert(!android_cpu_setup_vertices(0, STREAM_BUFFER_SIZE / ANDROID_CPU_VERTEX_BYTES + 1, NULL) && rejected == 1 && !gpu_used);
  printf("PASS: %lu vertices bit-identical to the reference across %lu skeletal programs and %lu interpreter fallbacks; "
-  "%lu parallel draws on %lu workers, %lu single-thread, %lu immediate; %lu attribute planes, %lu constant attributes\n",
+  "%lu parallel draws on %lu workers, %lu single-thread, %lu immediate, %lu four at once; %lu attribute planes, %lu constant attributes; "
+  "%lu NaN values with the other sign\n",
   checked_vertices, programs_used, interpreters, parallel_draws, android_cpu_pool.workers, single_draws, immediate_draws,
-  written_planes, constant_attributes);
+  quad_draws, written_planes, constant_attributes, nan_signs);
  return 0;
 }
 '''
@@ -287,7 +298,11 @@ void xgpu_text_append(struct xgpu_text *t, const char *f, ...) { (void)t; (void)
     ]
     for label, flags, rounds in builds:
         binary = tmp / ('test-' + label.split()[0].replace('/', '-'))
-        subprocess.run(['cc', '-std=gnu11', '-ffp-contract=off', '-Wall', '-Wno-unused-function',
+        # gcc treats fminf/fmaxf as commutative and may swap them in one
+        # path: the sign of min(+0, -0) would differ. The guest's clang
+        # (AArch64 FMINNM/FMAXNM) keeps them; so does a plain call.
+        subprocess.run(['cc', '-std=gnu11', '-ffp-contract=off', '-fno-builtin-fminf', '-fno-builtin-fmaxf',
+                        '-Wall', '-Wno-unused-function',
                         '-Wno-unused-variable', *flags, '-I', str(tmp), str(tmp / 'test.c'), str(tmp / 'nv2a_vsh.c'),
                         str(tmp / 'text.c'), '-pthread', '-lm', '-o', str(binary)], check=True)
         env = dict(os.environ, ASAN_OPTIONS='detect_leaks=0', TSAN_OPTIONS='halt_on_error=1')

@@ -34,6 +34,9 @@ latest finished hardware result */
 #define HALO_PERF_VISIBILITY_WAIT 0x100u
 /* the on-screen frame-time counter (PerfOverlay.java) */
 #define HALO_PERF_OVERLAY 0x200u
+/* test 4: the CPU skinning runs one vertex at a time (tests 1 to 3)
+instead of four at once, one in each NEON lane (nv2a_cpu_vertex_execute4) */
+#define HALO_PERF_ONE_VERTEX 0x400u
 /* set once the overlay has passed its saved settings */
 #define HALO_PERF_SET 0x80000000u
 

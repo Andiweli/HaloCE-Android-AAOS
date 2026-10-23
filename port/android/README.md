@@ -440,6 +440,7 @@ counter says so in its last line:
 | Skinning mode | CPU, several cores (default) - CPU, one core - GPU test A: uniform buffer - GPU test B: full constants - GPU original (known artefacts; frame-rate comparison only) |
 | Visibility tests without waiting | on (default) / off: the earlier waiting read |
 | Show FPS / frame time | the counter at the bottom centre (default on) |
+| Skinning: 4 vertices at once (NEON) | on (default) / off: one vertex at a time as in tests 1 to 3 (test 4) |
 | Save GFX diagnostic | the GFX capture, reachable with a controller |
 
 GPU test A compiles the original GLSL of a skeletal program with `c[]` as a
@@ -476,6 +477,36 @@ time per frame - `game_update` and the updates inside it (`ai_update`,
 `NVIDIA CPU skeletal breakdown v2` replaces v1: setup, compute (decoding,
 program and planes on all threads) and upload/bind.
 
+Test 3's switch for the shadows of characters and objects is gone: the
+tester saw at most a slight gain and no reason to lose them.
+
+**Test 4: four vertices at once.** The generator also gives every fixed
+executor a version for four vertices (`cpu_fast4_*`), one in each lane of
+the NEON registers: `struct cpu_quad` holds a register as four vectors, x,
+y, z and w of the four vertices. A dot product, the most frequent
+instruction of the skeletal programs (`dph`), becomes three multiplies and
+adds across the lanes instead of a sum across one register; swizzles cost
+nothing. Each vertex reads its own bone rows (`cpu_quad_relative`), and the
+bone address is converted without branches. `nv2a_cpu_vertex_execute4`
+finishes the four vertices the same way (viewport, clamped colours) and
+gives the bits of four `nv2a_cpu_vertex_execute` calls: the lanes do the
+same operations in the same order, and the build contracts no `a * b + c`.
+On the guest's AArch64 code the four-vertex path takes 265 instead of 543
+instructions per vertex (21 programs, Unicorn count), program and finishing
+together; decoding and the planes are as before. The counter's last line
+names the setting: `CPU x3 NEON x4` or `CPU x3 1 vertex`; compare its
+`Skin` milliseconds.
+
+`tools/test_android_cpu_specialized.py` compares four at once with one at a
+time on the host and, with `--native-images build/android/halo_guest.elf`,
+in the linked AArch64 code under Unicorn, with a third of the inputs +0 or
+-0. `tools/test_android_cpu_parallel.py` runs both settings through the
+worker pool. Where two NaNs meet, the paths may keep different NaNs, which
+changes no other value. On the host, gcc treats `fminf` and `fmaxf` as
+commutative and may swap their arguments in one path, so the sign of
+`max(+0, -0)` would differ; the tests build with `-fno-builtin-fminf
+-fno-builtin-fmaxf`, as the guest's FMINNM/FMAXNM keep it.
+
 `tools/test_android_cpu_parallel.py` compares 5.7 million vertices of all
 skeletal programs, interpreter fallbacks, random declarations, immediate
 mode and chunk/parallel limits with the reference, also under Address-,
@@ -506,7 +537,7 @@ the frame-time counter".
   recorded in `report.txt`. CPU uploads from earlier frames are not a
   complete CPU matrix snapshot. A capture alone cannot establish the
   cause of malformed geometry. Build with `-PhaloDiagnostics=false` to
-  hide the diagnostic UI again. The application version stays 1.0.10.
+  hide the diagnostic UI again. The test build is 1.0.12-test4 (versionCode 28).
 - NVIDIA Android devices retain classic attribute-pointer bindings for
   ordinary meshes and the skeletal passthrough. Other ES 3.1/3.2 GPUs retain
   their stream-binding path. Logcat reports

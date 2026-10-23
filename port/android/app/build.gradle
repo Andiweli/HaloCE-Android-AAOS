@@ -31,10 +31,10 @@ android {
         applicationId "com.halo.decomp"
         minSdk 28
         targetSdk 35
-        // Shield performance test: above the tester's installed 1.0.10 (25),
-        // so the test APK can install over it (Android refuses a downgrade)
-        versionCode 26
-        versionName "1.0.10"
+        // Shield performance test 4: above 1.0.12 (27), so the test APK can
+        // install over it (Android refuses a downgrade); 1.0.13 takes 29
+        versionCode 28
+        versionName "1.0.12-test4"
         buildConfigField "int", "HALO_BUILD_NUMBER", "${buildNumber}"
         buildConfigField "boolean", "HALO_DIAGNOSTICS_ENABLED", "${diagnosticsEnabled}"
         ndk {
