@@ -34,9 +34,6 @@ latest finished hardware result */
 #define HALO_PERF_VISIBILITY_WAIT 0x100u
 /* the on-screen frame-time counter (PerfOverlay.java) */
 #define HALO_PERF_OVERLAY 0x200u
-/* test 3: no shadows of characters and objects (Halo's render_shadows,
-source/render/render_objects.c), nor their shadows on the level */
-#define HALO_PERF_NO_OBJECT_SHADOWS 0x400u
 /* set once the overlay has passed its saved settings */
 #define HALO_PERF_SET 0x80000000u
 

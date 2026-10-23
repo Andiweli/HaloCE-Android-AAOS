@@ -22,9 +22,9 @@ final class SettingsOverlay {
     private static final int LEFT_LOOK=1, RIGHT_LOOK=2;
     private static final int GYRO_TOGGLE=5, GYRO_INVERT=6, GYRO_SLIDER=7, LEFT_STICK=8, RIGHT_STICK=9;
     // NVIDIA Shield performance test (diagnostic builds only)
-    private static final int PERF_MODE=10, PERF_VISIBILITY=11, PERF_OVERLAY=12, PERF_SHADOWS=13, PERF_CAPTURE=14, OK=15, CANCEL=16;
+    private static final int PERF_MODE=10, PERF_VISIBILITY=11, PERF_OVERLAY=12, PERF_CAPTURE=13, OK=14, CANCEL=15;
     // port/android/include/halo_android_perf.h
-    private static final int PERF_MODES=5, PERF_VISIBILITY_WAIT=0x100, PERF_SHOW_OVERLAY=0x200, PERF_NO_OBJECT_SHADOWS=0x400;
+    private static final int PERF_MODES=5, PERF_VISIBILITY_WAIT=0x100, PERF_SHOW_OVERLAY=0x200;
     private static final String[] KEYS={"master","effects","music","brightness","gamma","gyro_sensitivity","left_stick_sensitivity","right_stick_sensitivity"};
     private static final int[] MIN={0,0,0,50,50,25,50,50}, MAX={100,100,100,150,200,200,150,150};
     private static final int[] SLIDER_TARGETS={0,1,2,3,4,GYRO_SLIDER,LEFT_STICK,RIGHT_STICK};
@@ -38,8 +38,8 @@ final class SettingsOverlay {
     private boolean gyroEnabled, originalGyro, gyroInvertPitch, originalGyroInvert;
     private Switch gyroSwitch, gyroInvertSwitch;
     private int perfMode, originalPerfMode;
-    private boolean perfAsync, originalPerfAsync, perfOverlay, originalPerfOverlay, perfShadows, originalPerfShadows;
-    private Switch perfAsyncSwitch, perfOverlaySwitch, perfShadowsSwitch;
+    private boolean perfAsync, originalPerfAsync, perfOverlay, originalPerfOverlay;
+    private Switch perfAsyncSwitch, perfOverlaySwitch;
     private Button perfModeButton;
     private FrameLayout root;
     private int selected;
@@ -64,7 +64,6 @@ final class SettingsOverlay {
         perfMode=Math.max(0,Math.min(PERF_MODES-1,prefs.getInt("nvidia_skinning_mode",0)));
         perfAsync=prefs.getBoolean("nvidia_visibility_async",true);
         perfOverlay=prefs.getBoolean("perf_overlay",true);
-        perfShadows=prefs.getBoolean("nvidia_object_shadows",true);
         apply();
     }
     boolean isOpen(){return root!=null;}
@@ -72,10 +71,10 @@ final class SettingsOverlay {
     private String[] strings(){
         String language=android.content.res.Resources.getSystem().getConfiguration().getLocales().get(0).getLanguage();
         switch(language){
-            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyroskop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung","Gyro Rauf/Runter invertieren","Linker Stick Empfindlichkeit","Rechter Stick Empfindlichkeit","NVIDIA-Shield-Test (nur NVIDIA)","Skinning-Modus","Sichtbarkeitstests ohne Warten","FPS/Bildzeit anzeigen","GFX-Diagnose speichern","CPU, mehrere Kerne (Standard)","CPU, ein Kern","GPU-Test A: Uniform-Buffer","GPU-Test B: volle Konstanten","GPU original (fehlerhaft, nur FPS)","Schatten von Figuren und Objekten"};
-            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes","Inverser haut/bas du gyroscope","Sensibilité du stick gauche","Sensibilité du stick droit","Test NVIDIA Shield (NVIDIA uniquement)","Mode de skinning","Tests de visibilité sans attente","Afficher FPS / temps d'image","Enregistrer le diagnostic GFX","CPU, plusieurs cœurs (défaut)","CPU, un cœur","Test GPU A : uniform buffer","Test GPU B : constantes complètes","GPU d'origine (défauts, FPS seul.)","Ombres des personnages et objets"};
-            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli","Inverti su/giù del giroscopio","Sensibilità stick sinistro","Sensibilità stick destro","Test NVIDIA Shield (solo NVIDIA)","Modalità skinning","Test di visibilità senza attesa","Mostra FPS / tempo fotogramma","Salva diagnostica GFX","CPU, più core (predefinito)","CPU, un core","Test GPU A: uniform buffer","Test GPU B: costanti complete","GPU originale (difetti, solo FPS)","Ombre di personaggi e oggetti"};
-            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls","Invert gyro up/down","Left stick sensitivity","Right stick sensitivity","NVIDIA Shield test (NVIDIA only)","Skinning mode","Visibility tests without waiting","Show FPS / frame time","Save GFX diagnostic","CPU, several cores (default)","CPU, one core","GPU test A: uniform buffer","GPU test B: full constants","GPU original (faulty, FPS only)","Character and object shadows"};
+            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyroskop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung","Gyro Rauf/Runter invertieren","Linker Stick Empfindlichkeit","Rechter Stick Empfindlichkeit","NVIDIA-Shield-Test (nur NVIDIA)","Skinning-Modus","Sichtbarkeitstests ohne Warten","FPS/Bildzeit anzeigen","GFX-Diagnose speichern","CPU, mehrere Kerne (Standard)","CPU, ein Kern","GPU-Test A: Uniform-Buffer","GPU-Test B: volle Konstanten","GPU original (fehlerhaft, nur FPS)"};
+            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes","Inverser haut/bas du gyroscope","Sensibilité du stick gauche","Sensibilité du stick droit","Test NVIDIA Shield (NVIDIA uniquement)","Mode de skinning","Tests de visibilité sans attente","Afficher FPS / temps d'image","Enregistrer le diagnostic GFX","CPU, plusieurs cœurs (défaut)","CPU, un cœur","Test GPU A : uniform buffer","Test GPU B : constantes complètes","GPU d'origine (défauts, FPS seul.)"};
+            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli","Inverti su/giù del giroscopio","Sensibilità stick sinistro","Sensibilità stick destro","Test NVIDIA Shield (solo NVIDIA)","Modalità skinning","Test di visibilità senza attesa","Mostra FPS / tempo fotogramma","Salva diagnostica GFX","CPU, più core (predefinito)","CPU, un core","Test GPU A: uniform buffer","Test GPU B: costanti complete","GPU originale (difetti, solo FPS)"};
+            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls","Invert gyro up/down","Left stick sensitivity","Right stick sensitivity","NVIDIA Shield test (NVIDIA only)","Skinning mode","Visibility tests without waiting","Show FPS / frame time","Save GFX diagnostic","CPU, several cores (default)","CPU, one core","GPU test A: uniform buffer","GPU test B: full constants","GPU original (faulty, FPS only)"};
         }
     }
     private TextView text(String caption,int size) {
@@ -190,8 +189,7 @@ final class SettingsOverlay {
         return button;
     }
     /** halo_android_perf.h, as the overlay applies it */
-    int perfSettings(){return perfMode|(perfAsync?0:PERF_VISIBILITY_WAIT)|(perfOverlay?PERF_SHOW_OVERLAY:0)|
-        (perfShadows?0:PERF_NO_OBJECT_SHADOWS);}
+    int perfSettings(){return perfMode|(perfAsync?0:PERF_VISIBILITY_WAIT)|(perfOverlay?PERF_SHOW_OVERLAY:0);}
     private String perfModeText(){return "\u25c0 "+strings()[22+perfMode]+" \u25b6";}
     private void perfModeStep(int step){
         perfMode=(perfMode+step+PERF_MODES)%PERF_MODES;
@@ -204,7 +202,7 @@ final class SettingsOverlay {
         stickLookMask=nativeLookSticks();
         System.arraycopy(values,0,original,0,values.length);originalGyro=gyroEnabled;
         originalGyroInvert=gyroInvertPitch;
-        originalPerfMode=perfMode;originalPerfAsync=perfAsync;originalPerfOverlay=perfOverlay;originalPerfShadows=perfShadows;
+        originalPerfMode=perfMode;originalPerfAsync=perfAsync;originalPerfOverlay=perfOverlay;
         nativeOpen(true);activity.settingsVisibility(true);
         String[] labels=strings();
         root=new FrameLayout(activity);root.setBackgroundColor(Color.TRANSPARENT);root.setClickable(true);
@@ -250,8 +248,6 @@ final class SettingsOverlay {
             perfAsyncSwitch.setOnCheckedChangeListener((v,checked)->{perfAsync=checked;apply();});
             perfOverlaySwitch=perfToggle(rows,PERF_OVERLAY,labels[20],perfOverlay);
             perfOverlaySwitch.setOnCheckedChangeListener((v,checked)->{perfOverlay=checked;apply();});
-            perfShadowsSwitch=perfToggle(rows,PERF_SHADOWS,labels[27],perfShadows);
-            perfShadowsSwitch.setOnCheckedChangeListener((v,checked)->{perfShadows=checked;apply();});
             Button capture=perfButton(rows,PERF_CAPTURE,labels[21],"GFX");
             capture.setOnClickListener(v->{close(true);activity.captureGraphics();});
         }
@@ -284,13 +280,13 @@ final class SettingsOverlay {
             e.putBoolean("gyro_aim",gyroEnabled);
             e.putBoolean("gyro_invert_pitch",gyroInvertPitch);
             e.putInt("nvidia_skinning_mode",perfMode);e.putBoolean("nvidia_visibility_async",perfAsync);
-            e.putBoolean("perf_overlay",perfOverlay);e.putBoolean("nvidia_object_shadows",perfShadows);e.apply();
+            e.putBoolean("perf_overlay",perfOverlay);e.apply();
         } else {
             System.arraycopy(original,0,values,0,values.length);gyroEnabled=originalGyro;
             gyroInvertPitch=originalGyroInvert;
-            perfMode=originalPerfMode;perfAsync=originalPerfAsync;perfOverlay=originalPerfOverlay;perfShadows=originalPerfShadows;apply();
+            perfMode=originalPerfMode;perfAsync=originalPerfAsync;perfOverlay=originalPerfOverlay;apply();
         }
-        perfModeButton=null;perfAsyncSwitch=perfOverlaySwitch=perfShadowsSwitch=null;
+        perfModeButton=null;perfAsyncSwitch=perfOverlaySwitch=null;
         parent.removeView(root);root=null;nativeOpen(false);activity.settingsVisibility(false);
     }
     void suspend(){suspended=true;close(false);}
@@ -322,7 +318,6 @@ final class SettingsOverlay {
         else if(selected==PERF_MODE)perfModeStep(key==KeyEvent.KEYCODE_DPAD_LEFT?-1:1);
         else if(selected==PERF_VISIBILITY)perfAsyncSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
         else if(selected==PERF_OVERLAY)perfOverlaySwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
-        else if(selected==PERF_SHADOWS)perfShadowsSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
         else if(selected==PERF_CAPTURE)return;
         else selected=key==KeyEvent.KEYCODE_DPAD_LEFT?OK:CANCEL;
         targets[selected].requestFocus();

@@ -43,7 +43,7 @@ class OverlayNavigationTest {
     int selected,perfMode;boolean open=true,save;
     Slider[] sliders=new Slider[8];Widget[] targets=new Widget[CANCEL+1];
     Toggle gyroSwitch=new Toggle(),gyroInvertSwitch=new Toggle();
-    Toggle perfAsyncSwitch,perfOverlaySwitch,perfShadowsSwitch;
+    Toggle perfAsyncSwitch,perfOverlaySwitch;
     void perfModeStep(int step){perfMode=(perfMode+step+PERF_MODES)%PERF_MODES;}
     /* perf: the NVIDIA test section of diagnostic builds (null targets otherwise) */
     OverlayNavigationTest(boolean gyro,boolean perf){
@@ -53,7 +53,6 @@ class OverlayNavigationTest {
             targets[PERF_MODE]=new Widget();
             targets[PERF_VISIBILITY]=perfAsyncSwitch=new Toggle();
             targets[PERF_OVERLAY]=perfOverlaySwitch=new Toggle();
-            targets[PERF_SHADOWS]=perfShadowsSwitch=new Toggle();
             targets[PERF_CAPTURE]=new Widget();
         }
         targets[OK]=new Widget();targets[CANCEL]=new Widget();
@@ -112,7 +111,7 @@ checks=r'''
         for(int code:new int[]{KeyEvent.KEYCODE_BUTTON_B,KeyEvent.KEYCODE_BACK,KeyEvent.KEYCODE_ESCAPE}){
             t=new OverlayNavigationTest(true);t.press(code);assert !t.open && !t.save;
         }
-        /* the NVIDIA test section: mode, three switches, GFX, then OK */
+        /* the NVIDIA test section: mode, two switches, GFX, then OK */
         t=new OverlayNavigationTest(true,true);t.selected=RIGHT_STICK;
         t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==PERF_MODE;
         t.press(KeyEvent.KEYCODE_DPAD_RIGHT);assert t.perfMode==1;
@@ -123,9 +122,6 @@ checks=r'''
         t.press(KeyEvent.KEYCODE_BUTTON_A);assert !t.perfAsyncSwitch.checked;
         t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==PERF_OVERLAY;
         t.press(KeyEvent.KEYCODE_DPAD_LEFT);assert !t.perfOverlaySwitch.checked;
-        t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==PERF_SHADOWS;
-        t.press(KeyEvent.KEYCODE_DPAD_LEFT);assert !t.perfShadowsSwitch.checked;
-        t.press(KeyEvent.KEYCODE_DPAD_RIGHT);assert t.perfShadowsSwitch.checked;
         t.press(KeyEvent.KEYCODE_DPAD_DOWN);assert t.selected==PERF_CAPTURE;
         t.press(KeyEvent.KEYCODE_DPAD_RIGHT);assert t.selected==PERF_CAPTURE;
         t.press(KeyEvent.KEYCODE_BUTTON_A);assert t.targets[PERF_CAPTURE].clicked==1;
