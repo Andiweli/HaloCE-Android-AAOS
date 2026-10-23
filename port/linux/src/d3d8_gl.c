@@ -32,6 +32,10 @@ Conventions carried over from the Xbox:
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef HALO_ANDROID
+#include <pthread.h>
+#include <unistd.h>
+#endif
 
 void d3d8_surface_initialize(D3DSurface *surface, D3DFORMAT format, unsigned long width, unsigned long height);
 void d3d8_surface_resize(D3DSurface *surface, D3DFORMAT format, unsigned long width, unsigned long height);
@@ -54,8 +58,36 @@ and entry points used below that ES lacks */
 
 /* what the context supports (gl_initialize) */
 struct xgpu_capabilities xgpu_capabilities;
-/* Keep the pointer path for devices whose actual context is ES 3.0. */
+/* Keep the pointer path for ES 3.0 and NVIDIA (android_use_vertex_bindings). */
 static BOOL vertex_bindings_supported;
+/* NVIDIA: skeletal (animated) models run their original NV2A programs on
+the CPU (the NVIDIA CPU skeletal vertices section below) */
+static BOOL android_cpu_skeletal_vertices;
+static GLuint android_cpu_vertex_shader;
+static BOOL android_cpu_vertex_shader_attempted;
+static struct nv2a_cpu_program *android_active_cpu_program;
+
+/* NVIDIA reads lens flare visibility without waiting for the GPU (the
+latest finished hardware result); every other GPU keeps its wait */
+static BOOL android_visibility_wait(void)
+{
+	return !android_cpu_skeletal_vertices;
+}
+
+static BOOL android_is_nvidia(const char *vendor, const char *renderer)
+{
+	return (vendor && strstr(vendor, "NVIDIA")) ||
+		(renderer && strstr(renderer, "NVIDIA"));
+}
+
+static BOOL android_use_vertex_bindings(GLint major, GLint minor, const char *vendor, const char *renderer)
+{
+	/* The Shield reports ES 3.2, but exhibits stretched animated models.
+	Use the existing ES 3.0 attribute-pointer path for NVIDIA to isolate
+	the stream-binding path without changing shaders or node matrices. */
+	return (major > 3 || (major == 3 && minor >= 1)) &&
+		!android_is_nvidia(vendor, renderer);
+}
 #else
 static BOOL vertex_bindings_supported = TRUE;
 #endif
@@ -171,6 +203,10 @@ struct vertex_shader_object
 	unsigned long packed_mask;
 	/* [0] streams per the declaration, [1] immediate mode (all floats) */
 	GLuint shader[2];
+#ifdef HALO_ANDROID
+	BOOL cpu_checked;
+	struct nv2a_cpu_program *cpu_program;
+#endif
 };
 
 /* ---------- programs */
@@ -364,6 +400,8 @@ struct gl_device
 	unsigned long counter_next;
 	unsigned long counter_active;
 	unsigned long counter_of_slot[VISIBILITY_TEST_SLOTS];
+	/* the active test counts samples (not when NVIDIA reads without waiting) */
+	BOOL counter_test;
 #else
 	/* each test's latest result, which the GPU writes (as a query buffer)
 	when the test's draws are done: the game waits for results at the start
@@ -1022,10 +1060,20 @@ static void gl_initialize(void)
 #ifdef HALO_ANDROID
 	{
 		BOOL es32 = major > 3 || (major == 3 && minor >= 2);
+		const char *vendor = (const char *)glGetString(GL_VENDOR);
+		const char *renderer = (const char *)glGetString(GL_RENDERER);
 
-		vertex_bindings_supported = major > 3 || (major == 3 && minor >= 1);
-		platform_log("Patch50: vertex stream bindings %s (OpenGL ES %d.%d)",
-			vertex_bindings_supported ? "enabled" : "disabled; ES 3.0 pointer fallback", (int)major, (int)minor);
+		vertex_bindings_supported = android_use_vertex_bindings(major, minor, vendor, renderer);
+		android_cpu_skeletal_vertices = android_is_nvidia(vendor, renderer);
+		if (android_cpu_skeletal_vertices)
+			platform_log("NVIDIA skeletal compatibility: original NV2A vertex execution on CPU; GPU passthrough; "
+				"other meshes unchanged; lens flare visibility without waiting");
+		if (android_is_nvidia(vendor, renderer))
+			platform_log("Shield vertex compatibility: classic attribute pointers (OpenGL ES %d.%d); vendor=%s; renderer=%s",
+				(int)major, (int)minor, vendor ? vendor : "unknown", renderer ? renderer : "unknown");
+		else
+			platform_log("Patch50: vertex stream bindings %s (OpenGL ES %d.%d)",
+				vertex_bindings_supported ? "enabled" : "disabled; ES 3.0 pointer fallback", (int)major, (int)minor);
 
 		/* clip control is emulated in the vertex shader (nv2a_vsh.c) */
 		xgpu_capabilities.copy_image = es32 || host_gl_has_extension("GL_EXT_copy_image") ||
@@ -1517,7 +1565,9 @@ void WINAPI D3DDevice_BeginVisibilityTest(void)
 	readback on the current driver. The Vita uses hardware visibility tests. */
 	glBeginQuery(VISIBILITY_QUERY, device.queries[VISIBILITY_TEST_SLOTS]);
 #ifdef HALO_ANDROID
-	if (xgpu_capabilities.atomic_counters)
+	/* counting the samples is only of use to a reader that waits for them */
+	device.counter_test = xgpu_capabilities.atomic_counters && android_visibility_wait();
+	if (device.counter_test)
 	{
 		const GLuint zero = 0;
 
@@ -1544,7 +1594,8 @@ HRESULT WINAPI D3DDevice_EndVisibilityTest(DWORD index)
 #ifdef HALO_ANDROID
 	if (xgpu_capabilities.atomic_counters)
 	{
-		device.counter_of_slot[index] = device.counter_active;
+		/* (no counter: a test begun while NVIDIA did not wait) */
+		device.counter_of_slot[index] = device.counter_test ? device.counter_active : VISIBILITY_TEST_SLOTS;
 	}
 #endif
 	/* the target's pixels to a game pixel: the result is a count of the
@@ -1595,13 +1646,17 @@ HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULON
 		return S_OK;
 	}
 #ifdef HALO_ANDROID
-	if (xgpu_capabilities.atomic_counters)
+	/* NVIDIA: the latest finished hardware result below, as on ES 3.0, so
+	the CPU never waits for the whole previous frame on the GPU at the start
+	of every frame */
+	if (xgpu_capabilities.atomic_counters && android_visibility_wait())
 	{
 		GLuint hardware_visible = 0;
 
 		/* reading the buffer waits for the draws that counted */
-		samples = host_gl_read_buffer_word(device.visibility_counters,
-			(unsigned int)(device.counter_of_slot[index] * sizeof(GLuint)));
+		if (device.counter_of_slot[index] < VISIBILITY_TEST_SLOTS)
+			samples = host_gl_read_buffer_word(device.visibility_counters,
+				(unsigned int)(device.counter_of_slot[index] * sizeof(GLuint)));
 		glGetQueryObjectuiv(device.queries[index], GL_QUERY_RESULT, &hardware_visible);
 		/* A hardware query still detects visible geometry if an atomic
 		counter was not written or could not be mapped. Preserve the exact
@@ -1971,6 +2026,47 @@ static unsigned long hash_words(const void *data, unsigned long size)
 static GLuint vertex_shader_get(struct vertex_shader_object *program, BOOL immediate)
 {
 	int variant = immediate ? 1 : 0;
+
+#ifdef HALO_ANDROID
+	android_active_cpu_program = NULL;
+	if (android_cpu_skeletal_vertices)
+	{
+		BOOL declaration_supported = TRUE;
+		unsigned long index;
+		if (!immediate)
+			for (index = 0; index < device.vertex_shader->element_count; index++)
+			{
+				unsigned long type = device.vertex_shader->elements[index].type;
+				if (type != D3DVSDT_NONE && !vertex_type_bytes(type)) declaration_supported = FALSE;
+			}
+		if (!program->cpu_checked)
+		{
+			program->cpu_program = nv2a_cpu_program_create(program->instructions, program->instruction_count);
+			program->cpu_checked = TRUE;
+			if (program->cpu_program)
+				platform_log("NVIDIA CPU skeletal shader %lu: %lu original instructions, %s", program->id, program->instruction_count,
+					nv2a_cpu_program_is_specialized(program->cpu_program) ? "fixed CPU executor v1" : "interpreter fallback");
+		}
+		if (declaration_supported && program->cpu_program)
+		{
+			/* All skeletal shaders share one small GPU vertex shader. */
+			if (!android_cpu_vertex_shader_attempted)
+			{
+				char *source = nv2a_cpu_vertex_glsl();
+				android_cpu_vertex_shader_attempted = TRUE;
+				android_cpu_vertex_shader = compile_shader(GL_VERTEX_SHADER, source, "CPU skeletal passthrough");
+				free(source);
+				if (!android_cpu_vertex_shader)
+					platform_log("NVIDIA CPU skeletal passthrough unavailable; retaining original GPU shaders");
+			}
+			if (android_cpu_vertex_shader)
+			{
+				android_active_cpu_program = program->cpu_program;
+				return android_cpu_vertex_shader;
+			}
+		}
+	}
+#endif
 
 	if (!program->shader[variant])
 	{
@@ -2714,7 +2810,7 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	key.fog_enable = D3D__RenderState[D3DRS_FOGENABLE] != 0;
 	key.fog_table_mode = (unsigned char)D3D__RenderState[D3DRS_FOGTABLEMODE];
 #ifdef HALO_ANDROID
-	key.count_samples = device.visibility_test_active && xgpu_capabilities.atomic_counters;
+	key.count_samples = device.visibility_test_active && xgpu_capabilities.atomic_counters && device.counter_test;
 #endif
 
 	entry = program_get(vertex_shader_get(program, immediate), fragment_shader_get(&key));
@@ -3515,6 +3611,379 @@ static void setup_streams(unsigned long first, unsigned long count)
 	}
 }
 
+#ifdef HALO_ANDROID
+/* ---------- NVIDIA CPU skeletal vertices
+
+A draw's vertices are cut into chunks, which the render thread and up to
+ANDROID_CPU_WORKERS_MAXIMUM worker threads take in turn: a chunk's inputs
+are decoded column by column (only the registers the program reads), the
+original program runs for each vertex, and the attributes it writes go
+straight into their planes of one upload. The workers touch neither GL nor
+any state but the job's; only the render thread uploads and binds. Every
+vertex gives the same result whichever thread runs it, and a draw is
+finished before the next one starts. */
+
+#define ANDROID_CPU_CHUNK 64
+/* smaller draws stay on the render thread: waking a worker costs more */
+#define ANDROID_CPU_PARALLEL_MINIMUM 192
+#define ANDROID_CPU_WORKERS_MAXIMUM 3
+/* how long a worker looks for the next draw before it sleeps; a model's
+draws follow each other within microseconds, frames come milliseconds
+apart */
+#define ANDROID_CPU_WORKER_SPINS 20000
+/* the attributes of a vertex the GPU reads: nine float4, fog and point size */
+#define ANDROID_CPU_VERTEX_BYTES (9 * 4 * sizeof(float) + 2 * sizeof(float))
+
+struct android_cpu_stream
+{
+	const unsigned char *data;
+	unsigned long stride, type, reg;
+};
+
+struct android_cpu_job
+{
+	const struct nv2a_cpu_program *program;
+	const float (*constants)[4];
+	const float *viewport_scale, *viewport_offset;
+	float screen_offset, point_size;
+	/* every input register of every vertex (immediate mode), or decoded
+	from the streams into the job's own array */
+	const float (*inputs)[16][4];
+	float (*decoded)[16][4];
+	struct android_cpu_stream streams[16];
+	unsigned long stream_count;
+	/* read registers no stream gives: one value for every vertex */
+	float defaults[16][4];
+	unsigned default_registers;
+	/* attribute a's float4 plane is planes + plane_offset[a] (written
+	attributes only); the fog/point size pairs at auxiliary_offset */
+	unsigned char *planes;
+	unsigned long plane_offset[9], auxiliary_offset;
+	unsigned written;
+	BOOL auxiliary;
+	unsigned long count, chunk_count;
+	unsigned long next_chunk, done_chunks;
+};
+
+static struct
+{
+	pthread_mutex_t lock;
+	pthread_cond_t wake;
+	struct android_cpu_job *job;
+	/* a new job was opened (workers look for this), and whether one is
+	open; workers inside a job are busy, and the render thread waits for
+	them to leave before the job's memory is used again */
+	unsigned int generation, open, busy, sleepers;
+	unsigned long workers;
+	BOOL started;
+} android_cpu_pool = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER };
+
+static inline void android_cpu_relax(void)
+{
+#if defined(__aarch64__) || defined(__arm64__)
+	__asm__ __volatile__("yield" ::: "memory");
+#else
+	__asm__ __volatile__("" ::: "memory");
+#endif
+}
+
+static void android_cpu_chunk(struct android_cpu_job *job, unsigned long chunk)
+{
+	unsigned long first = chunk * ANDROID_CPU_CHUNK;
+	unsigned long count = job->count - first < ANDROID_CPU_CHUNK ? job->count - first : ANDROID_CPU_CHUNK;
+	const float (*inputs)[16][4] = job->inputs;
+	unsigned long vertex, index;
+	unsigned reg;
+
+	if (!inputs)
+	{
+		float (*decoded)[16][4] = job->decoded + first;
+
+		for (reg = 0; reg < 16; reg++)
+		{
+			if (job->default_registers & (1U << reg))
+			{
+				for (vertex = 0; vertex < count; vertex++)
+					memcpy(decoded[vertex][reg], job->defaults[reg], sizeof(job->defaults[reg]));
+			}
+		}
+		for (index = 0; index < job->stream_count; index++)
+		{
+			const struct android_cpu_stream *stream = &job->streams[index];
+
+			nv2a_cpu_attribute_decode_column(stream->type, stream->data + first * stream->stride,
+				stream->stride, count, decoded, (unsigned)stream->reg);
+		}
+		inputs = (const float (*)[16][4])job->decoded;
+	}
+	for (vertex = first; vertex < first + count; vertex++)
+	{
+		struct nv2a_cpu_vertex result;
+
+		nv2a_cpu_vertex_execute(job->program, inputs[vertex], job->constants, job->viewport_scale,
+			job->viewport_offset, job->screen_offset, job->point_size, &result);
+		for (index = 0; index < 9; index++)
+		{
+			if (job->written & (1U << index))
+				memcpy(job->planes + job->plane_offset[index] + vertex * 4 * sizeof(float), result.value[index],
+					4 * sizeof(float));
+		}
+		if (job->auxiliary)
+			memcpy(job->planes + job->auxiliary_offset + vertex * 2 * sizeof(float), &result.fog, 2 * sizeof(float));
+	}
+}
+
+static void android_cpu_job_work(struct android_cpu_job *job)
+{
+	for (;;)
+	{
+		unsigned long chunk = __atomic_fetch_add(&job->next_chunk, 1, __ATOMIC_SEQ_CST);
+
+		if (chunk >= job->chunk_count)
+			return;
+		android_cpu_chunk(job, chunk);
+		__atomic_fetch_add(&job->done_chunks, 1, __ATOMIC_RELEASE);
+	}
+}
+
+static void *android_cpu_worker(void *unused)
+{
+	unsigned int seen = __atomic_load_n(&android_cpu_pool.generation, __ATOMIC_SEQ_CST);
+
+	(void)unused;
+	for (;;)
+	{
+		unsigned int generation = seen;
+		unsigned long spins;
+
+		for (spins = 0; spins < ANDROID_CPU_WORKER_SPINS; spins++)
+		{
+			generation = __atomic_load_n(&android_cpu_pool.generation, __ATOMIC_SEQ_CST);
+			if (generation != seen)
+				break;
+			android_cpu_relax();
+		}
+		if (generation == seen)
+		{
+			pthread_mutex_lock(&android_cpu_pool.lock);
+			__atomic_add_fetch(&android_cpu_pool.sleepers, 1, __ATOMIC_SEQ_CST);
+			while ((generation = __atomic_load_n(&android_cpu_pool.generation, __ATOMIC_SEQ_CST)) == seen)
+				pthread_cond_wait(&android_cpu_pool.wake, &android_cpu_pool.lock);
+			__atomic_sub_fetch(&android_cpu_pool.sleepers, 1, __ATOMIC_SEQ_CST);
+			pthread_mutex_unlock(&android_cpu_pool.lock);
+		}
+		seen = generation;
+		/* enter, then check the job is still open: the render thread closes
+		it, then waits for every worker inside to leave */
+		__atomic_add_fetch(&android_cpu_pool.busy, 1, __ATOMIC_SEQ_CST);
+		if (__atomic_load_n(&android_cpu_pool.open, __ATOMIC_SEQ_CST))
+			android_cpu_job_work(android_cpu_pool.job);
+		__atomic_sub_fetch(&android_cpu_pool.busy, 1, __ATOMIC_SEQ_CST);
+	}
+	return NULL;
+}
+
+/* the workers, started once: two fewer than the processors (the render
+thread and the GL driver's own), at least one */
+static unsigned long android_cpu_workers(void)
+{
+	if (!android_cpu_pool.started)
+	{
+		long processors = sysconf(_SC_NPROCESSORS_ONLN);
+		unsigned long wanted = processors > 3 ? (unsigned long)processors - 2 : 1, index;
+
+		android_cpu_pool.started = TRUE;
+		if (wanted > ANDROID_CPU_WORKERS_MAXIMUM)
+			wanted = ANDROID_CPU_WORKERS_MAXIMUM;
+		for (index = 0; index < wanted; index++)
+		{
+			pthread_t thread;
+
+			if (pthread_create(&thread, NULL, android_cpu_worker, NULL) != 0)
+				break;
+			pthread_detach(thread);
+			android_cpu_pool.workers++;
+		}
+		platform_log("NVIDIA CPU skeletal workers: %lu of %lu started (%ld processors online)",
+			android_cpu_pool.workers, wanted, processors);
+	}
+	return android_cpu_pool.workers;
+}
+
+static void android_cpu_job_run(struct android_cpu_job *job, BOOL parallel)
+{
+	job->next_chunk = 0;
+	job->done_chunks = 0;
+	if (!parallel)
+	{
+		android_cpu_job_work(job);
+		return;
+	}
+	android_cpu_pool.job = job;
+	__atomic_store_n(&android_cpu_pool.open, 1, __ATOMIC_SEQ_CST);
+	__atomic_add_fetch(&android_cpu_pool.generation, 1, __ATOMIC_SEQ_CST);
+	if (__atomic_load_n(&android_cpu_pool.sleepers, __ATOMIC_SEQ_CST))
+	{
+		pthread_mutex_lock(&android_cpu_pool.lock);
+		pthread_cond_broadcast(&android_cpu_pool.wake);
+		pthread_mutex_unlock(&android_cpu_pool.lock);
+	}
+	android_cpu_job_work(job);
+	while (__atomic_load_n(&job->done_chunks, __ATOMIC_ACQUIRE) < job->chunk_count)
+		android_cpu_relax();
+	__atomic_store_n(&android_cpu_pool.open, 0, __ATOMIC_SEQ_CST);
+	while (__atomic_load_n(&android_cpu_pool.busy, __ATOMIC_SEQ_CST))
+		android_cpu_relax();
+}
+
+static BOOL android_cpu_setup_vertices(unsigned long first, unsigned long count, const float *immediate)
+{
+	static struct android_cpu_job job;
+	static float (*decoded)[16][4];
+	static unsigned long decoded_capacity;
+	static unsigned char *planes;
+	static unsigned long planes_capacity;
+	static const float initial[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	struct vertex_shader_object *declaration = device.vertex_shader;
+	const struct nv2a_cpu_program *program = android_active_cpu_program;
+	unsigned inputs = nv2a_cpu_program_inputs(program), outputs = nv2a_cpu_program_outputs(program);
+	unsigned long index, offset, bytes, stream_registers = 0, planes_written = 0;
+	BOOL parallel;
+
+	if (count > STREAM_BUFFER_SIZE / ANDROID_CPU_VERTEX_BYTES)
+	{
+		platform_log("NVIDIA CPU skeletal draw rejected: %lu vertices exceed the streaming buffer", count);
+		return FALSE;
+	}
+	bytes = count * ANDROID_CPU_VERTEX_BYTES;
+	if (bytes > planes_capacity)
+	{
+		unsigned char *larger = realloc(planes, bytes);
+
+		if (!larger)
+		{
+			platform_log("NVIDIA CPU skeletal upload allocation failed (%lu bytes)", bytes);
+			return FALSE;
+		}
+		planes = larger;
+		planes_capacity = bytes;
+	}
+	if (!immediate && count > decoded_capacity)
+	{
+		void *larger = realloc(decoded, count * sizeof(*decoded));
+
+		if (!larger)
+		{
+			platform_log("NVIDIA CPU skeletal input allocation failed (%lu vertices)", count);
+			return FALSE;
+		}
+		decoded = larger;
+		decoded_capacity = count;
+	}
+
+	job.program = program;
+	job.constants = (const float (*)[4])device.constants;
+	job.viewport_scale = draw_uniforms.viewport_scale;
+	job.viewport_offset = draw_uniforms.viewport_offset;
+	job.screen_offset = draw_uniforms.screen_offset;
+	job.point_size = draw_uniforms.point_size;
+	job.inputs = (const float (*)[16][4])immediate;
+	job.decoded = decoded;
+	job.stream_count = 0;
+	job.count = count;
+	job.chunk_count = (count + ANDROID_CPU_CHUNK - 1) / ANDROID_CPU_CHUNK;
+	if (!immediate)
+	{
+		/* Resolve addresses and constant streams once per draw. Only the last
+		valid element for a register matters, as in the original element loop. */
+		const struct vertex_element *last[16] = { NULL };
+
+		memcpy(job.defaults, device.attributes, sizeof(job.defaults));
+		for (index = 0; index < 16; index++)
+		{
+			if (declaration->packed_mask & (1UL << index))
+			{
+				job.defaults[index][0] = job.defaults[index][1] = job.defaults[index][2] = 0.0f;
+				job.defaults[index][3] = 1.0f;
+			}
+		}
+		for (index = 0; index < declaration->element_count; index++)
+		{
+			const struct vertex_element *element = &declaration->elements[index];
+
+			if (element->type != D3DVSDT_NONE && device.streams[element->stream].data)
+				last[element->reg] = element;
+		}
+		for (index = 0; index < 16; index++)
+		{
+			const struct vertex_element *element = last[index];
+			const unsigned char *base;
+			unsigned long stride;
+
+			if (!element || !(inputs & (1U << index)))
+				continue;
+			stride = device.streams[element->stream].stride;
+			base = PLATFORM_PHYSICAL_TO_VIRTUAL(device.streams[element->stream].data);
+			base += first * stride + element->offset;
+			if (!stride)
+			{
+				nv2a_cpu_attribute_decode(element->type, base, job.defaults[index]);
+			}
+			else
+			{
+				job.streams[job.stream_count].data = base;
+				job.streams[job.stream_count].stride = stride;
+				job.streams[job.stream_count].type = element->type;
+				job.streams[job.stream_count++].reg = index;
+				stream_registers |= 1UL << index;
+			}
+		}
+		job.default_registers = inputs & ~(unsigned)stream_registers;
+	}
+	/* the planes of the attributes the program writes, one after another */
+	job.written = outputs & 0x1ffU;
+	for (index = 0; index < 9; index++)
+	{
+		if (job.written & (1U << index))
+			job.plane_offset[index] = planes_written++ * count * 4 * sizeof(float);
+	}
+	job.auxiliary = (outputs & (NV2A_CPU_OUTPUT_FOG | NV2A_CPU_OUTPUT_POINT_SIZE)) != 0;
+	job.auxiliary_offset = planes_written * count * 4 * sizeof(float);
+	job.planes = planes;
+	bytes = job.auxiliary_offset + (job.auxiliary ? count * 2 * sizeof(float) : 0);
+	nv2a_cpu_program_prepare_constants(android_active_cpu_program, device.constants);
+	parallel = count >= ANDROID_CPU_PARALLEL_MINIMUM && android_cpu_workers() > 0;
+	android_cpu_job_run(&job, parallel);
+
+	/* One reservation/upload: orphaning cannot invalidate a second stream.
+	The existing ring and index rebasing still govern this draw. Attributes
+	the program never writes read their constant value instead. */
+	offset = stream_upload(planes, bytes);
+	stats.streamed_bytes += bytes;
+	for (index = 0; index < 9; index++)
+	{
+		if (job.written & (1U << index))
+			state_attribute_pointer((GLuint)index, device.stream_buffer, 4, GL_FLOAT, GL_FALSE, FALSE,
+				4 * sizeof(float), offset + job.plane_offset[index]);
+		else
+			state_attribute_value((GLuint)index, initial);
+	}
+	if (job.auxiliary)
+	{
+		state_attribute_pointer(9, device.stream_buffer, 2, GL_FLOAT, GL_FALSE, FALSE,
+			2 * sizeof(float), offset + job.auxiliary_offset);
+	}
+	else
+	{
+		const float auxiliary[4] = { 1.0f, draw_uniforms.point_size, 0.0f, 1.0f };
+
+		state_attribute_value(9, auxiliary);
+	}
+	for (index = 10; index < 16; index++) state_attribute_value(index, device.attributes[index]);
+	return TRUE;
+}
+#endif
+
 static GLenum primitive_mode(D3DPRIMITIVETYPE type)
 {
 	switch (type)
@@ -3578,7 +4047,14 @@ void WINAPI D3DDevice_DrawVertices(D3DPRIMITIVETYPE primitive_type, UINT start_v
 	if (!vertex_count || !prepare_draw(FALSE))
 		return;
 	trace_draw("draw", primitive_type, vertex_count, NULL);
-	setup_streams(start_vertex, vertex_count);
+#ifdef HALO_ANDROID
+	if (android_active_cpu_program)
+	{
+		if (!android_cpu_setup_vertices(start_vertex, vertex_count, NULL)) return;
+	}
+	else
+#endif
+		setup_streams(start_vertex, vertex_count);
 	if (primitive_type == D3DPT_QUADLIST)
 	{
 		unsigned long count;
@@ -3614,7 +4090,14 @@ void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT 
 	index_extent(index_data, vertex_count, generation, mirrored, &minimum, &maximum);
 	trace_draw("indexed", primitive_type, vertex_count, NULL);
 	/* (the streams from the base vertex on: index i is vertex base + i) */
-	setup_streams(device.base_vertex_index + minimum, maximum - minimum + 1);
+#ifdef HALO_ANDROID
+	if (android_active_cpu_program)
+	{
+		if (!android_cpu_setup_vertices(device.base_vertex_index + minimum, maximum - minimum + 1, NULL)) return;
+	}
+	else
+#endif
+		setup_streams(device.base_vertex_index + minimum, maximum - minimum + 1);
 	if (mirrored)
 	{
 		/* the attributes start at vertex minimum */
@@ -3684,20 +4167,29 @@ void WINAPI D3DDevice_End(void)
 	if (!count || !prepare_draw(TRUE))
 		return;
 	trace_draw("immediate", type, count, device.immediate_vertices);
-	offset = stream_upload(device.immediate_vertices, count * stride);
-	if (vertex_bindings_supported)
+#ifdef HALO_ANDROID
+	if (android_active_cpu_program)
 	{
-		/* Every attribute reads four floats from binding 0. */
-		state_vertex_buffer(0, device.stream_buffer, offset, (GLsizei)stride);
-		for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
-			state_attribute_format(index, 0, 4, GL_FLOAT, GL_FALSE, FALSE, (GLuint)(index * 4 * sizeof(float)));
+		if (!android_cpu_setup_vertices(0, count, device.immediate_vertices)) return;
 	}
 	else
+#endif
 	{
-		for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
+		offset = stream_upload(device.immediate_vertices, count * stride);
+		if (vertex_bindings_supported)
 		{
-			state_attribute_pointer(index, device.stream_buffer, 4, GL_FLOAT, GL_FALSE, FALSE, (GLsizei)stride,
-				offset + index * 4 * sizeof(float));
+			/* Every attribute reads four floats from binding 0. */
+			state_vertex_buffer(0, device.stream_buffer, offset, (GLsizei)stride);
+			for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
+				state_attribute_format(index, 0, 4, GL_FLOAT, GL_FALSE, FALSE, (GLuint)(index * 4 * sizeof(float)));
+		}
+		else
+		{
+			for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
+			{
+				state_attribute_pointer(index, device.stream_buffer, 4, GL_FLOAT, GL_FALSE, FALSE, (GLsizei)stride,
+					offset + index * 4 * sizeof(float));
+			}
 		}
 	}
 	if (type == D3DPT_QUADLIST)

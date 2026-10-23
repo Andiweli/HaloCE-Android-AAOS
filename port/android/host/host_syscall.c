@@ -11,7 +11,8 @@ The exceptions are
 - structures whose ILP32 layout differs from the kernel's: timespec and
   timeval (the guest's time_t is 32-bit, as in the MSVC runtime), iovec;
 - memory mappings, which must stay below 4 GB (host_memory.c);
-- the standard output and error streams, which go to logcat;
+- the standard output and error streams, which go to logcat; the bounded
+  NVIDIA CPU skeletal diagnostics also go to the app's diagnostic file;
 - process exit, and calls that have no meaning for the guest (signal
   handlers, which the host owns).
 */
@@ -91,6 +92,7 @@ static void log_bytes(int fd, const char *bytes, size_t size)
 {
 	struct log_stream *stream = &log_streams[fd == 2];
 	size_t index;
+	int saved_errno = errno;
 
 	pthread_mutex_lock(&log_lock);
 	for (index = 0; index < size; index++)
@@ -99,8 +101,22 @@ static void log_bytes(int fd, const char *bytes, size_t size)
 
 		if (c == '\n' || stream->length == sizeof(stream->line) - 1)
 		{
+			static const char *const diagnostic_prefixes[] = {
+				"halo-linux: NVIDIA CPU skeletal ", "halo-linux: gamepad port ",
+			};
+			int priority = fd == 2 ? ANDROID_LOG_WARN : ANDROID_LOG_INFO, forward = 0;
+			size_t prefix;
 			stream->line[stream->length] = 0;
-			__android_log_write(fd == 2 ? ANDROID_LOG_WARN : ANDROID_LOG_INFO, "halo", stream->line);
+			/* platform_log uses guest stderr, not host_logf. Forward only these
+low-rate diagnostic families through the existing bounded file writer.
+host_logf already writes Logcat, so do not emit a second Logcat copy.
+Ordinary guest output keeps its original Logcat-only path. */
+			for (prefix = 0; prefix < sizeof(diagnostic_prefixes) / sizeof(diagnostic_prefixes[0]); prefix++)
+				forward |= !strncmp(stream->line, diagnostic_prefixes[prefix], strlen(diagnostic_prefixes[prefix]));
+			if (forward)
+				host_logf(priority, "%s", stream->line);
+			else
+				__android_log_write(priority, "halo", stream->line);
 			stream->length = 0;
 			if (c == '\n')
 				continue;
@@ -108,6 +124,7 @@ static void log_bytes(int fd, const char *bytes, size_t size)
 		stream->line[stream->length++] = c;
 	}
 	pthread_mutex_unlock(&log_lock);
+	errno = saved_errno;
 }
 
 static long guest_writev(int fd, uint64_t vector, int count, int64_t offset, int positional)
@@ -356,6 +373,9 @@ long long host_syscall(long long number, long long a, long long b, long long c,
 	case SYS_getgid:
 	case SYS_getegid:
 	case SYS_sched_yield:
+	/* (musl's sysconf counts the processors with it: without it, one, and
+	the NVIDIA CPU skinning started a single worker on the Shield's four) */
+	case SYS_sched_getaffinity:
 	case SYS_getrandom:
 	case SYS_kill:
 	case SYS_tkill:

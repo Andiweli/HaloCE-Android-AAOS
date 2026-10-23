@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+"""Compare every fixed CPU executor with the retained interpreter.
+
+Uses the complete original microcode payload, randomized inputs/constants,
+changed draw constants and addressing boundaries. --gles additionally creates
+a synthetic capture and runs the existing real GLES transform-feedback check.
+The benchmark is a host comparison, not a Shield FPS measurement.
+"""
+from pathlib import Path
+import argparse
+import ctypes as C
+import json
+import os
+import re
+import shutil
+import statistics
+import subprocess
+import sys
+import tempfile
+import time
+from zipfile import ZipFile, ZIP_DEFLATED
+import numpy as np
+from android_cpu_shader_generate import programs, supported
+
+ROOT = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--gles', action='store_true')
+parser.add_argument('--output', type=Path)
+parser.add_argument('--native-images', type=Path, nargs='+',
+                    help='Additionally execute the built arm64_32 CPU path with Unicorn and pyelftools.')
+args = parser.parse_args()
+
+
+class NativeExecutor:
+    """Run the actual linked guest function, including its viewport conversion."""
+    def __init__(self, path):
+        import io
+        from elftools.elf.elffile import ELFFile
+        from unicorn import Uc, UC_ARCH_ARM64, UC_MODE_ARM
+        from unicorn import arm64_const as regs
+        self.regs = regs
+        self.uc = Uc(UC_ARCH_ARM64, UC_MODE_ARM)
+        elf = ELFFile(io.BytesIO(path.read_bytes()))
+        self.symbols = {s.name: s['st_value'] for s in elf.get_section_by_name('.symtab').iter_symbols()}
+        segments = [s for s in elf.iter_segments() if s['p_type'] == 'PT_LOAD']
+        low = min(s['p_vaddr'] for s in segments) & ~4095
+        high = (max(s['p_vaddr'] + s['p_memsz'] for s in segments) + 4095) & ~4095
+        assert high - low <= 0x01000000 and high < 0x100000000, path
+        self.uc.mem_map(low, high - low)
+        for s in segments:
+            self.uc.mem_write(s['p_vaddr'], s.data())
+        self.uc.mem_map(0x01000000, 0x20000)
+        self.uc.mem_map(0x10000000, 0x20000)
+
+    def execute(self, ordinal, count, inputs, constants, scale, offset, screen, size):
+        import struct
+        r, uc = self.regs, self.uc
+        # The arm64_32 program starts with count, prepared, executor: three
+        # 32-bit fields. Its fixed branch does not read the interpreter array.
+        uc.mem_write(0x01000000, struct.pack('<III', count, 0, self.symbols[f'cpu_fast_{ordinal}']))
+        for address, data in [(0x01000100, inputs), (0x01001000, constants),
+                              (0x01002000, scale), (0x01002010, offset)]:
+            uc.mem_write(address, data.tobytes())
+        for reg, address in [(r.UC_ARM64_REG_X0, 0x01000000), (r.UC_ARM64_REG_X1, 0x01000100),
+                             (r.UC_ARM64_REG_X2, 0x01001000), (r.UC_ARM64_REG_X3, 0x01002000),
+                             (r.UC_ARM64_REG_X4, 0x01002010), (r.UC_ARM64_REG_X5, 0x01003000),
+                             (r.UC_ARM64_REG_SP, 0x1001f000), (r.UC_ARM64_REG_LR, 0x70000000)]:
+            uc.reg_write(reg, address)
+        uc.reg_write(r.UC_ARM64_REG_S0, struct.unpack('<I', struct.pack('<f', screen))[0])
+        uc.reg_write(r.UC_ARM64_REG_S1, struct.unpack('<I', struct.pack('<f', size))[0])
+        uc.emu_start(self.symbols['nv2a_cpu_vertex_execute'], 0x70000000, count=200000)
+        assert uc.reg_read(r.UC_ARM64_REG_PC) == 0x70000000
+        return np.frombuffer(bytes(uc.mem_read(0x01003000, 160)), dtype='<f4')
+
+header = (ROOT / 'port/linux/src/xgpu.h').read_text()
+api = header[header.index('struct nv2a_cpu_program;'):header.index('#endif', header.index('struct nv2a_cpu_program;'))]
+xdk = (ROOT / 'port/include/xdk/xdk_d3d8.h').read_text()
+formats = '\n'.join(re.findall(r'^#define D3DVSDT_\w+ .*$', xdk, re.M))
+prefix = ('#include <stdint.h>\n#include <stdlib.h>\n#include <stdarg.h>\n'
+          '#define HALO_ANDROID 1\n#define TRUE 1\n#define FALSE 0\n'
+          'typedef uint32_t DWORD; typedef int BOOL;\n'
+          '#define XGPU_VERTEX_ATTRIBUTE_COUNT 16\n#define XGPU_VERTEX_CONSTANT_COUNT 192\n'
+          '#define XGPU_VERTEX_CONSTANT_BIAS 96\n'
+          'struct xgpu_capabilities { const char *shading_language; };\n'
+          'extern struct xgpu_capabilities xgpu_capabilities;\n'
+          'struct xgpu_text { char *buffer; unsigned long length, capacity; };\n'
+          'void xgpu_text_append(struct xgpu_text *,const char *,...);\n' + formats + '\n' + api)
+bridge = r'''
+#include <stdio.h>
+#include "nv2a_vsh.c"
+struct xgpu_capabilities xgpu_capabilities={"310 es"};
+void xgpu_text_append(struct xgpu_text *t,const char *f,...){
+ va_list a,b;va_start(a,f);va_copy(b,a);int n=vsnprintf(NULL,0,f,a);va_end(a);
+ if(t->length+n+1>t->capacity){t->capacity=(t->length+n+1)*2;t->buffer=realloc(t->buffer,t->capacity);}
+ vsnprintf(t->buffer+t->length,t->capacity-t->length,f,b);va_end(b);t->length+=n;
+}
+void *make(const DWORD *w,unsigned long n,int fixed){
+ struct nv2a_cpu_program *p=nv2a_cpu_program_create(w,n);
+ if(p && !fixed)p->execute=NULL;
+ return p;
+}
+void batch(struct nv2a_cpu_program *p,const float (*v)[16][4],const float c[192][4],
+ const float s[4],const float o[4],float x,float size,unsigned n,struct nv2a_cpu_vertex *out){
+ nv2a_cpu_program_prepare_constants(p,c);
+ for(unsigned i=0;i<n;i++)nv2a_cpu_vertex_execute(p,v[i],c,s,o,x,size,&out[i]);
+}
+'''
+
+with tempfile.TemporaryDirectory(prefix='halo-cpu-fixed-') as name:
+    folder = Path(name)
+    (folder / 'xgpu.h').write_text(prefix)
+    (folder / 'test.c').write_text(bridge)
+    for fn in ('nv2a_vsh.c', 'nv2a_cpu_shaders.inc'):
+        shutil.copyfile(ROOT / 'port/linux/src' / fn, folder / fn)
+    lib = folder / 'test.so'
+    subprocess.run(['cc', '-std=gnu11', '-O2', '-ffp-contract=off', '-fPIC', '-shared',
+                    str(folder / 'test.c'), '-lm', '-o', str(lib)], check=True)
+    production = C.CDLL(str(lib))
+    P, F, U = C.c_void_p, C.c_float, C.c_uint
+    production.make.argtypes = [P, C.c_ulong, C.c_int]
+    production.make.restype = P
+    production.nv2a_cpu_program_is_specialized.argtypes = [P]
+    production.batch.argtypes = [P, P, P, P, P, F, F, U, P]
+    production.nv2a_vertex_shader_to_glsl.argtypes = [P, C.c_ulong, C.c_ulong]
+    production.nv2a_vertex_shader_to_glsl.restype = P
+    libc = C.CDLL(None)
+    libc.free.argtypes = [P]
+    rng = np.random.default_rng(0x534849454c44)
+    summary = {'programs': 0, 'vertices': 0, 'host_interpreter_ms': 0.0, 'host_fixed_ms': 0.0,
+               'unknown_fallbacks': 0, 'scalar_outputs_per_vertex': 40}
+    native = [NativeExecutor(p) for p in args.native_images or []]
+    if native:
+        summary['native_images'] = len(native)
+        summary['native_vertices'] = 0
+    report, captured = [], []
+
+    def batch(p, v, c, scale, offset, screen, size):
+        out = np.zeros((len(v), 40), dtype=np.float32)
+        production.batch(p, v.ctypes.data, c.ctypes.data, scale.ctypes.data, offset.ctypes.data,
+                         screen, size, len(v), out.ctypes.data)
+        return out
+
+    for ordinal, code in programs():
+        words = np.asarray(code, dtype=np.uint32)
+        fast = production.make(words.ctypes.data, len(code) // 4, 1)
+        if not supported(code):
+            assert not fast, ('non-skeletal accepted', ordinal)
+            continue
+        assert fast and production.nv2a_cpu_program_is_specialized(fast), ordinal
+        slow = production.make(words.ctypes.data, len(code) // 4, 0)
+        assert slow and not production.nv2a_cpu_program_is_specialized(slow)
+        # word 0 is ignored by the interpreter but still part of the exact
+        # match. An unfamiliar equivalent program must safely fall back.
+        unknown_words = words.copy()
+        unknown_words[0] ^= np.uint32(0x100)
+        unknown = production.make(unknown_words.ctypes.data, len(code) // 4, 1)
+        assert unknown and not production.nv2a_cpu_program_is_specialized(unknown)
+        for trial in range(4):
+            v = rng.uniform(-1, 1, (512, 16, 4)).astype(np.float32)
+            v[:, :, 3] = 1
+            v[:, 5, :2] = rng.integers(0, 40, (512, 2)) * np.float32(3 / 255)
+            v[:, 6, 0] = rng.uniform(0, 1, 512)
+            c = rng.uniform(-2, 2, (192, 4)).astype(np.float32)
+            c[7, 3] = 255
+            c[58] = [320, -240, 1, 1]
+            c[59] = [320, 240, 0, 0]
+            scale = np.asarray([320, -240, 1, 1] if trial % 2 else [640, -360, 2, 1], dtype=np.float32)
+            offset = np.asarray([320, 240, 0, 0], dtype=np.float32)
+            screen, size = (0.25 if trial % 2 else 0.0), (3 if trial % 2 else 1)
+            if trial == 2:
+                # Address-rounding boundaries and saturation, including
+                # nonfinite node input. No undefined C float-to-int cast.
+                v[:8, 5, 0] = [-4, -0.001, 0, 0.001, 191, 255, np.inf, np.nan]
+                scale[:3] = 0
+            expected = batch(slow, v, c, scale, offset, screen, size)
+            actual = batch(fast, v, c, scale, offset, screen, size)
+            fallback = batch(unknown, v, c, scale, offset, screen, size)
+            assert np.array_equal(actual, expected, equal_nan=True), (ordinal, trial, 'fixed differs')
+            assert np.array_equal(fallback, expected, equal_nan=True), (ordinal, trial, 'fallback differs')
+            summary['vertices'] += len(v)
+            if trial == 0:
+                for image in native:
+                    for vi in range(8):
+                        native_result = image.execute(ordinal, len(code) // 4, v[vi], c, scale, offset, screen, size)
+                        assert np.array_equal(native_result, expected[vi], equal_nan=True), (ordinal, vi, 'native ELF differs')
+                        summary['native_vertices'] += 1
+                # A deterministic shader/data capture for the independent
+                # existing real-GLES test; these are synthetic, not Shield dumps.
+                pointer = production.nv2a_vertex_shader_to_glsl(words.ctypes.data, len(code) // 4, 0)
+                text = C.string_at(pointer).decode()
+                libc.free(pointer)
+                report += [f'DRAW {ordinal} program={ordinal}', '  VERTEX_RANGE 0..511']
+                for a in range(16):
+                    report.append(f'  ATTR {a} enabled=1 size=4 type=0x1406 normalized=0 integer=0 stride=16')
+                    captured.append((f'draw-{ordinal:04d}-attr-{a}.bin', v[:, a].copy().tobytes()))
+                for k in range(192):
+                    report.append(f'  U c[{k}] location={k} type=0x8b52 ' + ' '.join(map(str, c[k])) + ' nonfinite=0')
+                for key, values in [('viewport_scale', scale), ('viewport_offset', offset), ('screen_offset', [screen]), ('point_size', [size])]:
+                    report.append(f'  U {key} location=200 type=0x8b52 ' + ' '.join(map(str, values)) + ' nonfinite=0')
+                captured.append((f'program-{ordinal}-shader-8b31.glsl', text.encode()))
+            if trial == 3:
+                times = []
+                for executor in (slow, fast):
+                    samples = []
+                    for _ in range(5):
+                        start = time.perf_counter()
+                        batch(executor, v, c, scale, offset, screen, size)
+                        samples.append((time.perf_counter() - start) * 1000)
+                    times.append(statistics.median(samples))
+                summary['host_interpreter_ms'] += times[0]
+                summary['host_fixed_ms'] += times[1]
+        for p in (fast, slow, unknown):
+            libc.free(p)
+        summary['programs'] += 1
+        summary['unknown_fallbacks'] += 1
+    assert summary['programs'] == 21
+    summary['host_speedup'] = summary['host_interpreter_ms'] / summary['host_fixed_ms']
+    if args.gles:
+        capture = folder / 'synthetic-original-shaders.zip'
+        with ZipFile(capture, 'w', ZIP_DEFLATED) as z:
+            z.writestr('report.txt', '\n'.join(report))
+            for filename, data in captured:
+                z.writestr(filename, data)
+        result = folder / 'gles.json'
+        subprocess.run([sys.executable, str(ROOT / 'tools/test_android_cpu_skeletal.py'),
+                        '--dumps', str(capture), '--output', str(result)], check=True)
+        summary['gles'] = json.loads(result.read_text())
+    print('PASS: all 21 skeletal programs match the interpreter across', summary['vertices'], 'vertices; all 40 outputs match.')
+    print('PASS: exact matching, changed constants, address limits and 21 unknown-program fallbacks.')
+    print('Host-only CPU execution speedup:', round(summary['host_speedup'], 2), '(not Shield FPS)')
+    if native:
+        print('PASS:', summary['native_vertices'], 'actual AArch64 vertices across', len(native), 'linked images match all 40 outputs exactly; Unicorn control.')
+    if args.output:
+        args.output.write_text(json.dumps(summary, indent=2) + '\n')
