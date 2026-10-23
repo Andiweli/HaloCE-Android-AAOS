@@ -413,12 +413,23 @@ struct cpu_instruction
 };
 typedef BOOL (*cpu_fast_executor)(const float inputs[16][4], const float constants[192][4],
 	cpu_vec4 output[14], cpu_vec4 *clip);
-static cpu_fast_executor cpu_fast_find(const DWORD *words, unsigned long count);
+/* Four vertices at once, one in each lane of the NEON registers: lane l of
+c[i] is component i of vertex l. Each lane does the same operations in the
+same order as the one-vertex executor (the build does not contract a * b + c),
+so every vertex gets the same bits from either. */
+struct cpu_quad
+{
+	cpu_vec4 c[4];
+};
+typedef BOOL (*cpu_fast4_executor)(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip);
+static cpu_fast_executor cpu_fast_find(const DWORD *words, unsigned long count, cpu_fast4_executor *execute4);
 struct nv2a_cpu_program
 {
 	unsigned long count;
 	BOOL prepared;
 	cpu_fast_executor execute;
+	cpu_fast4_executor execute4;
 	/* the input registers any operand reads, and the GPU attributes the
 	program writes (nv2a_cpu_program_inputs, nv2a_cpu_program_outputs) */
 	unsigned inputs, outputs;
@@ -540,7 +551,7 @@ struct nv2a_cpu_program *nv2a_cpu_program_create(const DWORD *instructions, unsi
 and all three relative matrix rows. Static meshes/menu shaders stay GPU. */
 	if (bone_rows == 7 && (input_mask & 0x61U) == 0x61U)
 	{
-		program->execute = cpu_fast_find(instructions, program->count);
+		program->execute = cpu_fast_find(instructions, program->count, &program->execute4);
 		program->inputs = input_mask;
 		program->outputs = output_mask | 1U; /* the position, always */
 		return program;
@@ -690,6 +701,126 @@ static inline int cpu_address(float x)
 	return !isfinite(value) ? 0 : value < -256.0f ? -256 : value > 256.0f ? 256 : (int)value;
 }
 
+static inline __attribute__((always_inline)) struct cpu_quad cpu_quad_transpose(cpu_vec4 r0, cpu_vec4 r1,
+	cpu_vec4 r2, cpu_vec4 r3)
+{
+	cpu_vec4 low01 = __builtin_shufflevector(r0, r1, 0, 4, 1, 5), low23 = __builtin_shufflevector(r2, r3, 0, 4, 1, 5);
+	cpu_vec4 high01 = __builtin_shufflevector(r0, r1, 2, 6, 3, 7), high23 = __builtin_shufflevector(r2, r3, 2, 6, 3, 7);
+	return (struct cpu_quad){ {
+		__builtin_shufflevector(low01, low23, 0, 1, 4, 5), __builtin_shufflevector(low01, low23, 2, 3, 6, 7),
+		__builtin_shufflevector(high01, high23, 0, 1, 4, 5), __builtin_shufflevector(high01, high23, 2, 3, 6, 7) } };
+}
+
+static inline __attribute__((always_inline)) struct cpu_quad cpu_quad_splat(cpu_vec4 value)
+{
+	return (struct cpu_quad){ { value, value, value, value } };
+}
+
+static inline __attribute__((always_inline)) struct cpu_quad cpu_quad_input(const float (*inputs)[16][4], unsigned reg)
+{
+	return cpu_quad_transpose(cpu_load(inputs[0][reg]), cpu_load(inputs[1][reg]), cpu_load(inputs[2][reg]),
+		cpu_load(inputs[3][reg]));
+}
+
+/* the same constant for every vertex */
+static inline __attribute__((always_inline)) struct cpu_quad cpu_quad_constant(const float value[4])
+{
+	return (struct cpu_quad){ {
+		{ value[0], value[0], value[0], value[0] }, { value[1], value[1], value[1], value[1] },
+		{ value[2], value[2], value[2], value[2] }, { value[3], value[3], value[3], value[3] } } };
+}
+
+/* each vertex its own row (its bones) */
+static inline __attribute__((always_inline)) struct cpu_quad cpu_quad_relative(const float constants[192][4],
+	const int address[4], unsigned index)
+{
+	return cpu_quad_transpose(cpu_load(constants[cpu_constant_index(address[0], index)]),
+		cpu_load(constants[cpu_constant_index(address[1], index)]),
+		cpu_load(constants[cpu_constant_index(address[2], index)]),
+		cpu_load(constants[cpu_constant_index(address[3], index)]));
+}
+
+/* cpu_address for each lane, without branches: a finite value clamped to
+-256..256 converts as there, an infinite or NaN one gives 0 */
+typedef int cpu_ivec4 __attribute__((vector_size(16)));
+static inline __attribute__((always_inline)) void cpu_quad_address(int address[4], cpu_vec4 x)
+{
+	cpu_vec4 value, clamped;
+	cpu_ivec4 result;
+	unsigned lane;
+	for (lane = 0; lane < 4; lane++)
+	{
+		value[lane] = floorf(x[lane] + 0.001f);
+		clamped[lane] = fminf(fmaxf(value[lane], -256.0f), 256.0f);
+	}
+	result = __builtin_convertvector(clamped, cpu_ivec4) & (cpu_ivec4)(value - value == 0.0f);
+	memcpy(address, &result, sizeof(result));
+}
+
+/* cpu_mac, component by component */
+static inline __attribute__((always_inline)) struct cpu_quad cpu_quad_mac(unsigned opcode, struct cpu_quad a,
+	struct cpu_quad b, struct cpu_quad c)
+{
+	struct cpu_quad result = { { { 0, 0, 0, 0 } } };
+	unsigned component, lane;
+	cpu_vec4 dot;
+	switch (opcode)
+	{
+	case _mac_mov: case _mac_arl: return a;
+	case _mac_mul:
+		for (component = 0; component < 4; component++) result.c[component] = a.c[component] * b.c[component];
+		return result;
+	case _mac_add:
+		for (component = 0; component < 4; component++) result.c[component] = a.c[component] + c.c[component];
+		return result;
+	case _mac_mad:
+		for (component = 0; component < 4; component++)
+			result.c[component] = a.c[component] * b.c[component] + c.c[component];
+		return result;
+	case _mac_dp3: case _mac_dph: case _mac_dp4:
+		dot = a.c[0] * b.c[0] + a.c[1] * b.c[1] + a.c[2] * b.c[2];
+		if (opcode == _mac_dph) dot += b.c[3];
+		if (opcode == _mac_dp4) dot += a.c[3] * b.c[3];
+		return cpu_quad_splat(dot);
+	case _mac_dst:
+		result.c[0] = (cpu_vec4){ 1, 1, 1, 1 };
+		result.c[1] = a.c[1] * b.c[1];
+		result.c[2] = a.c[2];
+		result.c[3] = b.c[3];
+		return result;
+	default:
+		for (component = 0; component < 4; component++)
+		{
+			for (lane = 0; lane < 4; lane++)
+			{
+				float x = a.c[component][lane], y = b.c[component][lane];
+				switch (opcode)
+				{
+				case _mac_min: result.c[component][lane] = fminf(x, y); break;
+				case _mac_max: result.c[component][lane] = fmaxf(x, y); break;
+				case _mac_slt: result.c[component][lane] = x < y; break;
+				case _mac_sge: result.c[component][lane] = x >= y; break;
+				}
+			}
+		}
+		return result;
+	}
+}
+
+/* cpu_ilu for each vertex: few instructions use the ILU */
+static inline __attribute__((always_inline)) struct cpu_quad cpu_quad_ilu(unsigned opcode, struct cpu_quad c)
+{
+	struct cpu_quad result;
+	unsigned component, lane;
+	if (opcode == _ilu_mov) return c;
+	for (lane = 0; lane < 4; lane++)
+	{
+		cpu_vec4 value = cpu_ilu(opcode, (cpu_vec4){ c.c[0][lane], c.c[1][lane], c.c[2][lane], c.c[3][lane] });
+		for (component = 0; component < 4; component++) result.c[component][lane] = value[component];
+	}
+	return result;
+}
+
 #include "nv2a_cpu_shaders.inc"
 
 BOOL nv2a_cpu_program_is_specialized(const struct nv2a_cpu_program *program)
@@ -707,18 +838,57 @@ unsigned nv2a_cpu_program_outputs(const struct nv2a_cpu_program *program)
 	return program->outputs;
 }
 
+/* the output registers of nv2a_cpu_vertex.value: position, oD0 oD1 oB0 oB1 oT0..oT3 */
+static const unsigned cpu_outputs[9] = { 0, 3, 4, 7, 8, 9, 10, 11, 12 };
+
+/* The GPU's attributes from the output registers: the viewport conversion,
+the clamped colours, fog and point size */
+static inline __attribute__((always_inline)) void cpu_vertex_finish(const cpu_vec4 output[14], cpu_vec4 clip,
+	BOOL captured, const float constants[192][4], const float viewport_scale[4], const float viewport_offset[4],
+	float screen_offset, struct nv2a_cpu_vertex *vertex)
+{
+	unsigned long index;
+	unsigned component;
+	for (component = 0; component < 3; component++)
+	{
+		float scale = viewport_scale[component] != 0.0f ? viewport_scale[component] : 1.0f;
+		float half_pixel = component == 0 ? 0.5f + screen_offset : component == 1 ? 0.5f : 0.0f;
+		vertex->value[0][component] = captured ?
+			(clip[component] * constants[58][component] +
+			 (constants[59][component] + half_pixel - viewport_offset[component]) * clip[3]) / scale :
+			((output[0][component] + half_pixel - viewport_offset[component]) / scale) * output[0][3];
+	}
+	vertex->value[0][3] = captured ? clip[3] : output[0][3];
+	if (!(fabsf(vertex->value[0][3]) > 0.0f) || isnan(vertex->value[0][3]))
+	{
+		vertex->value[0][0] = vertex->value[0][1] = vertex->value[0][2] = 0.0f;
+		vertex->value[0][3] = -1.0f;
+	}
+	vertex->value[0][1] = -vertex->value[0][1];
+	vertex->value[0][2] = 2.0f * vertex->value[0][2] - vertex->value[0][3];
+	for (index = 1; index < 9; index++)
+	{
+		for (component = 0; component < 4; component++)
+		{
+			float value = output[cpu_outputs[index]][component];
+			vertex->value[index][component] = index < 5 ? fminf(fmaxf(value, 0.0f), 1.0f) : value;
+		}
+	}
+	vertex->fog = output[5][0];
+	vertex->point_size = output[6][0];
+	vertex->padding[0] = vertex->padding[1] = 0.0f;
+}
+
 void nv2a_cpu_vertex_execute(const struct nv2a_cpu_program *program, const float inputs[16][4],
 	const float constants[192][4], const float viewport_scale[4], const float viewport_offset[4],
 	float screen_offset, float point_size, struct nv2a_cpu_vertex *vertex)
 {
 	cpu_vec4 temporary[12] = { { 0, 0, 0, 0 } };
 	cpu_vec4 output[14] = { { 0, 0, 0, 1 } }, clip = { 0, 0, 0, 0 };
-	static const unsigned outputs[9] = { 0, 3, 4, 7, 8, 9, 10, 11, 12 };
 	BOOL captured = FALSE;
 	int address = 0;
 	unsigned long index;
-	unsigned component;
-	for (index = 1; index < 9; index++) output[outputs[index]][3] = 1.0f;
+	for (index = 1; index < 9; index++) output[cpu_outputs[index]][3] = 1.0f;
 	output[5] = (cpu_vec4){ 1, 1, 1, 1 };
 	output[6] = (cpu_vec4){ point_size, point_size, point_size, point_size };
 	if (program->execute)
@@ -761,34 +931,90 @@ undefined C float-to-int conversion without altering any such read. */
 			cpu_write(&output[reg], instruction->output_from_ilu ? ilu : mac, instruction->output_mask);
 		}
 	}
+	cpu_vertex_finish(output, clip, captured, constants, viewport_scale, viewport_offset, screen_offset, vertex);
+}
+
+BOOL nv2a_cpu_program_is_quad(const struct nv2a_cpu_program *program)
+{
+	return program && program->execute4 != NULL;
+}
+
+/* cpu_vertex_finish for the four lanes: the same operations on each */
+static inline __attribute__((always_inline)) void cpu_quad_finish(const struct cpu_quad output[14],
+	struct cpu_quad clip, BOOL captured, const float constants[192][4], const float viewport_scale[4],
+	const float viewport_offset[4], float screen_offset, struct nv2a_cpu_vertex vertex[4])
+{
+	struct cpu_quad attribute;
+	cpu_vec4 w;
+	cpu_ivec4 invalid;
+	unsigned long index;
+	unsigned component, lane;
 	for (component = 0; component < 3; component++)
 	{
 		float scale = viewport_scale[component] != 0.0f ? viewport_scale[component] : 1.0f;
 		float half_pixel = component == 0 ? 0.5f + screen_offset : component == 1 ? 0.5f : 0.0f;
-		vertex->value[0][component] = captured ?
-			(clip[component] * constants[58][component] +
-			 (constants[59][component] + half_pixel - viewport_offset[component]) * clip[3]) / scale :
-			((output[0][component] + half_pixel - viewport_offset[component]) / scale) * output[0][3];
+		attribute.c[component] = captured ?
+			(clip.c[component] * constants[58][component] +
+			 (constants[59][component] + half_pixel - viewport_offset[component]) * clip.c[3]) / scale :
+			((output[0].c[component] + half_pixel - viewport_offset[component]) / scale) * output[0].c[3];
 	}
-	vertex->value[0][3] = captured ? clip[3] : output[0][3];
-	if (!(fabsf(vertex->value[0][3]) > 0.0f) || isnan(vertex->value[0][3]))
+	w = captured ? clip.c[3] : output[0].c[3];
+	/* !(fabsf(w) > 0) || isnan(w): zero or NaN */
+	invalid = ~((w > 0.0f) | (w < 0.0f));
+	for (component = 0; component < 3; component++)
+		attribute.c[component] = (cpu_vec4)((cpu_ivec4)attribute.c[component] & ~invalid);
+	w = (cpu_vec4)(((cpu_ivec4)w & ~invalid) | ((cpu_ivec4)(cpu_vec4){ -1, -1, -1, -1 } & invalid));
+	attribute.c[1] = -attribute.c[1];
+	attribute.c[2] = 2.0f * attribute.c[2] - w;
+	attribute.c[3] = w;
+	for (index = 0; index < 9; index++)
 	{
-		vertex->value[0][0] = vertex->value[0][1] = vertex->value[0][2] = 0.0f;
-		vertex->value[0][3] = -1.0f;
-	}
-	vertex->value[0][1] = -vertex->value[0][1];
-	vertex->value[0][2] = 2.0f * vertex->value[0][2] - vertex->value[0][3];
-	for (index = 1; index < 9; index++)
-	{
-		for (component = 0; component < 4; component++)
+		struct cpu_quad row;
+		if (index)
 		{
-			float value = output[outputs[index]][component];
-			vertex->value[index][component] = index < 5 ? fminf(fmaxf(value, 0.0f), 1.0f) : value;
+			attribute = output[cpu_outputs[index]];
+			if (index < 5)
+			{
+				for (component = 0; component < 4; component++)
+					for (lane = 0; lane < 4; lane++)
+						attribute.c[component][lane] = fminf(fmaxf(attribute.c[component][lane], 0.0f), 1.0f);
+			}
 		}
+		row = cpu_quad_transpose(attribute.c[0], attribute.c[1], attribute.c[2], attribute.c[3]);
+		for (lane = 0; lane < 4; lane++)
+			memcpy(vertex[lane].value[index], &row.c[lane], sizeof(row.c[lane]));
 	}
-	vertex->fog = output[5][0];
-	vertex->point_size = output[6][0];
-	vertex->padding[0] = vertex->padding[1] = 0.0f;
+	for (lane = 0; lane < 4; lane++)
+	{
+		vertex[lane].fog = output[5].c[0][lane];
+		vertex[lane].point_size = output[6].c[0][lane];
+		vertex[lane].padding[0] = vertex[lane].padding[1] = 0.0f;
+	}
+}
+
+void nv2a_cpu_vertex_execute4(const struct nv2a_cpu_program *program, const float (*inputs)[16][4],
+	const float constants[192][4], const float viewport_scale[4], const float viewport_offset[4],
+	float screen_offset, float point_size, struct nv2a_cpu_vertex vertex[4])
+{
+	/* registers 1, 2 and 13 are never read: no attribute comes from them */
+	struct cpu_quad output[14], clip = { { { 0, 0, 0, 0 } } };
+	BOOL captured;
+	unsigned long index;
+	unsigned lane;
+	if (!program->execute4)
+	{
+		for (lane = 0; lane < 4; lane++)
+			nv2a_cpu_vertex_execute(program, inputs[lane], constants, viewport_scale, viewport_offset,
+				screen_offset, point_size, &vertex[lane]);
+		return;
+	}
+	/* as nv2a_cpu_vertex_execute starts each vertex */
+	output[0] = (struct cpu_quad){ { { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 1, 1, 1, 1 } } };
+	for (index = 1; index < 9; index++) output[cpu_outputs[index]] = output[0];
+	output[5] = cpu_quad_splat((cpu_vec4){ 1, 1, 1, 1 });
+	output[6] = cpu_quad_splat((cpu_vec4){ point_size, point_size, point_size, point_size });
+	captured = program->execute4(inputs, constants, output, &clip);
+	cpu_quad_finish(output, clip, captured, constants, viewport_scale, viewport_offset, screen_offset, vertex);
 }
 
 static inline __attribute__((always_inline)) void cpu_attribute_decode(unsigned long type,

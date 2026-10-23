@@ -209,6 +209,213 @@ static BOOL cpu_fast_5(const float inputs[16][4], const float constants[192][4],
 	return TRUE;
 }
 
+static BOOL cpu_fast4_5(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[13]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[4] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[5].c[0] = mac.c[0];
+		output[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_5_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c000ff8,
 	0x00000000, 0x01a00000, 0x0436106c, 0x20700ff8,
@@ -653,6 +860,429 @@ static BOOL cpu_fast_9(const float inputs[16][4], const float constants[192][4],
 		cpu_vec4 c_source = cpu_load(constants[16]);
 		cpu_vec4 c = (cpu_vec4){ c_source[0], c_source[1], c_source[2], c_source[3] };
 		cpu_vec4 mac = cpu_mac(3, a, (cpu_vec4){ 0, 0, 0, 0 }, c);
+		output[4] = mac;
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_9(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[2], c_source.c[2], c_source.c[2], c_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		cpu_quad_address(address, mac.c[0]);
+		output[3].c[3] = ilu.c[3];
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[23]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[25]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[0], -a_source.c[0], -a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[7].c[3] = mac.c[3];
+		output[12].c[0] = ilu.c[0];
+		output[12].c[1] = ilu.c[1];
+		output[12].c[2] = ilu.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[27]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[24]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[11];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[26]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[3].c[0] = mac.c[0];
+		output[3].c[1] = mac.c[1];
+		output[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[5].c[0] = mac.c[0];
+		output[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[13]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[1] = mac.c[1];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[2].c[3] = mac.c[3];
+		output[9].c[0] = ilu.c[0];
+		output[9].c[1] = ilu.c[1];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[10].c[0] = mac.c[0];
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
 		output[4] = mac;
 	}
 	return TRUE;
@@ -1325,6 +1955,625 @@ static BOOL cpu_fast_10(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_10(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[2], c_source.c[2], c_source.c[2], c_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		cpu_quad_address(address, mac.c[0]);
+		output[3].c[3] = ilu.c[3];
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[7].c[3] = mac.c[3];
+		output[12].c[0] = ilu.c[0];
+		output[12].c[1] = ilu.c[1];
+		output[12].c[2] = ilu.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[23]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[3].c[3] = mac.c[3];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { -b_source.c[3], -b_source.c[3], -b_source.c[3], -b_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[11].c[0] = mac.c[0];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[3] = mac.c[3];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { -b_source.c[3], -b_source.c[3], -b_source.c[3], -b_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { -a_source.c[2], -a_source.c[2], -a_source.c[2], -a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[3] = mac.c[3];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[3] = mac.c[3];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[25]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[3] = mac.c[3];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11] = mac;
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[27]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[2], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[24]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[26]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[3].c[0] = mac.c[0];
+		output[3].c[1] = mac.c[1];
+		output[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 55 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[13]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 56 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 57 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 58 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[9].c[3] = mac.c[3];
+		output[9].c[0] = ilu.c[0];
+		output[9].c[1] = ilu.c[1];
+	}
+	{ /* instruction 59 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 60 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[10].c[0] = mac.c[0];
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 61 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 62 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+		temporary[10].c[1] = mac.c[1];
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 63 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11] = mac;
+	}
+	{ /* instruction 64 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0] = mac;
+	}
+	{ /* instruction 65 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		output[4] = mac;
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_10_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x03a0081b, 0x243612a8, 0x2070181c,
@@ -1580,6 +2829,196 @@ static BOOL cpu_fast_13(const float inputs[16][4], const float constants[192][4]
 		output[0][0] = mac[0];
 		output[0][1] = mac[1];
 		output[0][2] = mac[2];
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_13(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[13]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[4] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
 	}
 	return TRUE;
 }
@@ -2008,6 +3447,410 @@ static BOOL cpu_fast_14(const float inputs[16][4], const float constants[192][4]
 		output[0][0] = mac[0];
 		output[0][1] = mac[1];
 		output[0][2] = mac[2];
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_14(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad c = { { c_source.c[2], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[9].c[0] = mac.c[0];
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[3].c[1] = mac.c[1];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[4].c[3] = mac.c[3];
+		output[10].c[2] = ilu.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[6].c[2] = mac.c[2];
+		output[12].c[2] = ilu.c[2];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[6].c[1] = mac.c[1];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+		output[11].c[2] = ilu.c[2];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[7].c[3] = mac.c[3];
+		output[10].c[1] = ilu.c[1];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+		output[11].c[1] = ilu.c[1];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[0] = mac.c[0];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[1] = mac.c[1];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[3] = mac.c[3];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[3] = mac.c[3];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[3] = mac.c[3];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[5].c[0] = mac.c[0];
+		output[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
 	}
 	return TRUE;
 }
@@ -2538,6 +4381,489 @@ static BOOL cpu_fast_15(const float inputs[16][4], const float constants[192][4]
 		cpu_vec4 b = (cpu_vec4){ b_source[3], b_source[3], b_source[3], b_source[3] };
 		cpu_vec4 mac = cpu_mac(2, a, b, (cpu_vec4){ 0, 0, 0, 0 });
 		output[3][3] = mac[3];
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_15(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[9].c[0] = mac.c[0];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7] = mac;
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[10].c[0] = mac.c[0];
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8] = mac;
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[13]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		output[4] = mac;
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[2].c[0] = mac.c[0];
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[5].c[1] = mac.c[1];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[3] = mac.c[3];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[3] = mac.c[3];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[2] = mac.c[2];
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
 	}
 	return TRUE;
 }
@@ -3326,6 +5652,733 @@ static BOOL cpu_fast_17(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_17(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[7].c[3] = mac.c[3];
+		output[12].c[0] = ilu.c[0];
+		output[12].c[1] = ilu.c[1];
+		output[12].c[2] = ilu.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[23]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[3].c[3] = mac.c[3];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { -b_source.c[3], -b_source.c[3], -b_source.c[3], -b_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[11].c[0] = mac.c[0];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[3] = mac.c[3];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { -b_source.c[3], -b_source.c[3], -b_source.c[3], -b_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { -a_source.c[2], -a_source.c[2], -a_source.c[2], -a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[3] = mac.c[3];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[3] = mac.c[3];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[25]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[3] = mac.c[3];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11] = mac;
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[27]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[2], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[24]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[26]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[3].c[0] = mac.c[0];
+		output[3].c[1] = mac.c[1];
+		output[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 55 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[13]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 56 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 57 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 58 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[9].c[3] = mac.c[3];
+		output[9].c[0] = ilu.c[0];
+		output[9].c[1] = ilu.c[1];
+	}
+	{ /* instruction 59 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 60 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[10].c[0] = mac.c[0];
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 61 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 62 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 63 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2] = mac;
+	}
+	{ /* instruction 64 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0] = mac;
+	}
+	{ /* instruction 65 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		output[4] = mac;
+	}
+	{ /* instruction 66 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+	}
+	{ /* instruction 67 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 68 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+	}
+	{ /* instruction 69 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+	}
+	{ /* instruction 70 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+	}
+	{ /* instruction 71 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 72 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[0] = mac.c[0];
+	}
+	{ /* instruction 73 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 74 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 75 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 76 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 77 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[10];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[11].c[3] = mac.c[3];
+	}
+	{ /* instruction 78 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_17_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x01a00000, 0x2436106c, 0x20700ff8,
@@ -3768,6 +6821,366 @@ static BOOL cpu_fast_18(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_18(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		cpu_quad_address(address, mac.c[0]);
+		output[9].c[0] = ilu.c[0];
+		output[9].c[1] = ilu.c[1];
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[3].c[1] = mac.c[1];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[3] = mac.c[3];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[6].c[1] = mac.c[1];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[3] = mac.c[3];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[5].c[0] = mac.c[0];
+		output[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_18_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x03a0081b, 0x2436106c, 0x2070c84c,
@@ -4136,6 +7549,336 @@ static BOOL cpu_fast_30(const float inputs[16][4], const float constants[192][4]
 		cpu_vec4 b = (cpu_vec4){ b_source[3], b_source[3], b_source[3], b_source[3] };
 		cpu_vec4 mac = cpu_mac(2, a, b, (cpu_vec4){ 0, 0, 0, 0 });
 		output[3][3] = mac[3];
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_30(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[4] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[2] = mac.c[2];
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
 	}
 	return TRUE;
 }
@@ -4946,6 +8689,772 @@ static BOOL cpu_fast_31(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_31(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[4].c[3] = mac.c[3];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[23]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[4].c[2] = mac.c[2];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { -b_source.c[3], -b_source.c[3], -b_source.c[3], -b_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[3] = mac.c[3];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[3] = mac.c[3];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[25]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[3] = mac.c[3];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { -a_source.c[2], -a_source.c[2], -a_source.c[2], -a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad c_source = temporary[11];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[5].c[3] = mac.c[3];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { -b_source.c[3], -b_source.c[3], -b_source.c[3], -b_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[3] = mac.c[3];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[3] = mac.c[3];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8] = mac;
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9] = mac;
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11] = mac;
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0] = mac;
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[27]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[2], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[24]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[26]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[3].c[0] = mac.c[0];
+		output[3].c[1] = mac.c[1];
+		output[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 55 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 56 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 57 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 58 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 59 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[0] = mac.c[0];
+	}
+	{ /* instruction 60 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[1] = mac.c[1];
+	}
+	{ /* instruction 61 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 62 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 63 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 64 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 65 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 66 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 67 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 68 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 69 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 70 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 71 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 72 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 73 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+	}
+	{ /* instruction 74 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 75 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[1] = mac.c[1];
+	}
+	{ /* instruction 76 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[0], -b_source.c[0], -b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 77 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 78 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 79 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[3] = mac.c[3];
+	}
+	{ /* instruction 80 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[5].c[2] = mac.c[2];
+		temporary[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 81 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 82 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[3] = mac.c[3];
+	}
+	{ /* instruction 83 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 84 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 85 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[4] = mac;
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_31_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x01a00000, 0x2436106c, 0x20700ff8,
@@ -5368,6 +9877,343 @@ static BOOL cpu_fast_32(const float inputs[16][4], const float constants[192][4]
 		cpu_vec4 b = (cpu_vec4){ b_source[3], b_source[3], b_source[3], b_source[3] };
 		cpu_vec4 mac = cpu_mac(2, a, b, (cpu_vec4){ 0, 0, 0, 0 });
 		output[3][3] = mac[3];
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_32(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[13]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[4] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[2] = mac.c[2];
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
 	}
 	return TRUE;
 }
@@ -5957,6 +10803,550 @@ static BOOL cpu_fast_36(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_36(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[3].c[1] = mac.c[1];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[4].c[3] = mac.c[3];
+		output[11].c[0] = ilu.c[0];
+		output[11].c[1] = ilu.c[1];
+		output[11].c[2] = ilu.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[6].c[1] = mac.c[1];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[3] = mac.c[3];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[11].c[0] = mac.c[0];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[2].c[0] = mac.c[0];
+		output[12].c[0] = ilu.c[0];
+		output[12].c[1] = ilu.c[1];
+		output[12].c[2] = ilu.c[2];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 55 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[10].c[3] = mac.c[3];
+	}
+	{ /* instruction 56 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[3] = mac.c[3];
+	}
+	{ /* instruction 57 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[0].c[2] = mac.c[2];
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 58 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_36_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x01a00000, 0x2436106c, 0x20700ff8,
@@ -6205,6 +11595,196 @@ static BOOL cpu_fast_39(const float inputs[16][4], const float constants[192][4]
 		output[0][0] = mac[0];
 		output[0][1] = mac[1];
 		output[0][2] = mac[2];
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_39(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[13]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[4] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[28]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[29]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[30]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[31]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
 	}
 	return TRUE;
 }
@@ -6751,6 +12331,524 @@ static BOOL cpu_fast_45(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_45(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[2], a_source.c[0], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[2], b_source.c[0], b_source.c[1], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { -a_source.c[1], -a_source.c[2], -a_source.c[0], -a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[0], b_source.c[1], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[0] = mac.c[0];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[1] = mac.c[1];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[1] = mac.c[1];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[0], -b_source.c[0], -b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[3] = mac.c[3];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[5].c[2] = mac.c[2];
+		temporary[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 55 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[3] = mac.c[3];
+	}
+	{ /* instruction 56 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 57 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 58 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[4] = mac;
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_45_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x01a00000, 0x2436106c, 0x20700ff8,
@@ -7288,6 +13386,486 @@ static BOOL cpu_fast_47(const float inputs[16][4], const float constants[192][4]
 		cpu_vec4 b_source = cpu_load(constants[14]);
 		cpu_vec4 b = (cpu_vec4){ b_source[2], b_source[2], b_source[2], b_source[2] };
 		cpu_vec4 mac = cpu_mac(2, a, b, (cpu_vec4){ 0, 0, 0, 0 });
+		output[4] = mac;
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_47(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[0] = mac.c[0];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[1] = mac.c[1];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[1] = mac.c[1];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[0] = mac.c[0];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[0], -b_source.c[0], -b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[10];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[11].c[3] = mac.c[3];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[5].c[1] = mac.c[1];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[2] = mac.c[2];
+		temporary[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[3] = mac.c[3];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
 		output[4] = mac;
 	}
 	return TRUE;
@@ -8006,6 +14584,661 @@ static BOOL cpu_fast_50(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_50(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[27]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[4].c[3] = mac.c[3];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[23]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[6].c[2] = mac.c[2];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { -b_source.c[3], -b_source.c[3], -b_source.c[3], -b_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[3] = mac.c[3];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[3] = mac.c[3];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[25]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad c_source = temporary[11];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[6].c[3] = mac.c[3];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { -b_source.c[3], -b_source.c[3], -b_source.c[3], -b_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[3] = mac.c[3];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[3] = mac.c[3];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6] = mac;
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7] = mac;
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[2], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[24]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[26]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[3].c[0] = mac.c[0];
+		output[3].c[1] = mac.c[1];
+		output[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[1] = mac.c[1];
+	}
+	{ /* instruction 55 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 56 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+	}
+	{ /* instruction 57 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 58 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 59 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 60 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 61 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 62 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 63 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+	}
+	{ /* instruction 64 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 65 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 66 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 67 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 68 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 69 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[3] = mac.c[3];
+	}
+	{ /* instruction 70 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[2] = mac.c[2];
+		temporary[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 71 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_50_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x01a00000, 0x2436106c, 0x20700ff8,
@@ -8639,6 +15872,564 @@ static BOOL cpu_fast_57(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_57(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[2], a_source.c[0], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[2], b_source.c[0], b_source.c[1], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { -a_source.c[1], -a_source.c[2], -a_source.c[0], -a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[0], b_source.c[1], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[0] = mac.c[0];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[1] = mac.c[1];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[11];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[0], -b_source.c[0], -b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7].c[3] = mac.c[3];
+	}
+	{ /* instruction 55 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 56 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 57 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[2] = mac.c[2];
+		temporary[9].c[3] = mac.c[3];
+	}
+	{ /* instruction 58 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 59 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[3] = mac.c[3];
+	}
+	{ /* instruction 60 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[10];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 61 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 62 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[4] = mac;
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_57_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x01a00000, 0x2436106c, 0x20700ff8,
@@ -9188,6 +16979,494 @@ static BOOL cpu_fast_60(const float inputs[16][4], const float constants[192][4]
 		cpu_vec4 b_source = cpu_load(constants[14]);
 		cpu_vec4 b = (cpu_vec4){ b_source[2], b_source[2], b_source[2], b_source[2] };
 		cpu_vec4 mac = cpu_mac(2, a, b, (cpu_vec4){ 0, 0, 0, 0 });
+		output[4] = mac;
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_60(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[3].c[1] = mac.c[1];
+		temporary[1].c[3] = ilu.c[3];
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[2] = mac.c[2];
+		temporary[3].c[3] = mac.c[3];
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+		output[9].c[3] = ilu.c[3];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(7, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(7, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[0] = mac.c[0];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[1] = mac.c[1];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[1] = mac.c[1];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+		temporary[7].c[2] = mac.c[2];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[0], -b_source.c[0], -b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[6];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[4].c[2] = mac.c[2];
+		temporary[4].c[3] = mac.c[3];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[5];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
 		output[4] = mac;
 	}
 	return TRUE;
@@ -9774,6 +18053,534 @@ static BOOL cpu_fast_62(const float inputs[16][4], const float constants[192][4]
 		cpu_vec4 b_source = cpu_load(constants[14]);
 		cpu_vec4 b = (cpu_vec4){ b_source[2], b_source[2], b_source[2], b_source[2] };
 		cpu_vec4 mac = cpu_mac(2, a, b, (cpu_vec4){ 0, 0, 0, 0 });
+		output[4] = mac;
+	}
+	return TRUE;
+}
+
+static BOOL cpu_fast4_62(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[17]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+		temporary[4].c[2] = mac.c[2];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[2], a_source.c[0], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[2], b_source.c[0], b_source.c[1], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { -a_source.c[1], -a_source.c[2], -a_source.c[0], -a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[0], b_source.c[1], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[6].c[0] = mac.c[0];
+		temporary[6].c[1] = mac.c[1];
+		temporary[6].c[2] = mac.c[2];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[15]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[16]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[18]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[19]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[20]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[21]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[0] = mac.c[0];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[22]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[1] = mac.c[1];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[0] = mac.c[0];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[1] = mac.c[1];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+		temporary[10].c[1] = mac.c[1];
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[2] = mac.c[2];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[1], -b_source.c[2], -b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[0] = mac.c[0];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[0];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[4].c[1] = mac.c[1];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { -b_source.c[0], -b_source.c[0], -b_source.c[0], -b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[4].c[3] = mac.c[3];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[2] = mac.c[2];
+		temporary[6].c[3] = mac.c[3];
+	}
+	{ /* instruction 55 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 56 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[3] = mac.c[3];
+	}
+	{ /* instruction 57 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 58 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 59 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[1] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
 		output[4] = mac;
 	}
 	return TRUE;
@@ -10376,6 +19183,540 @@ static BOOL cpu_fast_63(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_63(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		cpu_quad_address(address, mac.c[0]);
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 2);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[3].c[1] = mac.c[1];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[3];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[4].c[3] = mac.c[3];
+		output[10].c[2] = ilu.c[2];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[6].c[2] = mac.c[2];
+		output[12].c[2] = ilu.c[2];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 3);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[6].c[1] = mac.c[1];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[0] = mac.c[0];
+		temporary[9].c[1] = mac.c[1];
+		temporary[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[2];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+		temporary[5].c[2] = mac.c[2];
+		output[11].c[2] = ilu.c[2];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[7].c[3] = mac.c[3];
+		output[10].c[1] = ilu.c[1];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[7];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[8].c[0] = mac.c[0];
+		temporary[8].c[1] = mac.c[1];
+		temporary[8].c[2] = mac.c[2];
+		output[11].c[1] = ilu.c[1];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[9]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[11].c[0] = mac.c[0];
+		output[10].c[0] = ilu.c[0];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[10]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[11].c[1] = mac.c[1];
+		output[11].c[0] = ilu.c[0];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[8]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[8];
+		struct cpu_quad c = { { c_source.c[2], c_source.c[2], c_source.c[2], c_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		temporary[0].c[2] = mac.c[2];
+		output[12].c[0] = ilu.c[0];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[1] = mac.c[1];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[3] = mac.c[3];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[3] = mac.c[3];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[12].c[3] = mac.c[3];
+	}
+	{ /* instruction 41 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[11];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[0].c[0] = mac.c[0];
+		temporary[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 42 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 43 */
+		struct cpu_quad a_source = temporary[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 44 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[2];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 45 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 46 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[1], c_source.c[1], c_source.c[1], c_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[4].c[0] = mac.c[0];
+	}
+	{ /* instruction 47 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[2] = mac.c[2];
+	}
+	{ /* instruction 48 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3].c[0] = mac.c[0];
+	}
+	{ /* instruction 49 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[1], -c_source.c[2], -c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[4].c[0] = mac.c[0];
+		temporary[4].c[1] = mac.c[1];
+	}
+	{ /* instruction 50 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 51 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[0] = mac.c[0];
+		temporary[5].c[1] = mac.c[1];
+	}
+	{ /* instruction 52 */
+		struct cpu_quad a_source = temporary[5];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[1] = mac.c[1];
+	}
+	{ /* instruction 53 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad b_source = temporary[6];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[0], c_source.c[0], c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7].c[3] = mac.c[3];
+	}
+	{ /* instruction 54 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[11]);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[3] = mac.c[3];
+	}
+	{ /* instruction 55 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[9].c[2] = mac.c[2];
+		temporary[9].c[3] = mac.c[3];
+	}
+	{ /* instruction 56 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[3] = mac.c[3];
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_63_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x01a00000, 0x2436106c, 0x20700ff8,
@@ -10811,6 +20152,381 @@ static BOOL cpu_fast_64(const float inputs[16][4], const float constants[192][4]
 	return TRUE;
 }
 
+static BOOL cpu_fast4_64(const float (*inputs)[16][4], const float constants[192][4],
+	struct cpu_quad output[14], struct cpu_quad *clip)
+{
+	struct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };
+	int address[4] = { 0, 0, 0, 0 };
+	{ /* instruction 0 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 5);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+	}
+	{ /* instruction 1 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[2], c_source.c[2], c_source.c[2], c_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		cpu_quad_address(address, mac.c[0]);
+		output[10].c[1] = ilu.c[1];
+	}
+	{ /* instruction 2 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[3] = mac;
+	}
+	{ /* instruction 3 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[4] = mac;
+	}
+	{ /* instruction 4 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5] = mac;
+	}
+	{ /* instruction 5 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[1], a_source.c[1], a_source.c[1], a_source.c[1] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad c = { { c_source.c[2], c_source.c[2], c_source.c[2], c_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(13, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		struct cpu_quad ilu = cpu_quad_ilu(1, c);
+		cpu_quad_address(address, mac.c[0]);
+		output[11].c[0] = ilu.c[0];
+	}
+	{ /* instruction 6 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_input(inputs, 6);
+		struct cpu_quad c = { { -c_source.c[0], -c_source.c[0], -c_source.c[0], -c_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[6].c[0] = mac.c[0];
+	}
+	{ /* instruction 7 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[14]);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(1, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[3].c[0] = mac.c[0];
+		output[3].c[1] = mac.c[1];
+		output[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 8 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 60);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[3];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[7] = mac;
+	}
+	{ /* instruction 9 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 61);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[4];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[8] = mac;
+	}
+	{ /* instruction 10 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[0], a_source.c[0], a_source.c[0] } };
+		struct cpu_quad b_source = cpu_quad_relative(constants, address, 62);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		temporary[9] = mac;
+	}
+	{ /* instruction 11 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 12 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[1] = mac.c[1];
+	}
+	{ /* instruction 13 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 0);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 14 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[7];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+	}
+	{ /* instruction 15 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[8];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 16 */
+		struct cpu_quad a_source = cpu_quad_input(inputs, 1);
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[9];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[2] = mac.c[2];
+	}
+	{ /* instruction 17 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { -a_source.c[0], -a_source.c[1], -a_source.c[2], -a_source.c[3] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[4]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[3].c[0] = mac.c[0];
+		temporary[3].c[1] = mac.c[1];
+		temporary[3].c[2] = mac.c[2];
+	}
+	{ /* instruction 18 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 19 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[0]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[0] = mac.c[0];
+		output[0].c[0] = mac.c[0];
+	}
+	{ /* instruction 20 */
+		struct cpu_quad a_source = temporary[3];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(4, c);
+		temporary[4].c[3] = mac.c[3];
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 21 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[1]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[1] = mac.c[1];
+		output[0].c[1] = mac.c[1];
+	}
+	{ /* instruction 22 */
+		struct cpu_quad a_source = temporary[11];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[2].c[0] = mac.c[0];
+		temporary[2].c[1] = mac.c[1];
+		temporary[2].c[2] = mac.c[2];
+	}
+	{ /* instruction 23 */
+		struct cpu_quad a_source = temporary[4];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[4];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[5].c[3] = mac.c[3];
+	}
+	{ /* instruction 24 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[2]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = temporary[5];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(2, c);
+		temporary[1].c[3] = ilu.c[3];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 25 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[3]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(6, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[9].c[3] = mac.c[3];
+		output[0].c[3] = mac.c[3];
+	}
+	{ /* instruction 26 */
+		struct cpu_quad a_source = temporary[1];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[6].c[3] = mac.c[3];
+	}
+	{ /* instruction 27 */
+		struct cpu_quad a_source = temporary[6];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(9, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[7].c[3] = mac.c[3];
+	}
+	{ /* instruction 28 */
+		struct cpu_quad a_source = temporary[7];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_input(inputs, 4);
+		struct cpu_quad b = { { b_source.c[2], b_source.c[2], b_source.c[2], b_source.c[2] } };
+		struct cpu_quad mac = cpu_quad_mac(10, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[8].c[3] = mac.c[3];
+		output[3].c[3] = mac.c[3];
+	}
+	{ /* instruction 29 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[6]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[0] = mac.c[0];
+	}
+	{ /* instruction 30 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[7]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[1] = mac.c[1];
+	}
+	{ /* instruction 31 */
+		struct cpu_quad a_source = temporary[2];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[5]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(5, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[9].c[2] = mac.c[2];
+	}
+	{ /* instruction 32 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[0] = mac.c[0];
+	}
+	{ /* instruction 33 */
+		struct cpu_quad a_source = temporary[8];
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 34 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = cpu_quad_constant(constants[58]);
+		struct cpu_quad b = { { b_source.c[0], b_source.c[1], b_source.c[2], b_source.c[3] } };
+		struct cpu_quad c_source = output[0];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, c);
+		struct cpu_quad ilu = cpu_quad_ilu(3, c);
+		*clip = output[0];
+		temporary[1].c[0] = ilu.c[0];
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 35 */
+		struct cpu_quad a_source = temporary[9];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad c_source = temporary[9];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(3, a, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }), c);
+		temporary[10].c[0] = mac.c[0];
+		temporary[10].c[1] = mac.c[1];
+		temporary[10].c[3] = mac.c[3];
+	}
+	{ /* instruction 36 */
+		struct cpu_quad a_source = output[0];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad c_source = cpu_quad_constant(constants[59]);
+		struct cpu_quad c = { { c_source.c[0], c_source.c[1], c_source.c[2], c_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(4, a, b, c);
+		output[0].c[0] = mac.c[0];
+		output[0].c[1] = mac.c[1];
+		output[0].c[2] = mac.c[2];
+	}
+	{ /* instruction 37 */
+		struct cpu_quad c_source = temporary[10];
+		struct cpu_quad c = { { c_source.c[3], c_source.c[3], c_source.c[3], c_source.c[3] } };
+		struct cpu_quad ilu = cpu_quad_ilu(2, c);
+		temporary[1].c[3] = ilu.c[3];
+	}
+	{ /* instruction 38 */
+		struct cpu_quad a_source = temporary[10];
+		struct cpu_quad a = { { a_source.c[0], a_source.c[1], a_source.c[2], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[1];
+		struct cpu_quad b = { { b_source.c[3], b_source.c[3], b_source.c[3], b_source.c[3] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		temporary[11].c[0] = mac.c[0];
+		temporary[11].c[1] = mac.c[1];
+	}
+	{ /* instruction 39 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad a = { { a_source.c[2], a_source.c[2], a_source.c[2], a_source.c[2] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[0], b_source.c[0], b_source.c[0], b_source.c[0] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[10].c[2] = mac.c[2];
+	}
+	{ /* instruction 40 */
+		struct cpu_quad a_source = cpu_quad_constant(constants[12]);
+		struct cpu_quad a = { { a_source.c[3], a_source.c[3], a_source.c[3], a_source.c[3] } };
+		struct cpu_quad b_source = temporary[11];
+		struct cpu_quad b = { { b_source.c[1], b_source.c[1], b_source.c[1], b_source.c[1] } };
+		struct cpu_quad mac = cpu_quad_mac(2, a, b, cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 }));
+		output[11].c[2] = mac.c[2];
+	}
+	return TRUE;
+}
+
 static const DWORD cpu_fast_64_words[] = {
 	0x00000000, 0x0040ea1b, 0x09fe186c, 0x2c200ff8,
 	0x00000000, 0x03a0081b, 0x243612a8, 0x20704854,
@@ -10855,49 +20571,50 @@ static const DWORD cpu_fast_64_words[] = {
 	0x00000000, 0x004180ff, 0x0cab686c, 0x20702859,
 };
 
-static cpu_fast_executor cpu_fast_find(const DWORD *words, unsigned long count)
+static cpu_fast_executor cpu_fast_find(const DWORD *words, unsigned long count, cpu_fast4_executor *execute4)
 {
 	if (count == 23 && !memcmp(words, cpu_fast_5_words, sizeof(cpu_fast_5_words)))
-		return cpu_fast_5;
+		return *execute4 = cpu_fast4_5, cpu_fast_5;
 	if (count == 45 && !memcmp(words, cpu_fast_9_words, sizeof(cpu_fast_9_words)))
-		return cpu_fast_9;
+		return *execute4 = cpu_fast4_9, cpu_fast_9;
 	if (count == 66 && !memcmp(words, cpu_fast_10_words, sizeof(cpu_fast_10_words)))
-		return cpu_fast_10;
+		return *execute4 = cpu_fast4_10, cpu_fast_10;
 	if (count == 21 && !memcmp(words, cpu_fast_13_words, sizeof(cpu_fast_13_words)))
-		return cpu_fast_13;
+		return *execute4 = cpu_fast4_13, cpu_fast_13;
 	if (count == 44 && !memcmp(words, cpu_fast_14_words, sizeof(cpu_fast_14_words)))
-		return cpu_fast_14;
+		return *execute4 = cpu_fast4_14, cpu_fast_14;
 	if (count == 54 && !memcmp(words, cpu_fast_15_words, sizeof(cpu_fast_15_words)))
-		return cpu_fast_15;
+		return *execute4 = cpu_fast4_15, cpu_fast_15;
 	if (count == 79 && !memcmp(words, cpu_fast_17_words, sizeof(cpu_fast_17_words)))
-		return cpu_fast_17;
+		return *execute4 = cpu_fast4_17, cpu_fast_17;
 	if (count == 39 && !memcmp(words, cpu_fast_18_words, sizeof(cpu_fast_18_words)))
-		return cpu_fast_18;
+		return *execute4 = cpu_fast4_18, cpu_fast_18;
 	if (count == 37 && !memcmp(words, cpu_fast_30_words, sizeof(cpu_fast_30_words)))
-		return cpu_fast_30;
+		return *execute4 = cpu_fast4_30, cpu_fast_30;
 	if (count == 86 && !memcmp(words, cpu_fast_31_words, sizeof(cpu_fast_31_words)))
-		return cpu_fast_31;
+		return *execute4 = cpu_fast4_31, cpu_fast_31;
 	if (count == 38 && !memcmp(words, cpu_fast_32_words, sizeof(cpu_fast_32_words)))
-		return cpu_fast_32;
+		return *execute4 = cpu_fast4_32, cpu_fast_32;
 	if (count == 59 && !memcmp(words, cpu_fast_36_words, sizeof(cpu_fast_36_words)))
-		return cpu_fast_36;
+		return *execute4 = cpu_fast4_36, cpu_fast_36;
 	if (count == 21 && !memcmp(words, cpu_fast_39_words, sizeof(cpu_fast_39_words)))
-		return cpu_fast_39;
+		return *execute4 = cpu_fast4_39, cpu_fast_39;
 	if (count == 59 && !memcmp(words, cpu_fast_45_words, sizeof(cpu_fast_45_words)))
-		return cpu_fast_45;
+		return *execute4 = cpu_fast4_45, cpu_fast_45;
 	if (count == 55 && !memcmp(words, cpu_fast_47_words, sizeof(cpu_fast_47_words)))
-		return cpu_fast_47;
+		return *execute4 = cpu_fast4_47, cpu_fast_47;
 	if (count == 72 && !memcmp(words, cpu_fast_50_words, sizeof(cpu_fast_50_words)))
-		return cpu_fast_50;
+		return *execute4 = cpu_fast4_50, cpu_fast_50;
 	if (count == 63 && !memcmp(words, cpu_fast_57_words, sizeof(cpu_fast_57_words)))
-		return cpu_fast_57;
+		return *execute4 = cpu_fast4_57, cpu_fast_57;
 	if (count == 55 && !memcmp(words, cpu_fast_60_words, sizeof(cpu_fast_60_words)))
-		return cpu_fast_60;
+		return *execute4 = cpu_fast4_60, cpu_fast_60;
 	if (count == 60 && !memcmp(words, cpu_fast_62_words, sizeof(cpu_fast_62_words)))
-		return cpu_fast_62;
+		return *execute4 = cpu_fast4_62, cpu_fast_62;
 	if (count == 57 && !memcmp(words, cpu_fast_63_words, sizeof(cpu_fast_63_words)))
-		return cpu_fast_63;
+		return *execute4 = cpu_fast4_63, cpu_fast_63;
 	if (count == 41 && !memcmp(words, cpu_fast_64_words, sizeof(cpu_fast_64_words)))
-		return cpu_fast_64;
+		return *execute4 = cpu_fast4_64, cpu_fast_64;
+	*execute4 = NULL;
 	return NULL;
 }

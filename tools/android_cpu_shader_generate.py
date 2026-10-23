@@ -70,10 +70,11 @@ def supported(code):
     return rows == {60, 61, 62} and {0, 5, 6} <= inputs
 
 
-def writes(destination, value, mask):
+def writes(destination, value, mask, quad=False):
     if mask == 15:
         return [f'\t\t{destination} = {value};']
-    return [f'\t\t{destination}[{c}] = {value}[{c}];' for c in range(4) if mask & (8 >> c)]
+    part = '.c[{}]' if quad else '[{}]'
+    return [f'\t\t{destination}{part.format(c)} = {value}{part.format(c)};' for c in range(4) if mask & (8 >> c)]
 
 
 def generate():
@@ -89,6 +90,10 @@ def generate():
         lines += [f'static BOOL {name}(const float inputs[16][4], const float constants[192][4],',
                   '\tcpu_vec4 output[14], cpu_vec4 *clip)', '{',
                   '\tcpu_vec4 temporary[12] = { { 0, 0, 0, 0 } };', '\tint address = 0;']
+        # the same program for four vertices, one in each lane (struct cpu_quad)
+        quad = [f'static BOOL cpu_fast4_{ordinal}(const float (*inputs)[16][4], const float constants[192][4],',
+                '\tstruct cpu_quad output[14], struct cpu_quad *clip)', '{',
+                '\tstruct cpu_quad temporary[12] = { { { { 0, 0, 0, 0 } } } };', '\tint address[4] = { 0, 0, 0, 0 };']
         captured = False
         for at in range(0, len(code), 4):
             w = code[at:at + 4]
@@ -106,51 +111,72 @@ def generate():
             if not reads:
                 continue
             lines += [f'\t{{ /* instruction {at // 4}: operands precede both units\' writes */']
+            quad += [f'\t{{ /* instruction {at // 4} */']
             for which in sorted(reads):
                 mux, index, neg, swizzle = operand(w, which)
                 letter = 'abc'[which]
                 if mux == 1:
-                    value = 'output[0]' if index == 12 else f'temporary[{index}]'
+                    value = quad_value = 'output[0]' if index == 12 else f'temporary[{index}]'
                 elif mux == 2:
                     value = f'cpu_load(inputs[{index}])'
+                    quad_value = f'cpu_quad_input(inputs, {index})'
                 elif mux == 3:
                     idx = f'cpu_constant_index(address, {index})' if field(w, 3, 1, 1) else str(index)
                     value = f'cpu_load(constants[{idx}])'
+                    quad_value = (f'cpu_quad_relative(constants, address, {index})' if field(w, 3, 1, 1)
+                                  else f'cpu_quad_constant(constants[{index}])')
                 else:
                     value = '(cpu_vec4){ 0, 0, 0, 0 }'
+                    quad_value = 'cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 })'
                 lines.append(f'\t\tcpu_vec4 {letter}_source = {value};')
                 value = '(cpu_vec4){ ' + ', '.join(f'{letter}_source[{c}]' for c in swizzle) + ' }'
                 lines.append(f'\t\tcpu_vec4 {letter} = {"-" if neg else ""}{value};')
+                quad.append(f'\t\tstruct cpu_quad {letter}_source = {quad_value};')
+                quad.append(f'\t\tstruct cpu_quad {letter} = {{ {{ ' +
+                            ', '.join(f'{"-" if neg else ""}{letter}_source.c[{c}]' for c in swizzle) + ' } };')
             if do_mac:
                 args = [x if i in reads else '(cpu_vec4){ 0, 0, 0, 0 }' for i, x in enumerate('abc')]
                 lines.append(f'\t\tcpu_vec4 mac = cpu_mac({mac}, {", ".join(args)});')
+                args = [x if i in reads else 'cpu_quad_splat((cpu_vec4){ 0, 0, 0, 0 })' for i, x in enumerate('abc')]
+                quad.append(f'\t\tstruct cpu_quad mac = cpu_quad_mac({mac}, {", ".join(args)});')
             if do_ilu:
                 lines.append(f'\t\tcpu_vec4 ilu = cpu_ilu({ilu}, c);')
+                quad.append(f'\t\tstruct cpu_quad ilu = cpu_quad_ilu({ilu}, c);')
             if capture:
                 lines.append('\t\t*clip = output[0];')
+                quad.append('\t\t*clip = output[0];')
                 captured = True
             if mac == 13:
                 lines.append('\t\taddress = cpu_address(mac[0]);')
+                quad.append('\t\tcpu_quad_address(address, mac.c[0]);')
             elif mac and mm:
-                lines += writes('output[0]' if temp == 12 else f'temporary[{temp}]', 'mac', mm)
+                destination = 'output[0]' if temp == 12 else f'temporary[{temp}]'
+                lines += writes(destination, 'mac', mm)
+                quad += writes(destination, 'mac', mm, True)
             if ilu and im:
                 reg = 1 if mac else temp
-                lines += writes('output[0]' if reg == 12 else f'temporary[{reg}]', 'ilu', im)
+                destination = 'output[0]' if reg == 12 else f'temporary[{reg}]'
+                lines += writes(destination, 'ilu', im)
+                quad += writes(destination, 'ilu', im, True)
             if is_register and (ilu if from_ilu else mac):
                 if out not in (0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
                     out = 13
                 lines += writes(f'output[{out}]', 'ilu' if from_ilu else 'mac', om)
+                quad += writes(f'output[{out}]', 'ilu' if from_ilu else 'mac', om, True)
             lines.append('\t}')
+            quad.append('\t}')
         lines += [f'\treturn {"TRUE" if captured else "FALSE"};', '}', '']
+        lines += quad + [f'\treturn {"TRUE" if captured else "FALSE"};', '}', '']
         lines += [f'static const DWORD {name}_words[] = {{']
         for at in range(0, len(code), 4):
             lines.append('\t' + ', '.join(f'0x{x:08x}' for x in code[at:at + 4]) + ',')
         lines += ['};', '']
-    lines += ['static cpu_fast_executor cpu_fast_find(const DWORD *words, unsigned long count)', '{']
+    lines += ['static cpu_fast_executor cpu_fast_find(const DWORD *words, unsigned long count, cpu_fast4_executor *execute4)',
+              '{']
     for ordinal, code in entries:
         lines += [f'\tif (count == {len(code) // 4} && !memcmp(words, cpu_fast_{ordinal}_words, sizeof(cpu_fast_{ordinal}_words)))',
-                  f'\t\treturn cpu_fast_{ordinal};']
-    lines += ['\treturn NULL;', '}', '']
+                  f'\t\treturn *execute4 = cpu_fast4_{ordinal}, cpu_fast_{ordinal};']
+    lines += ['\t*execute4 = NULL;', '\treturn NULL;', '}', '']
     return '\n'.join(lines), len(entries)
 
 

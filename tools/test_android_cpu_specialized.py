@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Compare every fixed CPU executor with the retained interpreter.
 
+The four-vertex executors (NEON lanes) must give the same bits as the
+one-vertex executors, for every group of four and a remainder.
+
 Uses the complete original microcode payload, randomized inputs/constants,
 changed draw constants and addressing boundaries. --gles additionally creates
 a synthetic capture and runs the existing real GLES transform-feedback check.
@@ -52,12 +55,15 @@ class NativeExecutor:
         self.uc.mem_map(0x01000000, 0x20000)
         self.uc.mem_map(0x10000000, 0x20000)
 
-    def execute(self, ordinal, count, inputs, constants, scale, offset, screen, size):
+    def execute(self, ordinal, count, inputs, constants, scale, offset, screen, size, quad=False):
+        """One vertex (inputs [16][4]), or four at once (inputs [4][16][4])."""
         import struct
         r, uc = self.regs, self.uc
-        # The arm64_32 program starts with count, prepared, executor: three
-        # 32-bit fields. Its fixed branch does not read the interpreter array.
-        uc.mem_write(0x01000000, struct.pack('<III', count, 0, self.symbols[f'cpu_fast_{ordinal}']))
+        # The arm64_32 program starts with count, prepared, the executor and
+        # the four-vertex executor: four 32-bit fields. Their fixed branches
+        # do not read the interpreter array.
+        uc.mem_write(0x01000000, struct.pack('<IIII', count, 0, self.symbols[f'cpu_fast_{ordinal}'],
+                                             self.symbols[f'cpu_fast4_{ordinal}']))
         for address, data in [(0x01000100, inputs), (0x01001000, constants),
                               (0x01002000, scale), (0x01002010, offset)]:
             uc.mem_write(address, data.tobytes())
@@ -68,9 +74,18 @@ class NativeExecutor:
             uc.reg_write(reg, address)
         uc.reg_write(r.UC_ARM64_REG_S0, struct.unpack('<I', struct.pack('<f', screen))[0])
         uc.reg_write(r.UC_ARM64_REG_S1, struct.unpack('<I', struct.pack('<f', size))[0])
-        uc.emu_start(self.symbols['nv2a_cpu_vertex_execute'], 0x70000000, count=200000)
+        uc.emu_start(self.symbols['nv2a_cpu_vertex_execute4' if quad else 'nv2a_cpu_vertex_execute'],
+                     0x70000000, count=200000)
         assert uc.reg_read(r.UC_ARM64_REG_PC) == 0x70000000
-        return np.frombuffer(bytes(uc.mem_read(0x01003000, 160)), dtype='<f4')
+        return np.frombuffer(bytes(uc.mem_read(0x01003000, 640 if quad else 160)),
+                             dtype='<f4').reshape(4 if quad else 1, 40).squeeze()
+
+
+def bits(values):
+    """the bits of each float, every NaN alike (whichever NaN two NaNs give)"""
+    result = values.view(np.uint32).copy()
+    result[np.isnan(values)] = 0x7fc00000
+    return result
 
 header = (ROOT / 'port/linux/src/xgpu.h').read_text()
 api = header[header.index('struct nv2a_cpu_program;'):header.index('#endif', header.index('struct nv2a_cpu_program;'))]
@@ -96,8 +111,16 @@ void xgpu_text_append(struct xgpu_text *t,const char *f,...){
 }
 void *make(const DWORD *w,unsigned long n,int fixed){
  struct nv2a_cpu_program *p=nv2a_cpu_program_create(w,n);
- if(p && !fixed)p->execute=NULL;
+ if(p && !fixed)p->execute=NULL,p->execute4=NULL;
  return p;
+}
+/* groups of four as the renderer runs them, then the remainder one by one */
+void batch4(struct nv2a_cpu_program *p,const float (*v)[16][4],const float c[192][4],
+ const float s[4],const float o[4],float x,float size,unsigned n,struct nv2a_cpu_vertex *out){
+ unsigned i=0;
+ nv2a_cpu_program_prepare_constants(p,c);
+ for(;i+4<=n;i+=4)nv2a_cpu_vertex_execute4(p,v+i,c,s,o,x,size,out+i);
+ for(;i<n;i++)nv2a_cpu_vertex_execute(p,v[i],c,s,o,x,size,&out[i]);
 }
 void batch(struct nv2a_cpu_program *p,const float (*v)[16][4],const float c[192][4],
  const float s[4],const float o[4],float x,float size,unsigned n,struct nv2a_cpu_vertex *out){
@@ -113,7 +136,9 @@ with tempfile.TemporaryDirectory(prefix='halo-cpu-fixed-') as name:
     for fn in ('nv2a_vsh.c', 'nv2a_cpu_shaders.inc'):
         shutil.copyfile(ROOT / 'port/linux/src' / fn, folder / fn)
     lib = folder / 'test.so'
-    subprocess.run(['cc', '-std=gnu11', '-O2', '-ffp-contract=off', '-fPIC', '-shared',
+    # (gcc may swap fminf/fmaxf arguments in one path; see test_android_cpu_parallel.py)
+    subprocess.run(['cc', '-std=gnu11', '-O2', '-ffp-contract=off', '-fno-builtin-fminf', '-fno-builtin-fmaxf',
+                    '-fPIC', '-shared',
                     str(folder / 'test.c'), '-lm', '-o', str(lib)], check=True)
     production = C.CDLL(str(lib))
     P, F, U = C.c_void_p, C.c_float, C.c_uint
@@ -121,12 +146,14 @@ with tempfile.TemporaryDirectory(prefix='halo-cpu-fixed-') as name:
     production.make.restype = P
     production.nv2a_cpu_program_is_specialized.argtypes = [P]
     production.batch.argtypes = [P, P, P, P, P, F, F, U, P]
+    production.batch4.argtypes = [P, P, P, P, P, F, F, U, P]
+    production.nv2a_cpu_program_is_quad.argtypes = [P]
     production.nv2a_vertex_shader_to_glsl.argtypes = [P, C.c_ulong, C.c_ulong]
     production.nv2a_vertex_shader_to_glsl.restype = P
     libc = C.CDLL(None)
     libc.free.argtypes = [P]
     rng = np.random.default_rng(0x534849454c44)
-    summary = {'programs': 0, 'vertices': 0, 'host_interpreter_ms': 0.0, 'host_fixed_ms': 0.0,
+    summary = {'programs': 0, 'vertices': 0, 'host_interpreter_ms': 0.0, 'host_fixed_ms': 0.0, 'host_quad_ms': 0.0,
                'unknown_fallbacks': 0, 'scalar_outputs_per_vertex': 40}
     native = [NativeExecutor(p) for p in args.native_images or []]
     if native:
@@ -134,10 +161,11 @@ with tempfile.TemporaryDirectory(prefix='halo-cpu-fixed-') as name:
         summary['native_vertices'] = 0
     report, captured = [], []
 
-    def batch(p, v, c, scale, offset, screen, size):
+    def batch(p, v, c, scale, offset, screen, size, quad=False):
         out = np.zeros((len(v), 40), dtype=np.float32)
-        production.batch(p, v.ctypes.data, c.ctypes.data, scale.ctypes.data, offset.ctypes.data,
-                         screen, size, len(v), out.ctypes.data)
+        (production.batch4 if quad else production.batch)(
+            p, v.ctypes.data, c.ctypes.data, scale.ctypes.data, offset.ctypes.data,
+            screen, size, len(v), out.ctypes.data)
         return out
 
     for ordinal, code in programs():
@@ -147,8 +175,10 @@ with tempfile.TemporaryDirectory(prefix='halo-cpu-fixed-') as name:
             assert not fast, ('non-skeletal accepted', ordinal)
             continue
         assert fast and production.nv2a_cpu_program_is_specialized(fast), ordinal
+        assert production.nv2a_cpu_program_is_quad(fast), ordinal
         slow = production.make(words.ctypes.data, len(code) // 4, 0)
         assert slow and not production.nv2a_cpu_program_is_specialized(slow)
+        assert not production.nv2a_cpu_program_is_quad(slow)
         # word 0 is ignored by the interpreter but still part of the exact
         # match. An unfamiliar equivalent program must safely fall back.
         unknown_words = words.copy()
@@ -172,11 +202,20 @@ with tempfile.TemporaryDirectory(prefix='halo-cpu-fixed-') as name:
                 # nonfinite node input. No undefined C float-to-int cast.
                 v[:8, 5, 0] = [-4, -0.001, 0, 0.001, 191, 255, np.inf, np.nan]
                 scale[:3] = 0
+            if trial == 1:
+                # different bones in each lane, beyond both ends of c[] too
+                v[:, 5, 0] = rng.integers(-8, 70, 512) * np.float32(3)
             expected = batch(slow, v, c, scale, offset, screen, size)
             actual = batch(fast, v, c, scale, offset, screen, size)
             fallback = batch(unknown, v, c, scale, offset, screen, size)
+            # 511: 127 groups of four and a remainder of three
+            quad = batch(fast, v[:511], c, scale, offset, screen, size, quad=True)
+            quad_fallback = batch(slow, v[:511], c, scale, offset, screen, size, quad=True)
             assert np.array_equal(actual, expected, equal_nan=True), (ordinal, trial, 'fixed differs')
             assert np.array_equal(fallback, expected, equal_nan=True), (ordinal, trial, 'fallback differs')
+            assert np.array_equal(quad.view(np.uint32), actual[:511].view(np.uint32)), (ordinal, trial, 'four lanes differ')
+            assert np.array_equal(quad_fallback, expected[:511], equal_nan=True), (ordinal, trial, 'interpreter by four differs')
+            summary['quad_vertices'] = summary.get('quad_vertices', 0) + 511
             summary['vertices'] += len(v)
             if trial == 0:
                 for image in native:
@@ -184,6 +223,17 @@ with tempfile.TemporaryDirectory(prefix='halo-cpu-fixed-') as name:
                         native_result = image.execute(ordinal, len(code) // 4, v[vi], c, scale, offset, screen, size)
                         assert np.array_equal(native_result, expected[vi], equal_nan=True), (ordinal, vi, 'native ELF differs')
                         summary['native_vertices'] += 1
+                    # four at once in the NEON lanes: the bits of the one-vertex
+                    # native executor, signed zeros included
+                    # a third of the inputs +0 or -0: max(+0, -0) and the like
+                    zeros = np.where(rng.random((32, 16, 4)) < 0.5, np.float32(0.0), np.float32(-0.0))
+                    vz = np.where(rng.random((32, 16, 4)) < 0.3, zeros, v[:32]).astype(np.float32)
+                    for vi in range(0, 32, 4):
+                        lanes = image.execute(ordinal, len(code) // 4, vz[vi:vi + 4], c, scale, offset, screen, size, True)
+                        for lane in range(4):
+                            single = image.execute(ordinal, len(code) // 4, vz[vi + lane], c, scale, offset, screen, size)
+                            assert np.array_equal(bits(lanes[lane]), bits(single)), (ordinal, vi + lane, 'native NEON lanes differ')
+                        summary['native_quad_vertices'] = summary.get('native_quad_vertices', 0) + 4
                 # A deterministic shader/data capture for the independent
                 # existing real-GLES test; these are synthetic, not Shield dumps.
                 pointer = production.nv2a_vertex_shader_to_glsl(words.ctypes.data, len(code) // 4, 0)
@@ -200,15 +250,16 @@ with tempfile.TemporaryDirectory(prefix='halo-cpu-fixed-') as name:
                 captured.append((f'program-{ordinal}-shader-8b31.glsl', text.encode()))
             if trial == 3:
                 times = []
-                for executor in (slow, fast):
+                for executor, by_four in ((slow, False), (fast, False), (fast, True)):
                     samples = []
                     for _ in range(5):
                         start = time.perf_counter()
-                        batch(executor, v, c, scale, offset, screen, size)
+                        batch(executor, v, c, scale, offset, screen, size, by_four)
                         samples.append((time.perf_counter() - start) * 1000)
                     times.append(statistics.median(samples))
                 summary['host_interpreter_ms'] += times[0]
                 summary['host_fixed_ms'] += times[1]
+                summary['host_quad_ms'] += times[2]
         for p in (fast, slow, unknown):
             libc.free(p)
         summary['programs'] += 1
@@ -227,8 +278,13 @@ with tempfile.TemporaryDirectory(prefix='halo-cpu-fixed-') as name:
         summary['gles'] = json.loads(result.read_text())
     print('PASS: all 21 skeletal programs match the interpreter across', summary['vertices'], 'vertices; all 40 outputs match.')
     print('PASS: exact matching, changed constants, address limits and 21 unknown-program fallbacks.')
-    print('Host-only CPU execution speedup:', round(summary['host_speedup'], 2), '(not Shield FPS)')
+    print('PASS: four-vertex executors give the bits of the one-vertex executors for',
+          summary['quad_vertices'], 'vertices (groups of four and remainders), bones differing per lane.')
+    print('Host-only CPU execution speedup:', round(summary['host_speedup'], 2),
+          '; four at once against one at a time:', round(summary['host_fixed_ms'] / summary['host_quad_ms'], 2),
+          '(not Shield FPS)')
     if native:
         print('PASS:', summary['native_vertices'], 'actual AArch64 vertices across', len(native), 'linked images match all 40 outputs exactly; Unicorn control.')
+        print('PASS:', summary['native_quad_vertices'], 'AArch64 vertices four at once give the bits of one at a time (signed zeros too).')
     if args.output:
         args.output.write_text(json.dumps(summary, indent=2) + '\n')

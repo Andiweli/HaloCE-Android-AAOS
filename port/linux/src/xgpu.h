@@ -93,6 +93,13 @@ void nv2a_cpu_program_prepare_constants(struct nv2a_cpu_program *program, const 
 void nv2a_cpu_vertex_execute(const struct nv2a_cpu_program *program, const float inputs[16][4],
 	const float constants[192][4], const float viewport_scale[4], const float viewport_offset[4],
 	float screen_offset, float point_size, struct nv2a_cpu_vertex *vertex);
+/* the same for four vertices at once (inputs[0..3]): the bits of four calls,
+but where two NaNs meet another NaN may come out; a fixed executor runs the
+four in the lanes of each NEON register */
+BOOL nv2a_cpu_program_is_quad(const struct nv2a_cpu_program *program);
+void nv2a_cpu_vertex_execute4(const struct nv2a_cpu_program *program, const float (*inputs)[16][4],
+	const float constants[192][4], const float viewport_scale[4], const float viewport_offset[4],
+	float screen_offset, float point_size, struct nv2a_cpu_vertex vertex[4]);
 char *nv2a_cpu_vertex_glsl(void); /* malloc'd source, same language as fragment shader */
 void nv2a_cpu_attribute_decode(unsigned long type, const void *source, float value[4]);
 /* the same for one element of count vertices, into inputs[vertex][reg] */
