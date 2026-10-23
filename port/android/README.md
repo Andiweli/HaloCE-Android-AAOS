@@ -144,6 +144,11 @@ with the positions on the Xbox controller:
 | Options | start | pause menu |
 | Create | back | |
 
+Hold SELECT (Create, back) for half a second to open the settings of the
+app. A short press is the back button of the Xbox controller. Controllers
+without SELECT (the NVIDIA Shield controller, TV remotes) use their Back
+button the same way.
+
 The controller gets the rumble. The back gesture of Android is the B
 button. A Bluetooth or USB keyboard operates as on Linux. The screen does
 not accept touch input.
@@ -311,6 +316,15 @@ functions of OpenGL ES 3.2 if they are available:
 - On OpenGL ES 3.1 and later, the visibility tests (lens flares) count
   samples with an atomic counter, as the NV2A did. OpenGL ES 3.0 tells only
   if a sample is visible.
+- The NVIDIA driver (Tegra X1 of the Shield TV) computes the skinned vertex
+  shaders (characters, weapons) incorrectly. On NVIDIA, the CPU runs these
+  shaders (`nv2a_cpu_program` in `nv2a_vsh.c`; the fixed code in
+  `nv2a_cpu_shaders.inc` comes from `tools/android_cpu_shader_generate.py`)
+  and the GPU gets the finished vertices. Large draws are divided among the
+  render thread and up to three worker threads (the number of processors
+  minus two).
+- On NVIDIA, the visibility tests do not wait for the GPU. The game reads the
+  last finished result. Waiting halved the frame rate in large fights.
 
 ### Calling conventions
 

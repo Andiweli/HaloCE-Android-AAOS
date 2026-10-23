@@ -32,8 +32,8 @@ android {
         applicationId "com.halo.decomp"
         minSdk 28
         targetSdk 35
-        versionCode 24
-        versionName "1.0.11"
+        versionCode 27
+        versionName "1.0.12"
         buildConfigField "int", "HALO_BUILD_NUMBER", "${buildNumber}"
         buildConfigField "boolean", "HALO_DIAGNOSTICS_ENABLED", "${diagnosticsEnabled}"
         ndk {
