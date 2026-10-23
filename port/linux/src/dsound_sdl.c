@@ -550,11 +550,22 @@ static void stream_complete_head(struct sdl_stream *stream, DWORD status, DWORD 
 	}
 }
 
+/* (on the game's thread each frame: with the mixer mixing, the lock is not
+waited for but tried again the next frame, a stream's finished packets told a
+frame later - waited for, it was up to an eighth of the Switch's game thread
+in a busy match; a fifth frame in a row waits) */
 static void streams_complete_finished(void)
 {
+	static int missed;
 	struct sdl_stream *stream;
 
-	pthread_mutex_lock(&mixer_lock);
+	if (pthread_mutex_trylock(&mixer_lock) != 0)
+	{
+		if (++missed < 5)
+			return;
+		pthread_mutex_lock(&mixer_lock);
+	}
+	missed = 0;
 	for (stream = streams; stream; stream = stream->next)
 	{
 		while (stream->packet_count && stream->packets[stream->packet_head].finished)
