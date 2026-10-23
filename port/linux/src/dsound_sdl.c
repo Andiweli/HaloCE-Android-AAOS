@@ -44,7 +44,11 @@ skips opening a device (port_config.c).
 #define OUTPUT_RATE 48000
 #define OUTPUT_CHANNELS 2
 #define MAXIMUM_STREAM_PACKETS 64
-#define MIX_CHUNK_FRAMES 1024
+/* (the most mixed at once, under mixer_lock: the game's thread waits out a
+chunk's mix to start, stop or change a sound, so a chunk is about 5 ms of
+sound - at 1024, up to 2.7 ms of the Switch's game thread for each such call
+in a busy firefight) */
+#define MIX_CHUNK_FRAMES 256
 
 #define XBOX_ADPCM_BLOCK_BYTES 36
 #define XBOX_ADPCM_BLOCK_SAMPLES 64
@@ -472,7 +476,9 @@ static void *silent_clock_thread(void *parameter)
 	clock_gettime(CLOCK_MONOTONIC, &next);
 	for (;;)
 	{
-		mix(buffer, 480);
+		/* (10 ms, in chunks of MIX_CHUNK_FRAMES at most) */
+		mix(buffer, 240);
+		mix(buffer, 240);
 		next.tv_nsec += 10000000L;
 		if (next.tv_nsec >= 1000000000L)
 		{
