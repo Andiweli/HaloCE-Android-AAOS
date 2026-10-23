@@ -364,7 +364,10 @@ static void game_state_writer_dispose(void)
 		CloseHandle(game_state_writer.work);
 	if (game_state_writer.idle)
 		CloseHandle(game_state_writer.idle);
-	free(game_state_writer.allocation);
+	/* The game's debug_free rejects NULL; dispose also runs when no
+	writer was created, and again after the file has already been closed. */
+	if (game_state_writer.allocation)
+		free(game_state_writer.allocation);
 	memset(&game_state_writer, 0, sizeof(game_state_writer));
 }
 

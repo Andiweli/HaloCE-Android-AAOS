@@ -211,7 +211,10 @@ static void *snapshot_malloc(size_t size)
 }
 static void snapshot_free(void *pointer)
 {
-    if (pointer) allocations--;
+    /* Match the game's debug allocator: libc free(NULL) would hide the
+    actual shutdown failure seen in the Shield's debug.txt. */
+    assert(pointer);
+    allocations--;
     free(pointer);
 }
 
@@ -330,6 +333,11 @@ int main(void)
         game_state_dispose();
         assert(handles == 0 && allocations == 0);
     }
+    /* Closing then disposing, and repeating disposal of an empty writer,
+    must not call the game's strict free function on NULL. */
+    game_state_writer_dispose();
+    game_state_writer_dispose();
+    assert(handles == 0 && allocations == 0);
     puts("Checkpoints: pending reverts, serialized saves, short/failed writes, close/reopen, shutdown and setup fallbacks passed.");
     return 0;
 }
