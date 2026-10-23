@@ -281,6 +281,13 @@ int host_sdl_gamepad_type(uint32_t gamepad)
 	return object ? SDL_GetGamepadType(object) : SDL_GAMEPAD_TYPE_UNKNOWN;
 }
 
+int host_sdl_gamepad_has_axis(uint32_t gamepad, int axis)
+{
+	SDL_Gamepad *object = handle_get(gamepad, _handle_gamepad);
+
+	return object ? SDL_GamepadHasAxis(object, (SDL_GamepadAxis)axis) : 0;
+}
+
 /* Digital L2 and R2 (handhelds such as Anbernic's, some Bluetooth pads):
 Android reports them as KEYCODE_BUTTON_L2 and R2, which SDL's Android driver
 makes joystick buttons 15 and 16 (SDL_sysjoystick.c keycode_to_SDL). The

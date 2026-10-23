@@ -198,6 +198,11 @@ SDL_GamepadType SDL_GetGamepadType(SDL_Gamepad *gamepad)
 	return (SDL_GamepadType)host_sdl_gamepad_type((unsigned int)gamepad);
 }
 
+bool SDL_GamepadHasAxis(SDL_Gamepad *gamepad, SDL_GamepadAxis axis)
+{
+	return host_sdl_gamepad_has_axis((unsigned int)gamepad, (int)axis) != 0;
+}
+
 bool SDL_RumbleGamepad(SDL_Gamepad *gamepad, Uint16 low, Uint16 high, Uint32 milliseconds)
 {
 	return host_sdl_rumble_gamepad((unsigned int)gamepad, low, high, milliseconds) != 0;

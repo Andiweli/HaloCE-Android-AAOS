@@ -37,6 +37,7 @@ host_sdl_gamepad_from_id
 host_sdl_gamepad_axis
 host_sdl_gamepad_button
 host_sdl_gamepad_type
+host_sdl_gamepad_has_axis
 host_sdl_gamepad_digital_triggers
 host_sdl_rumble_gamepad
 host_sdl_open_audio_stream
