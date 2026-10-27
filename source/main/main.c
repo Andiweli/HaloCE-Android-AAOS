@@ -2218,6 +2218,9 @@ static boolean main_framerate_throttle_enabled(
 	return rasterizer_globals.framerate_throttle;
 }
 
+/* the performance counter at the last unthrottled frame (zero: none yet) */
+static LARGE_INTEGER unthrottled_previous_counter;
+
 /* The native ports draw a frame whenever the display can show one, paced
 by vsync, and frames fall between the 30 Hz ticks
 (port/linux/game/render_interpolation.c): no vertical blank throttle, and
@@ -2225,19 +2228,18 @@ the frame is timed with the performance counter. */
 static void main_update_time_unthrottled(
 	void)
 {
-	static LARGE_INTEGER previous_counter;
 	LARGE_INTEGER counter;
 	LARGE_INTEGER frequency;
 	real seconds_elapsed = 0.0f;
 
 	QueryPerformanceCounter(&counter);
 	QueryPerformanceFrequency(&frequency);
-	if (previous_counter.QuadPart && frequency.QuadPart)
+	if (unthrottled_previous_counter.QuadPart && frequency.QuadPart)
 	{
-		seconds_elapsed = (real)((double)(counter.QuadPart - previous_counter.QuadPart) /
+		seconds_elapsed = (real)((double)(counter.QuadPart - unthrottled_previous_counter.QuadPart) /
 			(double)frequency.QuadPart);
 	}
-	previous_counter = counter;
+	unthrottled_previous_counter = counter;
 
 	if (main_globals.movie)
 	{
@@ -3283,6 +3285,17 @@ void main_loop(
 				break;
 			}
 
+#ifdef HALO_ANDROID
+			/* the settings' 60 FPS switch, between two frames
+			(port/linux/src/sdl_platform.c): the interpolation and both
+			clocks start afresh */
+			if (halo_interpolation_update())
+			{
+				render_interpolation_reset();
+				unthrottled_previous_counter.QuadPart = 0;
+				main_reset_time();
+			}
+#endif
 			main_update_time();
 			process_ui_widgets();
 			bink_playback_update();

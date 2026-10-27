@@ -23,6 +23,9 @@ struct observer_result;
 struct render_camera;
 struct real_matrix4x3;
 int halo_interpolation_enabled(void);
+#ifdef HALO_ANDROID
+int halo_interpolation_update(void);
+#endif
 float game_time_get_tick_fraction(void);
 void render_interpolation_tick(void);
 void render_interpolation_reset(void);

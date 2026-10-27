@@ -14,6 +14,8 @@ int host_settings_active(void);
 int host_sdl_gamepad_digital_triggers(unsigned int gamepad);
 void host_settings_sticks(float *left, float *right);
 void host_settings_stick_look_mask(unsigned int mask);
+/* Nonzero: the settings' 60 FPS (interpolation); zero: the original 30. */
+int host_settings_sixty_fps(void);
 float host_audio_gain(int category);
 void host_audio_profile(const char *key);
 int host_audio_level(int category);

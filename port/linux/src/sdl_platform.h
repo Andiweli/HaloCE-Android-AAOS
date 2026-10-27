@@ -43,6 +43,10 @@ void platform_video_swap(void);
 /* frames between the 30 Hz ticks at the display's refresh rate, unless
 display.interpolation is false (port/linux/game/render_interpolation.c) */
 int halo_interpolation_enabled(void);
+#ifdef HALO_ANDROID
+/* the settings' 60 FPS switch: TRUE when it changed the mode */
+int halo_interpolation_update(void);
+#endif
 void platform_mouse_capture(BOOL capture);
 
 /* main thread only; a no-op elsewhere */

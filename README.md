@@ -22,7 +22,8 @@ This fork adds controller-aware [RetroTouch](https://github.com/Andiweli/RetroTo
 profile volume controls, cleaned-up menus, immersive mobile display and an AAOS
 build that respects the vehicle's available screen area. AAOS audio buffering
 and Android memory-layout fallbacks are included. The game uses the original
-**30 FPS mode**, with a corrected geometry-upload path tested on Retroid.
+**30 FPS mode**, with a corrected geometry-upload path tested on Retroid;
+**60 FPS** can be switched on in the in-game settings (experimental).
 Use the AAOS build while parked.
 
 <p align=center>

@@ -16,6 +16,10 @@ and the debug keyboard that the game's console reads.
 #include "p2p.h"
 #include "xiso.h"
 
+#ifdef HALO_ANDROID
+#include "halo_android_controls.h"
+#endif
+
 #include <SDL3/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -301,14 +305,32 @@ BOOL platform_offer_game_data(const char *destination)
 }
 #endif
 
+static int interpolation_enabled = -1;
+
 int halo_interpolation_enabled(void)
 {
-	static int enabled = -1;
-
-	if (enabled < 0)
-		enabled = config_boolean("display.interpolation");
-	return enabled;
+	if (interpolation_enabled < 0)
+		interpolation_enabled = config_boolean("display.interpolation");
+	return interpolation_enabled;
 }
+
+#ifdef HALO_ANDROID
+/* The settings' 60 FPS switch (SettingsOverlay.java), off by default: the
+original 30 frames each second (host_main.c starts the game with
+display.interpolation false), or one frame for each refresh with
+interpolation. main_loop asks between two frames; TRUE when the mode
+changed. */
+int halo_interpolation_update(void)
+{
+	int enabled = host_settings_sixty_fps() != 0;
+
+	if (enabled == halo_interpolation_enabled())
+		return FALSE;
+	interpolation_enabled = enabled;
+	platform_log("frame rate: %s", enabled ? "60 FPS with interpolation" : "the original 30 FPS");
+	return TRUE;
+}
+#endif
 
 #ifndef HALO_ANDROID
 /* whether the window opens fullscreen (display.fullscreen), never when it

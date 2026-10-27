@@ -181,6 +181,17 @@ These settings are only for Android:
 | `display.screen_width` | The number of columns of the 480-line picture. `0` (the default): the shape of the display (1068 on a 20:9 phone). `640`: the 4:3 shape of the Xbox. |
 | `debug.sample_seconds` | Refer to "Find problems". |
 
+The game shows 30 frames each second, as on the Xbox: the host starts it
+with `display.interpolation` false (`host/host_main.c`), whatever
+`config.toml` says. The switch **60 FPS (experimental)** in the display
+section of the in-game settings turns on the interpolation of the Linux
+port instead (refer to "Frame rate" in
+[port/linux/README.md](../linux/README.md#frame-rate)): one frame for each
+refresh of the display. It takes effect at once, between two frames
+(`halo_interpolation_update` in `port/linux/src/sdl_platform.c`, asked by
+`main_loop`), and is saved with OK. The interpolation is not perfect: the
+spaceship in the first level hops, which is why 30 is the default. `tools/test_android_frame_rate.py` checks the switch.
+
 ## Internet play
 
 Internet play operates as on Linux, but without Discord. When the game

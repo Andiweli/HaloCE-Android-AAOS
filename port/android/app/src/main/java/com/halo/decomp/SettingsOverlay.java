@@ -17,9 +17,10 @@ final class SettingsOverlay {
     static native void nativeDisplay(int brightness, int gamma);
     static native void nativeSticks(int left, int right);
     static native int nativeLookSticks();
+    static native void nativeFrameRate(boolean sixty);
     private static final int TEXT_SP=16, HEADING_SP=14;
     private static final int LEFT_LOOK=1, RIGHT_LOOK=2;
-    private static final int GYRO_TOGGLE=5, GYRO_INVERT=6, GYRO_SLIDER=7, LEFT_STICK=8, RIGHT_STICK=9, OK=10, CANCEL=11;
+    private static final int FRAME_RATE=5, GYRO_TOGGLE=6, GYRO_INVERT=7, GYRO_SLIDER=8, LEFT_STICK=9, RIGHT_STICK=10, OK=11, CANCEL=12;
     private static final String[] KEYS={"master","effects","music","brightness","gamma","gyro_sensitivity","left_stick_sensitivity","right_stick_sensitivity"};
     private static final int[] MIN={0,0,0,50,50,25,50,50}, MAX={100,100,100,150,200,200,150,150};
     private static final int[] SLIDER_TARGETS={0,1,2,3,4,GYRO_SLIDER,LEFT_STICK,RIGHT_STICK};
@@ -31,7 +32,9 @@ final class SettingsOverlay {
     private final View[] targets=new View[CANCEL+1];
     private final View[] stickRows=new View[2];
     private boolean gyroEnabled, originalGyro, gyroInvertPitch, originalGyroInvert;
-    private Switch gyroSwitch, gyroInvertSwitch;
+    // 60 FPS with interpolation; off, the original 30 (sdl_platform.c)
+    private boolean sixtyFps, originalSixtyFps;
+    private Switch gyroSwitch, gyroInvertSwitch, frameRateSwitch;
     private FrameLayout root;
     private int selected;
     private int stickLookMask;
@@ -52,6 +55,7 @@ final class SettingsOverlay {
             values[i]=Math.max(MIN[i],Math.min(MAX[i],prefs.getInt(KEYS[i],100)));
         gyroEnabled=prefs.getBoolean("gyro_aim",false) && activity.motionAvailable();
         gyroInvertPitch=prefs.getBoolean("gyro_invert_pitch",false);
+        sixtyFps=prefs.getBoolean("sixty_fps",false);
         apply();
     }
     boolean isOpen(){return root!=null;}
@@ -59,10 +63,10 @@ final class SettingsOverlay {
     private String[] strings(){
         String language=android.content.res.Resources.getSystem().getConfiguration().getLocales().get(0).getLanguage();
         switch(language){
-            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyroskop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung","Gyro Rauf/Runter invertieren","Linker Stick Empfindlichkeit","Rechter Stick Empfindlichkeit"};
-            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes","Inverser haut/bas du gyroscope","Sensibilité du stick gauche","Sensibilité du stick droit"};
-            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli","Inverti su/giù del giroscopio","Sensibilità stick sinistro","Sensibilità stick destro"};
-            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls","Invert gyro up/down","Left stick sensitivity","Right stick sensitivity"};
+            case "de":return new String[]{"Einstellungen","Gesamtlautstärke","Soundeffektlautstärke","Musiklautstärke","Helligkeit","Gamma","Gyro-Empfindlichkeit","Gyroskop Sicht aktivieren","OK","Abbrechen","kein Gyroskop","Lautstärken","Anzeige","Steuerung","Gyro Rauf/Runter invertieren","Linker Stick Empfindlichkeit","Rechter Stick Empfindlichkeit","60 FPS (experimentell)"};
+            case "fr":return new String[]{"Paramètres","Volume général","Volume des effets sonores","Volume de la musique","Luminosité","Gamma","Sensibilité du gyro","Activer la vue gyroscopique","OK","Annuler","gyroscope absent","Volumes","Affichage","Commandes","Inverser haut/bas du gyroscope","Sensibilité du stick gauche","Sensibilité du stick droit","60 FPS (expérimental)"};
+            case "it":return new String[]{"Impostazioni","Volume generale","Volume degli effetti sonori","Volume della musica","Luminosità","Gamma","Sensibilità gyro","Attiva visuale con giroscopio","OK","Annulla","giroscopio assente","Volumi","Schermo","Controlli","Inverti su/giù del giroscopio","Sensibilità stick sinistro","Sensibilità stick destro","60 FPS (sperimentale)"};
+            default:return new String[]{"Settings","Master volume","Sound effects volume","Music volume","Brightness","Gamma","Gyro sensitivity","Enable gyroscope look","OK","Cancel","no gyroscope","Volumes","Display","Controls","Invert gyro up/down","Left stick sensitivity","Right stick sensitivity","60 FPS (experimental)"};
         }
     }
     private TextView text(String caption,int size) {
@@ -141,7 +145,7 @@ final class SettingsOverlay {
             public void onStopTrackingTouch(SeekBar bar){}
         });
     }
-    private Switch gyroToggle(LinearLayout rows,int target,String caption,boolean checked) {
+    private Switch toggle(LinearLayout rows,int target,String caption,boolean checked,boolean enabled) {
         LinearLayout row=row(rows);
         TextView label=text(caption,TEXT_SP);label.setPadding(0,0,dp(8),0);
         row.addView(label,new LinearLayout.LayoutParams(0,-2,1));
@@ -152,7 +156,7 @@ final class SettingsOverlay {
         toggle.setPadding(0,0,0,0);toggle.setMinHeight(0);toggle.setMinimumHeight(0);
         toggle.setId(View.generateViewId());label.setLabelFor(toggle.getId());
         toggle.setContentDescription(caption);toggle.setFocusableInTouchMode(true);
-        toggle.setEnabled(activity.motionAvailable());toggle.setChecked(checked);
+        toggle.setEnabled(enabled);toggle.setChecked(checked);
         toggle.setOnFocusChangeListener((v,focused)->{if(focused)selected=target;});
         row.addView(toggle,new LinearLayout.LayoutParams(-2,dp(48)));
         return toggle;
@@ -162,7 +166,7 @@ final class SettingsOverlay {
         activity.releaseGameKeys();
         stickLookMask=nativeLookSticks();
         System.arraycopy(values,0,original,0,values.length);originalGyro=gyroEnabled;
-        originalGyroInvert=gyroInvertPitch;
+        originalGyroInvert=gyroInvertPitch;originalSixtyFps=sixtyFps;
         nativeOpen(true);activity.settingsVisibility(true);
         String[] labels=strings();
         root=new FrameLayout(activity);root.setBackgroundColor(Color.TRANSPARENT);root.setClickable(true);
@@ -191,11 +195,13 @@ final class SettingsOverlay {
         for(int i=0;i<3;i++)slider(rows,i,labels[i+1]);
         heading(rows,labels[12]);
         for(int i=3;i<5;i++)slider(rows,i,labels[i+1]);
+        frameRateSwitch=toggle(rows,FRAME_RATE,labels[17],sixtyFps,true);
+        frameRateSwitch.setOnCheckedChangeListener((v,checked)->{sixtyFps=checked;apply();});
         heading(rows,labels[13]);
         boolean available=activity.motionAvailable();
-        gyroSwitch=gyroToggle(rows,GYRO_TOGGLE,labels[7]+(available?"":" ("+labels[10]+")"),gyroEnabled);
+        gyroSwitch=toggle(rows,GYRO_TOGGLE,labels[7]+(available?"":" ("+labels[10]+")"),gyroEnabled,available);
         gyroSwitch.setOnCheckedChangeListener((v,checked)->{gyroEnabled=checked && available;apply();});
-        gyroInvertSwitch=gyroToggle(rows,GYRO_INVERT,labels[14],gyroInvertPitch);
+        gyroInvertSwitch=toggle(rows,GYRO_INVERT,labels[14],gyroInvertPitch,available);
         gyroInvertSwitch.setOnCheckedChangeListener((v,checked)->{gyroInvertPitch=checked;apply();});
         slider(rows,5,labels[6]);
         slider(rows,6,labels[15]);
@@ -226,10 +232,10 @@ final class SettingsOverlay {
             SharedPreferences.Editor e=prefs.edit();
             for(int i=0;i<values.length;i++)e.putInt(KEYS[i],values[i]);
             e.putBoolean("gyro_aim",gyroEnabled);
-            e.putBoolean("gyro_invert_pitch",gyroInvertPitch);e.apply();
+            e.putBoolean("gyro_invert_pitch",gyroInvertPitch);e.putBoolean("sixty_fps",sixtyFps);e.apply();
         } else {
             System.arraycopy(original,0,values,0,values.length);gyroEnabled=originalGyro;
-            gyroInvertPitch=originalGyroInvert;apply();
+            gyroInvertPitch=originalGyroInvert;sixtyFps=originalSixtyFps;apply();
         }
         parent.removeView(root);root=null;nativeOpen(false);activity.settingsVisibility(false);
     }
@@ -239,6 +245,7 @@ final class SettingsOverlay {
         HaloPort.nativeVolumes(values[0],values[1],values[2]);nativeDisplay(values[3],values[4]);
         activity.motionSettings(gyroEnabled,values[5],gyroInvertPitch);
         nativeSticks(values[6],values[7]);
+        nativeFrameRate(sixtyFps);
     }
     private void direction(int key){
         if(key==KeyEvent.KEYCODE_DPAD_UP || key==KeyEvent.KEYCODE_DPAD_DOWN){
@@ -246,11 +253,12 @@ final class SettingsOverlay {
             int next=selected+step;
             while(next>=0 && next<targets.length && !targets[next].isEnabled())next+=step;
             if(next>=0 && next<targets.length)selected=next;
-        } else if(selected<GYRO_TOGGLE || (selected>=GYRO_SLIDER && selected<=RIGHT_STICK)){
+        } else if(selected<FRAME_RATE || (selected>=GYRO_SLIDER && selected<=RIGHT_STICK)){
             int index=selected>=GYRO_SLIDER?selected-GYRO_SLIDER+5:selected;
             int delta=key==KeyEvent.KEYCODE_DPAD_LEFT?-5:5;
             sliders[index].setProgress(sliders[index].getProgress()+delta);
-        } else if(selected==GYRO_TOGGLE)gyroSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
+        } else if(selected==FRAME_RATE)frameRateSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
+        else if(selected==GYRO_TOGGLE)gyroSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
         else if(selected==GYRO_INVERT)gyroInvertSwitch.setChecked(key==KeyEvent.KEYCODE_DPAD_RIGHT);
         else selected=key==KeyEvent.KEYCODE_DPAD_LEFT?OK:CANCEL;
         targets[selected].requestFocus();
@@ -263,7 +271,7 @@ final class SettingsOverlay {
         if(key==KeyEvent.KEYCODE_BUTTON_B || key==KeyEvent.KEYCODE_BACK || key==KeyEvent.KEYCODE_ESCAPE){close(false);return true;}
         if(key>=KeyEvent.KEYCODE_DPAD_UP && key<=KeyEvent.KEYCODE_DPAD_RIGHT)direction(key);
         else if((key==KeyEvent.KEYCODE_BUTTON_A || key==KeyEvent.KEYCODE_DPAD_CENTER || key==KeyEvent.KEYCODE_ENTER) && event.getRepeatCount()==0){
-            if(selected==GYRO_TOGGLE || selected==GYRO_INVERT || selected>=OK)targets[selected].performClick();
+            if(selected==FRAME_RATE || selected==GYRO_TOGGLE || selected==GYRO_INVERT || selected>=OK)targets[selected].performClick();
             else{selected=OK;targets[selected].requestFocus();}
         }
         return true;

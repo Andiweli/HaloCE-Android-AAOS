@@ -152,22 +152,22 @@ def main():
     final SeekBar[] sliders=new SeekBar[KEYS.length];
     final View[] targets=new View[CANCEL+1],stickRows=new View[2];
     final int[] values=new int[KEYS.length],original=new int[KEYS.length];
-    Switch gyroSwitch,gyroInvertSwitch;
-    boolean gyroEnabled,originalGyro,gyroInvertPitch,originalGyroInvert,suspended;
+    Switch gyroSwitch,gyroInvertSwitch,frameRateSwitch;
+    boolean gyroEnabled,originalGyro,gyroInvertPitch,originalGyroInvert,sixtyFps,originalSixtyFps,suspended;
     int selected,stickLookMask,applyCount;
     long lastMotion;
     FrameLayout root;
     boolean isOpen(){return root!=null;}
     void apply(){applyCount++;}
     int dp(int value){return value;}
-    String[] strings(){String[] labels=new String[17];java.util.Arrays.fill(labels,"caption");return labels;}
+    String[] strings(){String[] labels=new String[18];java.util.Arrays.fill(labels,"caption");return labels;}
     TextView text(String caption,int size){return new TextView(activity);}
     void heading(LinearLayout rows,String caption){rows.addView(text(caption,14));}
 '''
     fixture += block(overlay, "private final Runnable refreshStickRoles=", True)
     for marker in ("private boolean sliderEnabled(", "private void refreshStickSliders(",
                    "private void direction(", "private LinearLayout row(", "private void slider(",
-                   "private Switch gyroToggle(", "void show(", "void close(", "void suspend(", "void resume("):
+                   "private Switch toggle(", "void show(", "void close(", "void suspend(", "void resume("):
         fixture += block(overlay, marker)
     fixture += r'''
     OverlayStickRefreshCheck(){
@@ -195,18 +195,21 @@ def main():
             check(sliders[i+6].getProgress()==50&&values[i+6]==100);
         }
         check(applyCount==0);
+        /* 60 FPS: the display section's last row, after gamma, without a gyroscope too */
+        check(targets[FRAME_RATE]==frameRateSwitch&&frameRateSwitch.isEnabled());
+        check(rows.children.get(7)==frameRateSwitch.parent&&rows.children.get(6)==sliders[4].parent.parent);
     }
     public static void main(String[] args){
         OverlayStickRefreshCheck x=new OverlayStickRefreshCheck();x.checkMask(RIGHT_LOOK);
         x.selected=RIGHT_STICK;
         nativeMask=LEFT_LOOK;x.refreshStickRoles.run();x.checkMask(LEFT_LOOK);
         check(x.selected==OK&&x.root.pending==x.refreshStickRoles&&x.root.delay==100);
-        x.selected=4;x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==LEFT_STICK);
+        x.selected=FRAME_RATE;x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==LEFT_STICK);
         nativeMask=RIGHT_LOOK;x.refreshStickRoles.run();x.checkMask(RIGHT_LOOK);
         check(x.selected==RIGHT_STICK);
         nativeMask=LEFT_LOOK|RIGHT_LOOK;x.refreshStickRoles.run();x.checkMask(3);
         nativeMask=0;x.refreshStickRoles.run();x.checkMask(0);check(x.selected==OK);
-        x.selected=4;x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==OK);
+        x.selected=FRAME_RATE;x.direction(KeyEvent.KEYCODE_DPAD_DOWN);check(x.selected==OK);
         x.activity.gyro=true;check(x.sliderEnabled(5));
         FrameLayout oldRoot=x.root;x.close(true);
         check(!x.isOpen()&&oldRoot.pending==null&&oldRoot.removed==1);

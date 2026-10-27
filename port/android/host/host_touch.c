@@ -194,6 +194,14 @@ JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeSticks(JNIEnv 
     settings_right_stick=fmaxf(50,fminf(150,right))/100.f;
     pthread_mutex_unlock(&lock);
 }
+/* the settings' 60 FPS switch; the game asks once a frame (sdl_platform.c) */
+static int settings_sixty_fps;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeFrameRate(JNIEnv *e,jclass c,jboolean sixty) {
+    pthread_mutex_lock(&lock); settings_sixty_fps=sixty!=0; pthread_mutex_unlock(&lock);
+}
+int host_settings_sixty_fps(void) {
+    pthread_mutex_lock(&lock); int sixty=settings_sixty_fps; pthread_mutex_unlock(&lock); return sixty;
+}
 void host_settings_sticks(float *left,float *right) {
     pthread_mutex_lock(&lock);*left=settings_left_stick;*right=settings_right_stick;pthread_mutex_unlock(&lock);
 }
