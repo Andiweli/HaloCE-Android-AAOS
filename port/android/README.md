@@ -147,7 +147,9 @@ with the positions on the Xbox controller:
 Hold SELECT (Create, back) for half a second to open the settings of the
 app. A short press is the back button of the Xbox controller. Controllers
 without SELECT (the NVIDIA Shield controller, TV remotes) use their Back
-button the same way.
+button the same way. At the main menu, B (and the back gesture of Android)
+quits the app; the back button does not, so a press of SELECT too short to
+open the settings never quits (`source/interface/ui_widget.c`).
 
 The controller gets the rumble. The back gesture of Android is the B
 button. A Bluetooth or USB keyboard operates as on Linux. The screen does

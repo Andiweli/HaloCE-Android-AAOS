@@ -6423,12 +6423,14 @@ static void widget_instance_process_one_event_recursive(
 		event->data.button.value = 1;
 	}
 #ifdef HALO_ANDROID
-    /* Only the active main-menu root may exit. Submenu BACK continues through
-       the original widget stack; held buttons and releases never exit. */
+    /* Only the active main-menu root may exit, and only with B (Android's
+       back gesture is B). BACK is the short press of SELECT, held to open the
+       settings (HaloActivity.java): a press too short for them must not quit.
+       Submenus continue through the original widget stack; held buttons and
+       releases never exit. */
     if(event_for_this_widget && !widget->parent && android_main_menu_root(definition) &&
        event->type==_event_type_button && event->data.button.value==1 &&
-       (event->data.button.index==_widget_event_b_button ||
-        event->data.button.index==_widget_event_back_button)) {
+       event->data.button.index==_widget_event_b_button) {
         extern void main_android_request_exit(void);
         main_android_request_exit();*return_widget_deleted=FALSE;return;
     }
