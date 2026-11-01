@@ -152,8 +152,15 @@ quits the app; the back button does not, so a press of SELECT too short to
 open the settings never quits (`source/interface/ui_widget.c`).
 
 The controller gets the rumble. The back gesture of Android is the B
-button. A Bluetooth or USB keyboard operates as on Linux. The screen does
-not accept touch input.
+button. A Bluetooth or USB keyboard operates as on Linux.
+
+Without a controller, the screen shows touch controls (RetroTouch). They
+hide while a controller is connected: a physical device with a gamepad or
+joystick source that also has a stick or a D-pad on axes
+(`ControllerPresence.java`). Phones list more devices as gamepads, such as
+the fingerprint sensors of Xiaomi, Redmi and Poco phones (`uinput-fpc`,
+`uinput-goodix`), which have only keys and leave the touch controls shown.
+Logcat and the diagnostic file name each gamepad device and the choice.
 
 Some handhelds (Anbernic's among them) have L2 and R2 keys instead of
 analog triggers. SDL maps them to no trigger when it does not know the
@@ -398,6 +405,5 @@ assembly of the port is necessary:
   The Xbox data window is separately placed in free low-address memory.
   Existing Android mappings are never overwritten; startup fails with a
   diagnostic if no suitable address is available.
-- The game does not accept touch input. Use a controller or a keyboard.
 - Kernels with 16 KB pages (a developer option of Android 15) do not
   operate. The Xbox memory uses 4 KB pages.

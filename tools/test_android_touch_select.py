@@ -146,9 +146,9 @@ stubs = {
         public int getRepeatCount(){return repeat;}public int getDeviceId(){return 1;}
         public boolean isCanceled(){return canceled;}
     }''',
-    "com/ast/retrotouch/RetroTouchControllers": '''public class RetroTouchControllers {
+    "com/halo/decomp/ControllerPresence": '''public class ControllerPresence {
         public static boolean connected;
-        public static boolean isControllerConnected(){return connected;}
+        public static boolean isControllerConnected(android.content.Context context){return connected;}
     }''',
     "com/ast/retrotouch/RetroTouchView": '''public class RetroTouchView extends android.view.View {
         public static RetroTouchView last;
@@ -220,10 +220,10 @@ class TouchSelectTest {
         press(v,true);v.setEditing(true);Handler.advance(600);check(a.settings.opens==1,"editor release removes timer");
         press(v,true);Handler.advance(600);check(a.settings.opens==1,"editing cannot open settings");
         v.setEditing(false);HaloPort.actions.clear();
-        press(v,true);RetroTouchControllers.connected=true;Handler.advance(600);
+        press(v,true);ControllerPresence.connected=true;Handler.advance(600);
         check(a.settings.opens==1 && v.visibility==View.GONE,"controller connection cancels touch hold");
         press(v,true);Handler.advance(600);check(a.settings.opens==1,"hidden touch control remains blocked");
-        RetroTouchControllers.connected=false;Handler.advance(100);
+        ControllerPresence.connected=false;Handler.advance(100);
         press(v,true);HaloPort.engineMode=1;Handler.advance(600);
         check(a.settings.opens==1 && v.getMode()==RetroTouchMode.NAVIGATION,"mode switch cancels pending hold");
         press(v,true);Handler.advance(500);check(a.settings.opens==2,"navigation layout also opens overlay");

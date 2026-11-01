@@ -104,7 +104,7 @@ final class HaloPort {
     void resume() { if(active)return; active=true;updateControllerPresence();handler.post(poll); }
     void suspend() { active=false;handler.removeCallbacks(poll);activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset(); }
     private void updateControllerPresence() {
-        boolean connected = RetroTouchControllers.isControllerConnected();
+        boolean connected = ControllerPresence.isControllerConnected(activity);
         if (connected != controllerConnected) {
             activity.cancelTouchSelect();
             controllerConnected = connected;
