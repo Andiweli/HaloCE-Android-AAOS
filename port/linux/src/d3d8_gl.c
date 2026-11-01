@@ -4724,6 +4724,9 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer_get(back_buffer->target.texture, 0));
+		/* Creating the source framebuffer binds both targets. A cached
+		map can reach this first blit without a loading-screen draw. */
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		/* row 0 of the render target is the top of the picture */
 #ifdef HALO_ANDROID
         { extern int host_settings_present(unsigned int texture,int width,int height);
