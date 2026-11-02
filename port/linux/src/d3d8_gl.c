@@ -4802,6 +4802,10 @@ red and green); the world where the weapon is not is drawn again from the
 copy, each pixel gathering twelve taps within its blur. */
 #define DOF_LOW_LOG2 (-6.64f)
 #define DOF_RANGE_LOG2 18.64f
+/* in world units (a tenth of a Halo unit is a foot): sharp up to 1.3 times
+the focus and 1.5 more, fully blurred at twice that and 6 more (dof_blur);
+the widest blur a hundredth of the screen's height and a tenth more */
+#define DOF_RADIUS 0.011f
 
 static struct
 {
@@ -4870,8 +4874,8 @@ static const char dof_blur[] =
 	"float focus;\n"
 	"float blur(float z)\n"
 	"{\n"
-	"\tfloat start = max(focus * 1.5, focus + 3.0);\n"
-	"\treturn smoothstep(start, start * 2.5 + 20.0, z);\n"
+	"\tfloat start = focus * 1.3 + 1.5;\n"
+	"\treturn smoothstep(start, start * 2.0 + 6.0, z);\n"
 	"}\n"
 	"void main()\n"
 	"{\n"
@@ -4886,9 +4890,9 @@ static const char dof_blur[] =
 	"\t}\n"
 	"\tvec3 sum = sharp.rgb;\n"
 	"\tfloat total = 1.0;\n"
-	"\tfor (int index = 0; index < 12; index++)\n"
+	"\tfor (int index = 0; index < 16; index++)\n"
 	"\t{\n"
-	"\t\tfloat reach = sqrt((float(index) + 0.5) / 12.0);\n"
+	"\t\tfloat reach = sqrt((float(index) + 0.5) / 16.0);\n"
 	"\t\tfloat angle = float(index) * 2.39996323;\n"
 	"\t\tvec2 at = uv + vec2(cos(angle), sin(angle)) * reach * radius * amount;\n"
 	"\t\tvec4 tap = texture(color_texture, at);\n"
@@ -5057,6 +5061,17 @@ static void dof_bind_textures(GLuint focus)
 
 /* the menu's depth of field, then its FXAA, on the world as render_window
 has drawn it so far (before the lens flares, the HUD and the menus) */
+/* Logcat once each time what happens changes: drawn, or why not */
+static void post_process_say(int state, const char *what, long width, long height)
+{
+	static int said = -1;
+
+	if (state == said)
+		return;
+	said = state;
+	platform_log("depth of field / FXAA: %s (%ldx%ld)", what, width, height);
+}
+
 void xgpu_post_process(float z_near, float z_far)
 {
 	struct render_target_entry *color, *depth;
@@ -5074,7 +5089,11 @@ void xgpu_post_process(float z_near, float z_far)
 	color = render_target_get(device.render_target);
 	depth = render_target_get(device.depth_stencil);
 	if (!color || color->target.depth || !color->screen)
+	{
+		post_process_say(1, "not on the screen's target", color ? (long)color->target.width : 0,
+			color ? (long)color->target.height : 0);
 		return;
+	}
 	if (!depth || !depth->target.depth || !depth->screen ||
 		color->target.gl_width != depth->target.gl_width || color->target.gl_height != depth->target.gl_height)
 		blur = FALSE;
@@ -5087,7 +5106,12 @@ void xgpu_post_process(float z_near, float z_far)
 	if (!has_depth)
 		blur = FALSE;
 	if (!blur && !smooth)
+	{
+		post_process_say(2, "no depth to focus with", (long)width, (long)height);
 		return;
+	}
+	post_process_say(blur && smooth ? 3 : blur ? 4 : 5, blur && smooth ? "depth of field and FXAA drawn" :
+		blur ? "depth of field drawn" : "FXAA drawn", (long)width, (long)height);
 	game_framebuffer = gl_state.framebuffer;
 	if (!dof_prepare(width, height))
 		return;
@@ -5145,7 +5169,7 @@ void xgpu_post_process(float z_near, float z_far)
 		glStencilFunc(GL_EQUAL, 0, 1);
 		glUseProgram(dof.blur_program);
 		glUniform2f(dof.blur_clip, z_near, z_far);
-		glUniform2f(dof.blur_radius, 0.007f * (float)height / (float)width, 0.007f);
+		glUniform2f(dof.blur_radius, DOF_RADIUS * (float)height / (float)width, DOF_RADIUS);
 		dof_bind_textures(dof.focus[next]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		glDisable(GL_STENCIL_TEST);
