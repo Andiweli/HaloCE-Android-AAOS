@@ -49,6 +49,9 @@ and entry points used below that ES lacks */
 #ifndef GL_TEXTURE_MAX_ANISOTROPY_EXT
 #define GL_TEXTURE_MAX_ANISOTROPY_EXT 0x84fe
 #endif
+#ifndef GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT
+#define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT 0x84ff
+#endif
 #ifndef GL_TEXTURE_BORDER_COLOR
 #define GL_TEXTURE_BORDER_COLOR 0x1004
 #endif
@@ -2267,10 +2270,42 @@ static GLenum address_mode(DWORD mode)
 	}
 }
 
+/* display.anisotropic_filtering: the most texels along a pixel's footprint
+that a texture with mip levels is sampled with where the game filters it
+linearly, 0 or 1 for the game's own filtering. The Xbox game asks for none
+(it never sets D3DTEXF_ANISOTROPIC or D3DTSS_MAXANISOTROPY), so the floors,
+walls and terrain seen at a grazing angle blur toward their smaller mip
+levels. At most the GPU's most (16 on the desktop's), and none on GLES
+without GL_EXT_texture_filter_anisotropic. Read once. */
+static DWORD anisotropic_filtering(void)
+{
+	static long level = -1;
+
+	if (level < 0)
+	{
+		GLint maximum = 1;
+
+		level = config_integer("display.anisotropic_filtering");
+#ifdef HALO_ANDROID
+		if (xgpu_capabilities.anisotropy)
+			glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximum);
+#else
+		glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &maximum);
+#endif
+		if (level > (long)maximum)
+			level = (long)maximum;
+		if (level < 1)
+			level = 1;
+		platform_log("anisotropic filtering: %ldx (the GPU's most %dx)", level, (int)maximum);
+	}
+	return (DWORD)level;
+}
+
 /* hires: a high-res HUD texture (hud_hires.h), drawn smaller than it is, so
 filtered and from its mip levels whatever the game asks: the HUD's meters are
-point sampled for one player, to keep the Xbox bitmaps' texels sharp */
-static void configure_sampler(int stage, BOOL mipmapped, BOOL hires)
+point sampled for one player, to keep the Xbox bitmaps' texels sharp.
+rendered: a render target the game draws into */
+static void configure_sampler(int stage, BOOL mipmapped, BOOL hires, BOOL rendered)
 {
 	/* the texture stage state each sampler was last configured from */
 	static DWORD configured[D3DTSS_MAXSTAGES][11];
@@ -2282,11 +2317,11 @@ static void configure_sampler(int stage, BOOL mipmapped, BOOL hires)
 	DWORD mag_filter = hires ? D3DTEXF_LINEAR : state[D3DTSS_MAGFILTER];
 	DWORD maximum_mip_level = hires ? 0 : state[D3DTSS_MAXMIPLEVEL];
 	DWORD lod_bias = hires ? 0 : state[D3DTSS_MIPMAPLODBIAS];
+	DWORD maximum_anisotropy = state[D3DTSS_MAXANISOTROPY];
 	GLenum minification;
 	float border[4];
 	DWORD inputs[11];
 
-	inputs[0] = min_filter;
 	inputs[1] = mip_filter;
 	inputs[2] = mag_filter;
 	inputs[3] = state[D3DTSS_ADDRESSU];
@@ -2294,7 +2329,18 @@ static void configure_sampler(int stage, BOOL mipmapped, BOOL hires)
 	inputs[5] = state[D3DTSS_ADDRESSW];
 	inputs[6] = lod_bias;
 	inputs[7] = maximum_mip_level;
-	inputs[8] = state[D3DTSS_MAXANISOTROPY];
+	/* (display.anisotropic_filtering, over the game's linear filtering of
+	the maps' textures with mip levels; not of what the game renders, the
+	water's ripples, whose finer levels seen far off are noise) */
+	if (!hires && mipmapped && !rendered && mip_filter != D3DTEXF_NONE &&
+		(min_filter == D3DTEXF_LINEAR || min_filter == D3DTEXF_ANISOTROPIC) && anisotropic_filtering() > 1)
+	{
+		min_filter = D3DTEXF_ANISOTROPIC;
+		if (maximum_anisotropy < anisotropic_filtering())
+			maximum_anisotropy = anisotropic_filtering();
+	}
+	inputs[0] = min_filter;
+	inputs[8] = maximum_anisotropy;
 	inputs[9] = state[D3DTSS_BORDERCOLOR];
 	inputs[10] = hires;
 	if (configured_valid[stage] && !memcmp(configured[stage], inputs, sizeof(inputs)))
@@ -2319,7 +2365,7 @@ static void configure_sampler(int stage, BOOL mipmapped, BOOL hires)
 	glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, (float)maximum_mip_level);
 	if (xgpu_capabilities.anisotropy)
 		glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-			(min_filter == D3DTEXF_ANISOTROPIC && state[D3DTSS_MAXANISOTROPY] > 1) ? (float)state[D3DTSS_MAXANISOTROPY] : 1.0f);
+			(min_filter == D3DTEXF_ANISOTROPIC && maximum_anisotropy > 1) ? (float)maximum_anisotropy : 1.0f);
 	if (xgpu_capabilities.border_clamp)
 	{
 		color_to_vec4(state[D3DTSS_BORDERCOLOR], border);
@@ -2329,7 +2375,7 @@ static void configure_sampler(int stage, BOOL mipmapped, BOOL hires)
 	glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, dword_to_float(lod_bias));
 	glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, (float)maximum_mip_level);
 	glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY,
-		(min_filter == D3DTEXF_ANISOTROPIC && state[D3DTSS_MAXANISOTROPY] > 1) ? (float)state[D3DTSS_MAXANISOTROPY] : 1.0f);
+		(min_filter == D3DTEXF_ANISOTROPIC && maximum_anisotropy > 1) ? (float)maximum_anisotropy : 1.0f);
 	color_to_vec4(state[D3DTSS_BORDERCOLOR], border);
 	glSamplerParameterfv(sampler, GL_TEXTURE_BORDER_COLOR, border);
 #endif
@@ -2499,7 +2545,7 @@ static void bind_textures(struct nv2a_pixel_shader_key *key, float texture_scale
 			gl_targets[stage] = gl_target;
 			gl_textures[stage] = gl_texture;
 			state_sampler(stage, device.samplers[stage]);
-			configure_sampler(stage, description.levels > 1, description.hires);
+			configure_sampler(stage, description.levels > 1, description.hires, target != NULL);
 			if (stage == 0)
 				key->coverage_alpha = description.hires_coverage != FALSE;
 			key->sampler_type[stage] = gl_target == GL_TEXTURE_CUBE_MAP ? _xgpu_sampler_cube :

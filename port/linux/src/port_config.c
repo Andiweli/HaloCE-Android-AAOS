@@ -73,6 +73,11 @@ static const struct config_setting config_settings[] =
 	{ "display.screen_width", _config_integer, "0", "HALO_SCREEN_WIDTH", _environment_value, _platform_android,
 		"Columns of the 480-line picture: 0 for the display's shape, 640 for the\n"
 		"Xbox's 4:3." },
+	{ "display.anisotropic_filtering", _config_integer, "4", "HALO_ANISOTROPIC_FILTERING", _environment_value,
+		_platform_all,
+		"Sharpen textures seen at a grazing angle (floors, walls, terrain), which\n"
+		"the Xbox did not: 2, 4, 8 or 16 times; 0 filters as the Xbox did. 4 keeps\n"
+		"most of 16's sharpness at less cost on slower GPUs." },
 	{ "display.vsync", _config_boolean, "true", "HALO_NO_VSYNC", _environment_set_is_false, _platform_all,
 		"Wait for the display between frames; false draws as fast as possible." },
 	{ "display.interpolation", _config_boolean, "true", "HALO_INTERPOLATION", _environment_value, _platform_all,
