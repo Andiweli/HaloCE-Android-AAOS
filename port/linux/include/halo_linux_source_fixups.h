@@ -35,8 +35,8 @@ float render_interpolation_fraction(void);
 struct real_matrix4x3 *render_interpolation_object_node_matrices(long object_index);
 struct observer_result const *render_interpolation_camera(short local_player_index,
 	struct observer_result const *observer);
-void render_interpolation_first_person(short local_player_index, struct real_matrix4x3 *node_matrices,
-	short node_count, struct render_camera const *camera);
+void render_interpolation_first_person(short local_player_index, long weapon_index, long animation_graph_index,
+	struct real_matrix4x3 *node_matrices, short node_count, struct render_camera const *camera);
 float render_interpolation_game_time_sec(long ticks);
 
 /* the width of the screen the game draws, 480 lines tall: the device's or

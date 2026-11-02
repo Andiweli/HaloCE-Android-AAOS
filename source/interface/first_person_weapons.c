@@ -1377,6 +1377,8 @@ static void first_person_weapon_build_node_matrices(
 		/* the pose between the last two ticks (render_interpolation.c) */
 		render_interpolation_first_person(
 			local_player_index,
+			first_person_weapon->weapon_index,
+			weapon_definition->weapon.interface_definition.first_person_animations.index,
 			first_person_weapon->node_matrices,
 			(short)animation_graph->nodes.count,
 			&render.camera);
