@@ -274,8 +274,15 @@ JNIEXPORT jint JNICALL Java_com_halo_decomp_SettingsOverlay_nativeMsaaLimit(JNIE
 int host_settings_msaa(void) {
     pthread_mutex_lock(&lock); int samples=settings_msaa; pthread_mutex_unlock(&lock); return samples;
 }
+/* the strength in per cent while it is on, 0 while off */
+static int settings_depth_of_field_strength=50;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeDepthOfFieldStrength(JNIEnv *e,jclass c,jint percent) {
+    pthread_mutex_lock(&lock); settings_depth_of_field_strength=percent<10?10:percent>200?200:percent; pthread_mutex_unlock(&lock);
+}
 int host_settings_depth_of_field(void) {
-    pthread_mutex_lock(&lock); int on=settings_depth_of_field; pthread_mutex_unlock(&lock); return on;
+    pthread_mutex_lock(&lock);
+    int strength=settings_depth_of_field?settings_depth_of_field_strength:0;
+    pthread_mutex_unlock(&lock); return strength;
 }
 void host_settings_msaa_limit(int samples) {
     pthread_mutex_lock(&lock); settings_msaa_limit=samples<0?0:samples; pthread_mutex_unlock(&lock);

@@ -87,7 +87,7 @@ class KeyEvent {
 public class MenuCheck {
 ''' + constants + '\n' + '\n'.join(method(m) for m in (
     'static int action(', 'static int stepped(', 'static int toggled(', 'static int filter(',
-    'static int msaa(', 'static boolean msaaOffered(')) + '\n' + fps_methods + r'''
+    'static int msaa(', 'static boolean msaaOffered(', 'static int dofStrength(')) + '\n' + fps_methods + r'''
     static void check(boolean condition,String what){if(!condition)throw new AssertionError(what);}
     public static void main(String[] args){
         check(action(KeyEvent.KEYCODE_VOLUME_UP)==PASS && action(KeyEvent.KEYCODE_VOLUME_MUTE)==PASS,"volume keys stay Android's");
@@ -124,6 +124,9 @@ public class MenuCheck {
         check(line("%1$d FPS (Spiel)","%1$d FPS (Spiel) · %2$d FPS (Bild)",true,30,60).equals("30 FPS (Spiel) · 60 FPS (Bild)"),"60 FPS");
         check(hz(59.94f).equals(" · 60 Hz") && hz(0).equals(""),"the screen's rate");
         check(size(2400,1080).equals(" · 2400×1080") && size(0,0).equals(""),"the picture's size");
+        check(dofStrength(50)==50 && dofStrength(200)==200 && dofStrength(10)==10,"the depth of field's strengths");
+        check(dofStrength(0)==DOF_DEFAULT && dofStrength(210)==DOF_DEFAULT && dofStrength(55)==DOF_DEFAULT && DOF_DEFAULT==50,
+              "else the default 50 %");
         System.out.println("menu java ok");
     }
 }

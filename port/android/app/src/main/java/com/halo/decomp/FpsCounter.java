@@ -34,6 +34,7 @@ final class FpsCounter {
 
     private final HaloActivity activity;
     private final TextView view;
+    private final FrameLayout frame;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final int[] counters = new int[4];
     private boolean on, paused, sixty;
@@ -53,8 +54,17 @@ final class FpsCounter {
         view.setFocusable(false);
         view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         view.setVisibility(View.GONE);
-        parent.addView(view, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
+        // in a frame of its own over the whole screen: SDL's layout is a RelativeLayout, which put the
+        // line at the top left (device test of the project owner, 02.11.2026); the frame takes no touch
+        frame = new FrameLayout(activity);
+        frame.setClickable(false);
+        frame.setFocusable(false);
+        frame.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        frame.addView(view, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
             FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT));
+        frame.setVisibility(View.GONE);
+        parent.addView(frame, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     /** The menu's switch and the 60 FPS switch (whose pictures it counts as well). */
@@ -73,10 +83,10 @@ final class FpsCounter {
         boolean shown = on && !paused;
         main.removeCallbacks(tick);
         since = -1;
-        view.setVisibility(shown ? View.VISIBLE : View.GONE);
+        frame.setVisibility(shown ? View.VISIBLE : View.GONE);
         if (!shown) return;
         view.setText(activity.getString(R.string.menu_fps_none) + hz(rate()) + size(counters[2], counters[3]));
-        view.bringToFront();
+        frame.bringToFront();
         main.post(tick);
     }
 

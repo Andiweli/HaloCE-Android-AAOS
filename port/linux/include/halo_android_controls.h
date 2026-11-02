@@ -22,7 +22,7 @@ int host_settings_texture_filter(void);
 int host_settings_msaa(void);
 /* The most samples the GPU renders with (0: no anti-aliasing), said once. */
 void host_settings_msaa_limit(int samples);
-/* Nonzero: the menu's depth of field. */
+/* The menu's depth of field: its strength in per cent (10 to 200), 0 while off. */
 int host_settings_depth_of_field(void);
 /* The menu's FPS display: a picture shown (at the size it was drawn), a frame the game advanced in. */
 void host_settings_picture(int width, int height);

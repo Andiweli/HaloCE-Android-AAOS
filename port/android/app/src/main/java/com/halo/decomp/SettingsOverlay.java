@@ -44,6 +44,7 @@ final class SettingsOverlay {
     static native int nativeCheatResult(int action);
     static native void nativeMsaa(int samples);
     static native void nativeDepthOfField(boolean on);
+    static native void nativeDepthOfFieldStrength(int percent);
     static native int nativeMsaaLimit();
     static native void nativeFxaa(boolean on);
     static native void nativeCounters(int[] out);
@@ -65,6 +66,14 @@ final class SettingsOverlay {
     static final int DEFAULT_FILTER=4;
     // MSAA's choices (samples; 0 off), off by default
     static final int[] MSAA={0,2,4};
+    // the depth of field's strength in per cent, in steps of 10 (wish of the project owner, 02.11.2026: the
+    // first build blurred too much; 100 % is that one, 50 % the default)
+    static final int DOF_MIN=10, DOF_MAX=200, DOF_STEP=10, DOF_DEFAULT=50;
+    /** A stored strength within the range and on a step, else the default. */
+    static int dofStrength(int stored) {
+        if(stored<DOF_MIN || stored>DOF_MAX || stored%DOF_STEP!=0) return DOF_DEFAULT;
+        return stored;
+    }
     static final String SOURCE_URL="https://github.com/Andiweli/HaloCE-Android-AAOS";
     // the cheats: the switches' bits and the buttons as halo_android_controls.h numbers them
     static final int CHEAT_HEALTH=1, CHEAT_AMMO=2, CHEAT_RELOAD=4, CHEAT_ONE_HIT=8, CHEAT_SWITCHES=15;
@@ -117,6 +126,7 @@ final class SettingsOverlay {
     private boolean sixtyFps;
     private int textureFilter, cheatBits, msaaSamples;
     private boolean depthOfField, fxaa, fpsDisplay;
+    private int dofStrength;
     private final FpsCounter fps;
     private FrameLayout root;
     private LinearLayout body;
@@ -151,6 +161,7 @@ final class SettingsOverlay {
         cheatBits=prefs.getInt("cheats",0)&CHEAT_SWITCHES;
         msaaSamples=msaa(prefs.getInt("msaa",0));
         depthOfField=prefs.getBoolean("depth_of_field",false);
+        dofStrength=dofStrength(prefs.getInt("depth_of_field_strength",DOF_DEFAULT));
         fxaa=prefs.getBoolean("fxaa",false);
         fpsDisplay=prefs.getBoolean("fps_display",false);
         fps=new FpsCounter(activity,parent);
@@ -160,6 +171,7 @@ final class SettingsOverlay {
         nativeCheats(cheatBits);
         nativeMsaa(msaaSamples);
         nativeDepthOfField(depthOfField);
+        nativeDepthOfFieldStrength(dofStrength);
         nativeFxaa(fxaa);
     }
     boolean isOpen(){return root!=null;}
@@ -227,10 +239,11 @@ final class SettingsOverlay {
     }
     /** A row of buttons in the choices' column, left-aligned with their buttons (CubeEvil4's labelledOptions(0));
      *  narrow, where the choices stack under their labels, across the whole width. */
-    private MenuLayout.Buttons optionsRow(){
+    private MenuLayout.Buttons optionsRow(){return optionsRow(1);}
+    private MenuLayout.Buttons optionsRow(int columns){
         MenuLayout.Columns outer=new MenuLayout.Columns(activity,170,640,true);
         outer.addView(new View(activity));
-        MenuLayout.Buttons buttons=new MenuLayout.Buttons(activity,1);
+        MenuLayout.Buttons buttons=new MenuLayout.Buttons(activity,columns);
         outer.addView(buttons);
         body.addView(outer);
         return buttons;
@@ -283,6 +296,38 @@ final class SettingsOverlay {
         }
     }
     /** A slider as a row: its label, the bar, its value in per cent; kept at once. */
+    /**
+     * A switch and, in the other half of the row, a slider of its own with its value in per cent: min, min + step
+     * ... max, kept as the caller keeps it. The slider stays usable while the switch is off, to set it first.
+     */
+    private void toggleWithSlider(String label,boolean on,Changed<Boolean> toggled,String sliderLabel,int value,int min,
+                                  int max,int step,Changed<Integer> moved){
+        MenuLayout.Buttons row=optionsRow(2);
+        toggle(row,label,on,toggled);
+        LinearLayout controls=row();
+        SeekBar bar=new SeekBar(activity);
+        TextView shown=text(value+" %",15,false);
+        shown.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);shown.setMinWidth(dp(56));
+        controls.addView(bar,new LinearLayout.LayoutParams(0,dp(48),1));
+        controls.addView(shown);
+        bar.setMax((max-min)/step);bar.setProgress((value-min)/step);bar.setKeyProgressIncrement(1);
+        bar.setContentDescription(sliderLabel);
+        bar.setProgressTintList(ColorStateList.valueOf(ACCENT));bar.setThumbTintList(ColorStateList.valueOf(ACCENT));
+        bar.setProgressBackgroundTintList(ColorStateList.valueOf(BORDER));
+        GradientDrawable ring=new GradientDrawable();ring.setColor(0);ring.setCornerRadius(dp(6));ring.setStroke(dp(2),INK);
+        StateListDrawable look=new StateListDrawable();
+        look.addState(new int[]{android.R.attr.state_focused},ring);
+        look.addState(new int[0],new GradientDrawable());
+        bar.setBackground(look);
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onProgressChanged(SeekBar b,int progress,boolean fromUser){
+                int now=min+progress*step;shown.setText(now+" %");moved.accept(now);
+            }
+            public void onStartTrackingTouch(SeekBar b){}
+            public void onStopTrackingTouch(SeekBar b){}
+        });
+        row.addButton(controls);
+    }
     private void slider(int label,int index){
         MenuLayout.Columns line=new MenuLayout.Columns(activity,170,520,false);
         line.addView(rowLabel(s(label)));
@@ -506,8 +551,11 @@ final class SettingsOverlay {
             textureFilter=level;nativeTextureFilter(level);prefs.edit().putInt("texture_filter",level).apply();
         });
         help(R.string.menu_texture_filter_help);
-        toggle(optionsRow(),s(R.string.menu_dof),depthOfField,on->{
+        // the switch half as wide, its strength beside it (wish of the project owner, 02.11.2026)
+        toggleWithSlider(s(R.string.menu_dof),depthOfField,on->{
             depthOfField=on;nativeDepthOfField(on);prefs.edit().putBoolean("depth_of_field",on).apply();
+        },s(R.string.menu_dof_strength),dofStrength,DOF_MIN,DOF_MAX,DOF_STEP,value->{
+            dofStrength=value;nativeDepthOfFieldStrength(value);prefs.edit().putInt("depth_of_field_strength",value).apply();
         });
         help(R.string.menu_dof_help);
     }
@@ -597,6 +645,9 @@ final class SettingsOverlay {
                 bar.setProgress(stepped(i,values[i],direction==View.FOCUS_LEFT?-1:1)-MIN[i]);
                 return;
             }
+            // a slider of its own (toggleWithSlider): a step of it
+            bar.setProgress(bar.getProgress()+(direction==View.FOCUS_LEFT?-1:1));
+            return;
         }
         View next=FocusFinder.getInstance().findNextFocus(root,focused,direction);
         if(next!=null)next.requestFocus(direction);

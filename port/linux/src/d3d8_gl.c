@@ -4804,9 +4804,11 @@ red and green); the world where the weapon is not is drawn again from the
 copy, each pixel gathering twelve taps within its blur. */
 #define DOF_LOW_LOG2 (-6.64f)
 #define DOF_RANGE_LOG2 18.64f
-/* in world units (a tenth of a Halo unit is a foot): sharp up to 1.3 times
-the focus and 1.5 more, fully blurred at twice that and 6 more (dof_blur);
-the widest blur a hundredth of the screen's height and a tenth more */
+/* in world units (a tenth of a Halo unit is a foot), at the menu's 100 %:
+sharp up to 1.3 times the focus and 1.5 more, fully blurred at twice that
+and 6 more (dof_blur); the widest blur a hundredth of the screen's height
+and a tenth more. The menu's strength s (0.1 to 2) widens the blur s times
+and brings where it starts and where it is full nearer by 1/s */
 #define DOF_RADIUS 0.011f
 
 static struct
@@ -4814,7 +4816,7 @@ static struct
 	BOOL failed, ready;
 	GLuint vertex_array;
 	GLuint mask_program, focus_program, blur_program, fxaa_program;
-	GLint focus_clip, focus_rate, blur_clip, blur_radius, fxaa_texel;
+	GLint focus_clip, focus_rate, blur_clip, blur_radius, blur_strength, fxaa_texel;
 	GLuint color, depth, framebuffer;
 	GLuint focus[2], focus_framebuffer[2];
 	int focus_current;
@@ -4873,11 +4875,12 @@ static const char dof_focus[] =
 
 static const char dof_blur[] =
 	"uniform vec2 radius;\n"
+	"uniform float strength;\n"
 	"float focus;\n"
 	"float blur(float z)\n"
 	"{\n"
-	"\tfloat start = focus * 1.3 + 1.5;\n"
-	"\treturn smoothstep(start, start * 2.0 + 6.0, z);\n"
+	"\tfloat start = focus * (1.0 + 0.3 / strength) + 1.5 / strength;\n"
+	"\treturn smoothstep(start, start * 2.0 + 6.0 / strength, z);\n"
 	"}\n"
 	"void main()\n"
 	"{\n"
@@ -5006,6 +5009,7 @@ static BOOL dof_prepare(GLsizei width, GLsizei height)
 		dof.focus_rate = glGetUniformLocation(dof.focus_program, "rate");
 		dof.blur_clip = glGetUniformLocation(dof.blur_program, "clip");
 		dof.blur_radius = glGetUniformLocation(dof.blur_program, "radius");
+		dof.blur_strength = glGetUniformLocation(dof.blur_program, "strength");
 		dof.fxaa_texel = glGetUniformLocation(dof.fxaa_program, "texel");
 		glGenVertexArrays(1, &dof.vertex_array);
 		glGenTextures(1, &dof.color);
@@ -5080,11 +5084,12 @@ void xgpu_post_process(float z_near, float z_far)
 	GLuint game_framebuffer;
 	GLsizei width, height;
 	BOOL has_depth, blur, smooth;
-	int next;
+	int next, strength;
 
 	if (dof.failed)
 		return;
-	blur = host_settings_depth_of_field() && z_near > 0.0f && z_far > z_near;
+	strength = host_settings_depth_of_field();
+	blur = strength > 0 && z_near > 0.0f && z_far > z_near;
 	smooth = host_settings_fxaa() != 0;
 	if (!blur && !smooth)
 		return;
@@ -5171,7 +5176,9 @@ void xgpu_post_process(float z_near, float z_far)
 		glStencilFunc(GL_EQUAL, 0, 1);
 		glUseProgram(dof.blur_program);
 		glUniform2f(dof.blur_clip, z_near, z_far);
-		glUniform2f(dof.blur_radius, DOF_RADIUS * (float)height / (float)width, DOF_RADIUS);
+		glUniform2f(dof.blur_radius, DOF_RADIUS * (float)strength / 100.0f * (float)height / (float)width,
+			DOF_RADIUS * (float)strength / 100.0f);
+		glUniform1f(dof.blur_strength, (float)strength / 100.0f);
 		dof_bind_textures(dof.focus[next]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		glDisable(GL_STENCIL_TEST);

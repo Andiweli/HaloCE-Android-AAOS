@@ -63,11 +63,12 @@
     <string name="menu_msaa_help">Lisse les bords crénelés du monde 3D. 4× coûte plus sur les GPU modestes.</string>
     <string name="menu_msaa_none">Ce GPU ne propose pas cet anticrénelage.</string>
     <string name="menu_dof">Profondeur de champ</string>
-    <string name="menu_dof_help">Fait la mise au point sur ce que vise le réticule et adoucit le lointain derrière ; l\'arme, le HUD et les menus restent nets. Coûte un peu de performances.</string>
+    <string name="menu_dof_help">Fait la mise au point sur ce que vise le réticule et adoucit le lointain derrière ; l\'arme, le HUD et les menus restent nets. Le curseur à côté règle l\'intensité (50 % par défaut). Coûte un peu de performances.</string>
     <string name="menu_fxaa">FXAA</string>
     <string name="menu_fxaa_help">Lisse les bords crénelés lors d\'une dernière passe. Fonctionne avec ou sans MSAA ; l\'image devient un peu plus douce, le HUD reste net.</string>
     <string name="menu_fps_display">Afficher les FPS en bas à gauche</string>
     <string name="menu_fps_none">-- FPS (jeu)</string>
     <string name="menu_fps">%1$d FPS (jeu)</string>
     <string name="menu_fps_smooth">%1$d FPS (jeu) · %2$d FPS (écran)</string>
+    <string name="menu_dof_strength">Intensité de la profondeur de champ</string>
 </resources>

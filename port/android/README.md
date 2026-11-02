@@ -242,7 +242,10 @@ lens flares, the HUD and the menus): the distance at the crosshair is in
 focus, followed over about a third of a second; what lies behind it blurs
 more the farther it is, never what is in front. The first-person weapon,
 which the game marks in bit 0 of the stencil, stays sharp and is not
-blurred into the world. Only with one player on the screen.
+blurred into the world. Only with one player on the screen. A slider
+beside the switch sets its strength, 10 to 200 % (50 % by default; 100 %
+was the first build's): the blur widens with it, and where it starts and
+where it is full come nearer.
 `tools/test_android_depth_of_field.py` runs its shaders and FXAA's in
 Chromium's WebGL2 (the GLSL ES of the phones) on made-up frames.
 

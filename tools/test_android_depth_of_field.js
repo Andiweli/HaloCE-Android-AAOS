@@ -62,6 +62,7 @@ const src = n => fs.readFileSync(dir + '/' + n, 'utf8');
     // blur
     gl.bindFramebuffer(gl.FRAMEBUFFER, fo); gl.viewport(0, 0, W, H); gl.useProgram(pb);
     gl.uniform2f(gl.getUniformLocation(pb, 'clip'), near, far);
+    gl.uniform1f(gl.getUniformLocation(pb, 'strength'), 1.0);
     gl.uniform2f(gl.getUniformLocation(pb, 'radius'), 0.007 * 8 * H / W, 0.007 * 8);  // a larger radius on the tiny test image
     bind(tf[0]); gl.drawArrays(gl.TRIANGLES, 0, 3);
     const px = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
