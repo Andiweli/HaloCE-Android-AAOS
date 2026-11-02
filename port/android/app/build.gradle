@@ -32,9 +32,8 @@ android {
         applicationId "com.halo.decomp"
         minSdk 28
         targetSdk 35
-        // 33 was the touch fix's 1.0.15: 34 installs over it
-        versionCode 34
-        versionName "1.0.15"
+        versionCode 35
+        versionName "1.0.16"
         buildConfigField "int", "HALO_BUILD_NUMBER", "${buildNumber}"
         buildConfigField "boolean", "HALO_DIAGNOSTICS_ENABLED", "${diagnosticsEnabled}"
         ndk {
