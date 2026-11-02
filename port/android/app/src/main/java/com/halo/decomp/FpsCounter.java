@@ -15,7 +15,7 @@ import java.util.Locale;
 
 /**
  * The in-game menu's FPS display, as CubeEvil4's (wish of the project owner, 02.11.2026): one line at the
- * bottom left, "30 FPS (Game) · 60 Hz · 2400×1080", counted over a second; with "60 FPS (experimental)"
+ * top left, "30 FPS (Game) · 60 Hz · 2400×1080", counted over a second; with "60 FPS (experimental)"
  * also the pictures on the screen, the in-between ones included ("30 FPS (Game) · 60 FPS (Screen)").
  * The game counts (host_touch.c): the frames it advanced in (game_time_update), the pictures shown and
  * the size they are drawn at (Present). Hidden while the menu is open; counted anew afterwards.
@@ -54,14 +54,14 @@ final class FpsCounter {
         view.setFocusable(false);
         view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         view.setVisibility(View.GONE);
-        // in a frame of its own over the whole screen: SDL's layout is a RelativeLayout, which put the
-        // line at the top left (device test of the project owner, 02.11.2026); the frame takes no touch
+        // at the top left (decision of the project owner, 02.11.2026), in a frame of its own over the whole
+        // screen, which takes no touch (SDL's layout is a RelativeLayout)
         frame = new FrameLayout(activity);
         frame.setClickable(false);
         frame.setFocusable(false);
         frame.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         frame.addView(view, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT));
+            FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.LEFT));
         frame.setVisibility(View.GONE);
         parent.addView(frame, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT));

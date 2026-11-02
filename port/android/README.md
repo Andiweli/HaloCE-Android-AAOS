@@ -226,7 +226,7 @@ framebuffer changed: the walls turned bright and see-through. Where the
 GPU has no samples, or a renderbuffer cannot be made, the menu offers Off
 only.
 
-**FPS display bottom left** (off by default; `FpsCounter.java`, as
+**FPS display top left** (off by default; `FpsCounter.java`, as
 CubeEvil4's): the frames the game advanced in each second
 (`game_time_update`), with 60 FPS also the pictures shown (Present), the
 screen's refresh rate and the size the pictures are drawn at, as
