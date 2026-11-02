@@ -3286,6 +3286,10 @@ void main_loop(
 			}
 
 #ifdef HALO_ANDROID
+			/* the in-game menu's cheats (game/cheats.c) */
+			android_cheats_update(game_in_progress());
+#endif
+#ifdef HALO_ANDROID
 			/* the settings' 60 FPS switch, between two frames
 			(port/linux/src/sdl_platform.c): the interpolation and both
 			clocks start afresh */

@@ -220,3 +220,41 @@ int host_settings_active(void) {
 void host_settings_display(float *brightness,float *gamma) {
     pthread_mutex_lock(&lock); *brightness=settings_brightness; *gamma=settings_gamma; pthread_mutex_unlock(&lock);
 }
+/* the menu's texture filtering (SettingsOverlay.java): 1 off, 2, 4 or 8
+texels; 0 until the menu said, the configuration's
+(display.anisotropic_filtering). d3d8_gl.c asks once a frame. */
+static int settings_texture_filter;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeTextureFilter(JNIEnv *e,jclass c,jint level) {
+    pthread_mutex_lock(&lock); settings_texture_filter=level<1?1:level>16?16:level; pthread_mutex_unlock(&lock);
+}
+int host_settings_texture_filter(void) {
+    pthread_mutex_lock(&lock); int level=settings_texture_filter; pthread_mutex_unlock(&lock); return level;
+}
+/* the menu's cheats: the switches (HALO_ANDROID_CHEAT_*) as the menu set
+them, the buttons (HALO_ANDROID_CHEAT_ACTION_*) waiting for the game's next
+frame (cheats.c android_cheats_update) and what each came to
+(HALO_ANDROID_CHEAT_RESULT_*), for the menu to show */
+static unsigned int settings_cheats, settings_cheat_actions;
+static int settings_cheat_results[HALO_ANDROID_CHEAT_ACTIONS];
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeCheats(JNIEnv *e,jclass c,jint bits) {
+    pthread_mutex_lock(&lock); settings_cheats=(unsigned int)bits&HALO_ANDROID_CHEAT_SWITCHES; pthread_mutex_unlock(&lock);
+}
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeCheatAction(JNIEnv *e,jclass c,jint action) {
+    if(action<0||action>=HALO_ANDROID_CHEAT_ACTIONS) return;
+    pthread_mutex_lock(&lock);
+    settings_cheat_actions|=1u<<action; settings_cheat_results[action]=HALO_ANDROID_CHEAT_RESULT_PENDING;
+    pthread_mutex_unlock(&lock);
+}
+JNIEXPORT jint JNICALL Java_com_halo_decomp_SettingsOverlay_nativeCheatResult(JNIEnv *e,jclass c,jint action) {
+    if(action<0||action>=HALO_ANDROID_CHEAT_ACTIONS) return HALO_ANDROID_CHEAT_RESULT_NO_GAME;
+    pthread_mutex_lock(&lock); int result=settings_cheat_results[action]; pthread_mutex_unlock(&lock); return result;
+}
+unsigned int host_settings_cheats(unsigned int *actions) {
+    pthread_mutex_lock(&lock);
+    unsigned int bits=settings_cheats; *actions=settings_cheat_actions; settings_cheat_actions=0;
+    pthread_mutex_unlock(&lock); return bits;
+}
+void host_settings_cheat_done(int action,int result) {
+    if(action<0||action>=HALO_ANDROID_CHEAT_ACTIONS) return;
+    pthread_mutex_lock(&lock); settings_cheat_results[action]=result; pthread_mutex_unlock(&lock);
+}

@@ -52,7 +52,7 @@ class SettingsOverlay {
     final HaloActivity activity;boolean open;int opens;
     SettingsOverlay(HaloActivity activity){this.activity=activity;}
     boolean isOpen(){return open;}
-    void show(){if(open)return;open=true;opens++;activity.port.overlay(true);}
+    void show(boolean controller){if(open)return;open=true;opens++;activity.port.overlay(true);}
     void close(){open=false;activity.port.overlay(false);}
 }
 '''

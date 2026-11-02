@@ -470,3 +470,138 @@ void cheat_all_vehicles(
 
 	return;
 }
+
+#ifdef HALO_ANDROID
+#include "halo_android_controls.h"
+#include "units/vehicle_definitions.h"
+#include "tag_files/tag_files.h"
+
+/* port: the in-game menu's Warthog (SettingsOverlay.java): the map's
+Warthog, the plain one before the rocket one, or NONE where the map has
+none (The Pillar of Autumn's) */
+static long android_cheat_warthog(
+	void)
+{
+	struct tag_iterator iterator;
+	long tag_index, found = NONE;
+
+	tag_iterator_new(&iterator, VEHICLE_DEFINITION_TAG);
+	for (tag_index = tag_iterator_next(&iterator);
+		tag_index!=NONE;
+		tag_index = tag_iterator_next(&iterator))
+	{
+		char const *name = tag_get_name(tag_index);
+
+		if (name && strstr(name, "warthog"))
+		{
+			if (!strstr(name, "rwarthog"))
+				return tag_index;
+			if (found==NONE)
+				found = tag_index;
+		}
+	}
+
+	return found;
+}
+
+/* port: it a few metres ahead of the player, where it does not land on him */
+static boolean android_cheat_spawn_warthog(
+	void)
+{
+	long player_index = cheat_player_index();
+	long definition_index = android_cheat_warthog();
+	struct object_placement_data data;
+	struct player_datum *player;
+	real_point3d origin;
+	real_vector3d forward, up;
+	real length;
+
+	if (player_index==NONE || definition_index==NONE)
+		return FALSE;
+	player = player_get(player_index);
+	object_get_origin(player->unit_index, &origin);
+	object_get_orientation(player->unit_index, &forward, &up);
+	length = square_root(forward.i*forward.i+forward.j*forward.j);
+	if (length<0.01f)
+	{
+		forward.i = 1.0f;
+		forward.j = 0.0f;
+		length = 1.0f;
+	}
+	forward.i /= length;
+	forward.j /= length;
+	forward.k = 0.0f;
+	object_placement_data_new(&data, definition_index, NONE);
+	data.position.x = origin.x+forward.i*4.5f;
+	data.position.y = origin.y+forward.j*4.5f;
+	data.position.z = origin.z+0.6f;
+	data.forward = forward;
+	data.up.i = 0.0f;
+	data.up.j = 0.0f;
+	data.up.k = 1.0f;
+
+	return object_new(&data)!=NONE;
+}
+
+/* port: the in-game menu's cheats, once a frame from main_loop: the
+switches as the original's cheat globals (cheat_deathless_player,
+cheat_infinite_ammo, cheat_bottomless_clip, cheat_omnipotent), set when the
+menu changes them so the console's stay as they are; the buttons once,
+answered to the menu. Never in another's network game, whose host's rules
+cheats_network_client_enforce keeps. */
+void android_cheats_update(
+	boolean in_game)
+{
+	static unsigned int applied;
+	static boolean applied_valid;
+	unsigned int actions;
+	unsigned int bits = host_settings_cheats(&actions);
+	boolean playing = in_game && !network_game_distributed_client() && cheat_player_index()!=NONE;
+	short action;
+
+	/* another's game puts all of them back (cheats_network_client_enforce):
+	afterwards the menu's all four again */
+	if (network_game_distributed_client())
+		applied_valid = FALSE;
+	else if (!applied_valid || bits!=applied)
+	{
+		unsigned int changed = applied_valid ? bits^applied : HALO_ANDROID_CHEAT_SWITCHES;
+
+		if (changed & HALO_ANDROID_CHEAT_HEALTH)
+			cheat.deathless_player = (bits & HALO_ANDROID_CHEAT_HEALTH)!=0;
+		if (changed & HALO_ANDROID_CHEAT_AMMO)
+			cheat.infinite_ammo = (bits & HALO_ANDROID_CHEAT_AMMO)!=0;
+		if (changed & HALO_ANDROID_CHEAT_NEVER_RELOAD)
+			cheat.bottomless_clip = (bits & HALO_ANDROID_CHEAT_NEVER_RELOAD)!=0;
+		if (changed & HALO_ANDROID_CHEAT_ONE_HIT_KILL)
+			cheat.omnipotent = (bits & HALO_ANDROID_CHEAT_ONE_HIT_KILL)!=0;
+		error(_error_log, "android cheats: %s%s%s%s",
+				bits & HALO_ANDROID_CHEAT_HEALTH ? "deathless " : "",
+				bits & HALO_ANDROID_CHEAT_AMMO ? "infinite_ammo " : "",
+				bits & HALO_ANDROID_CHEAT_NEVER_RELOAD ? "bottomless_clip " : "",
+				bits & HALO_ANDROID_CHEAT_ONE_HIT_KILL ? "omnipotent" : "");
+		applied = bits;
+		applied_valid = TRUE;
+	}
+
+	for (action = 0; action<HALO_ANDROID_CHEAT_ACTIONS; action++)
+	{
+		int result;
+
+		if (!(actions & (1u<<action)))
+			continue;
+		if (!playing)
+			result = HALO_ANDROID_CHEAT_RESULT_NO_GAME;
+		else if (action==HALO_ANDROID_CHEAT_ACTION_WEAPONS)
+		{
+			cheat_all_weapons();
+			result = HALO_ANDROID_CHEAT_RESULT_DONE;
+		}
+		else
+			result = android_cheat_spawn_warthog() ? HALO_ANDROID_CHEAT_RESULT_DONE : HALO_ANDROID_CHEAT_RESULT_MISSING;
+		host_settings_cheat_done(action, result);
+	}
+
+	return;
+}
+#endif

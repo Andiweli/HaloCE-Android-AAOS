@@ -35,7 +35,7 @@ public class HaloActivity extends SDLActivity {
             if (selectTouch || android.view.InputDevice.getDevice(selectDevice) != null) {
                 // Showing the overlay releases RetroTouch's pressed buttons.
                 selectOpened=true;
-                settings.show();
+                settings.show(!selectTouch);
                 if (!settings.isOpen()) selectOpened=false;
             }
         }
@@ -48,7 +48,11 @@ public class HaloActivity extends SDLActivity {
     void settingsVisibility(boolean visible) {
         if (haloPort != null) haloPort.overlay(visible);
         if (motionAim != null) motionAim.overlay(visible);
-        if (!visible) restoreFullscreen();
+        if (!visible) {
+            restoreFullscreen();
+            // the game's keys go to SDL's surface again (SDLSurface.onKey)
+            if (mSurface != null) mSurface.requestFocus();
+        }
     }
     boolean motionAvailable() { return motionAim != null && motionAim.available(); }
     void motionSettings(boolean enabled, int sensitivity, boolean invertPitch) {
@@ -128,7 +132,7 @@ public class HaloActivity extends SDLActivity {
         if (hasFocus) restoreFullscreen();
         else {
             cancelSelect();
-            if (settings != null) settings.close(false);
+            if (settings != null) settings.close();
             if (haloPort != null) haloPort.focusLost();
             releaseGameKeys();
         }
@@ -185,7 +189,7 @@ public class HaloActivity extends SDLActivity {
 
     @Override
     public void onBackPressed() {
-        if (settings != null && settings.isOpen()) { settings.close(false); return; }
+        if (settings != null && settings.isOpen()) { settings.goBack(); return; }
         super.onBackPressed();
     }
 
@@ -220,6 +224,10 @@ public class HaloActivity extends SDLActivity {
                 gamepadBack && (selectHeld || !settings.isOpen()))) {
             if (down && event.getRepeatCount() == 0 && !settings.isOpen()) {
                 beginSelect(false,event.getDeviceId());
+            } else if (down && event.getRepeatCount() == 0 && !selectHeld &&
+                    key == android.view.KeyEvent.KEYCODE_BUTTON_SELECT) {
+                // SELECT again closes the menu it opened (as CubeEvil4's does)
+                settings.close();
             } else if (!down) {
                 endSelect(false,event.isCanceled());
             }
@@ -271,7 +279,7 @@ public class HaloActivity extends SDLActivity {
     @Override
     public void onConfigurationChanged(Configuration configuration) {
         cancelSelect();
-        if (settings != null) settings.close(false);
+        if (settings != null) settings.close();
         super.onConfigurationChanged(configuration);
         restoreFullscreen();
     }

@@ -144,8 +144,8 @@ with the positions on the Xbox controller:
 | Options | start | pause menu |
 | Create | back | |
 
-Hold SELECT (Create, back) for half a second to open the settings of the
-app. A short press is the back button of the Xbox controller. Controllers
+Hold SELECT (Create, back) for half a second to open the in-game menu of
+the app; SELECT, Start or B on its first page close it again. A short press is the back button of the Xbox controller. Controllers
 without SELECT (the NVIDIA Shield controller, TV remotes) use their Back
 button the same way. At the main menu, B (and the back gesture of Android)
 quits the app; the back button does not, so a press of SELECT too short to
@@ -190,15 +190,46 @@ These settings are only for Android:
 | `display.screen_width` | The number of columns of the 480-line picture. `0` (the default): the shape of the display (1068 on a 20:9 phone). `640`: the 4:3 shape of the Xbox. |
 | `debug.sample_seconds` | Refer to "Find problems". |
 
+### In-game menu
+
+The in-game menu (`SettingsOverlay.java`, laid out like CubeEvil4's in
+Halo's colours) shows the version, an update button and **Back to the
+game**, and four pages: **Display** (brightness, gamma, 60 FPS, texture
+filtering), **Controls** (gyroscope, stick sensitivity), **Volume** and
+**Cheats**. Every change applies and is saved at once. The D-pad or the
+left stick moves, A presses, B goes back a page, Start closes. Its texts
+are in English, German, French and Italian (`res/values*/strings_menu.xml`).
+
+The update button asks GitHub for the latest release of
+`Andiweli/HaloCE-Android-AAOS` (`AppUpdate.java`): green when the app is
+up to date, red with a newer release. It downloads the release's APK (the
+first `.apk` without `aaos` in its name) and hands it to Android's package
+installer. Android Automotive builds have no button.
+
+**Texture filtering** (Off, 2x, 4x, 8x) replaces `display.anisotropic_filtering`
+at once (`anisotropic_filtering` in `port/linux/src/d3d8_gl.c`, asked once a
+frame), at most the GPU's maximum. 4x is the default.
+
+**Cheats**: the switches *Infinite health*, *Infinite ammo*, *Never
+reload* and *One-hit kill* set the original game's `cheat_deathless_player`,
+`cheat_infinite_ammo`, `cheat_bottomless_clip` and `cheat_omnipotent`; they
+stay on, also after a restart, until switched off. *All weapons* lays the
+level's weapons around the player (`cheat_all_weapons`), *Spawn Warthog*
+puts the level's Warthog in front of the player, if the level has one (The
+Pillar of Autumn has none). In another player's network game the host's
+rules apply and the cheats are off (`android_cheats_update` in
+`source/game/cheats.c`). `tools/test_android_ingame_menu.py` checks the
+texts, the keys and the cheats from the menu to the game.
+
 The game shows 30 frames each second, as on the Xbox: the host starts it
 with `display.interpolation` false (`host/host_main.c`), whatever
 `config.toml` says. The switch **60 FPS (experimental)** in the display
-section of the in-game settings turns on the interpolation of the Linux
+page of the in-game menu turns on the interpolation of the Linux
 port instead (refer to "Frame rate" in
 [port/linux/README.md](../linux/README.md#frame-rate)): one frame for each
 refresh of the display. It takes effect at once, between two frames
 (`halo_interpolation_update` in `port/linux/src/sdl_platform.c`, asked by
-`main_loop`), and is saved with OK. The interpolation is not perfect: the
+`main_loop`), and is saved at once. The interpolation is not perfect: the
 spaceship in the first level hops, which is why 30 is the default. `tools/test_android_frame_rate.py` checks the switch.
 
 ## Internet play

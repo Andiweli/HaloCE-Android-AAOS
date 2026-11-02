@@ -50,6 +50,11 @@ void cheats_dispose_from_old_map(
 	void);
 void cheats_update(
 	void);
+#ifdef HALO_ANDROID
+/* the in-game menu's cheats (SettingsOverlay.java), once a frame */
+void android_cheats_update(
+	boolean in_game);
+#endif
 void cheats_network_client_enforce(
 	void);
 void cheats_load(
