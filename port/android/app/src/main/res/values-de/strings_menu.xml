@@ -11,7 +11,7 @@
     <string name="menu_update_failed">Die Aktualisierung ist fehlgeschlagen: %1$s</string>
     <string name="menu_settings">Einstellungen</string>
     <string name="menu_display">Anzeige</string>
-    <string name="menu_display_summary">Bild, Bildrate, Kantenglättung, Tiefenschärfe</string>
+    <string name="menu_display_summary">Bild, Bildrate, Kantenglättung, FXAA, Tiefenschärfe</string>
     <string name="menu_controls">Steuerung</string>
     <string name="menu_controls_summary">Gyroskop und Stick-Empfindlichkeit</string>
     <string name="menu_audio">Lautstärke</string>
@@ -64,4 +64,6 @@
     <string name="menu_msaa_none">Diese GPU bietet diese Kantenglättung nicht.</string>
     <string name="menu_dof">Tiefenschärfe</string>
     <string name="menu_dof_help">Stellt scharf, worauf das Fadenkreuz zeigt, und zeichnet die Ferne dahinter weich unscharf; Waffe, HUD und Menüs bleiben scharf. Kostet etwas Leistung.</string>
+    <string name="menu_fxaa">FXAA</string>
+    <string name="menu_fxaa_help">Glättet Kanten in einem letzten Schritt. Geht mit und ohne MSAA; das Bild wird etwas weicher, das HUD bleibt scharf.</string>
 </resources>

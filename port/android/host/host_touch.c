@@ -280,3 +280,11 @@ int host_settings_depth_of_field(void) {
 void host_settings_msaa_limit(int samples) {
     pthread_mutex_lock(&lock); settings_msaa_limit=samples<0?0:samples; pthread_mutex_unlock(&lock);
 }
+/* the menu's FXAA (d3d8_gl.c xgpu_post_process asks once a frame) */
+static int settings_fxaa;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeFxaa(JNIEnv *e,jclass c,jboolean on) {
+    pthread_mutex_lock(&lock); settings_fxaa=on!=0; pthread_mutex_unlock(&lock);
+}
+int host_settings_fxaa(void) {
+    pthread_mutex_lock(&lock); int on=settings_fxaa; pthread_mutex_unlock(&lock); return on;
+}

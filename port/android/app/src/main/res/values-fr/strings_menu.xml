@@ -11,7 +11,7 @@
     <string name="menu_update_failed">La mise à jour a échoué : %1$s</string>
     <string name="menu_settings">Paramètres</string>
     <string name="menu_display">Affichage</string>
-    <string name="menu_display_summary">Image, fréquence d\'images, anticrénelage, profondeur de champ</string>
+    <string name="menu_display_summary">Image, fréquence d\'images, anticrénelage, FXAA, profondeur de champ</string>
     <string name="menu_controls">Commandes</string>
     <string name="menu_controls_summary">Gyroscope et sensibilité des sticks</string>
     <string name="menu_audio">Volumes</string>
@@ -64,4 +64,6 @@
     <string name="menu_msaa_none">Ce GPU ne propose pas cet anticrénelage.</string>
     <string name="menu_dof">Profondeur de champ</string>
     <string name="menu_dof_help">Fait la mise au point sur ce que vise le réticule et adoucit le lointain derrière ; l\'arme, le HUD et les menus restent nets. Coûte un peu de performances.</string>
+    <string name="menu_fxaa">FXAA</string>
+    <string name="menu_fxaa_help">Lisse les bords crénelés lors d\'une dernière passe. Fonctionne avec ou sans MSAA ; l\'image devient un peu plus douce, le HUD reste net.</string>
 </resources>

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the in-game menu's depth of field (port/linux/src/d3d8_gl.c) on a made-up frame.
+"""Run the in-game menu's depth of field and FXAA (port/linux/src/d3d8_gl.c) on made-up frames.
 
 The production shaders (dof_vertex, dof_common, dof_mask, dof_focus,
 dof_blur), formatted as xgpu_depth_of_field formats them, compile and run
@@ -12,6 +12,8 @@ first-person weapon:
 - the far checkerboard is blurred to nearly flat grey; the block, in
   focus, stays exact to the pixel;
 - the weapon's colour hardly reaches the world beside it.
+FXAA (dof_fxaa) smooths a hard diagonal staircase, leaves flat areas and
+the alpha as they were.
 Requires a C compiler, Node and Playwright with Chromium.
 """
 from pathlib import Path
@@ -36,6 +38,7 @@ int main(void)
 	f = fopen("mask.glsl", "w"); fprintf(f, "#version 300 es\n%s%s", dof_common, dof_mask); fclose(f);
 	f = fopen("focus.glsl", "w"); fprintf(f, "#version 300 es\n%s%s", dof_common, focus); fclose(f);
 	f = fopen("blur.glsl", "w"); fprintf(f, "#version 300 es\n%s%s", dof_common, blur); fclose(f);
+	f = fopen("fxaa.glsl", "w"); fprintf(f, "#version 300 es\n%s%s", dof_common, dof_fxaa); fclose(f);
 	return 0;
 }
 '''
@@ -56,5 +59,9 @@ assert abs(result['focus3'] - expected) / expected < 0.01, (result, expected)
 assert result['farSpread'] <= 20, result      # 0/255 checkers within 20 of grey
 assert result['nearSame'], result
 assert result['redNear'] <= 8, result         # the weapon's red beside it, of 255
+assert result['fxaaEdge'] >= 2, result        # a staircase: pixels between black and white
+assert result['fxaaFlat'], result             # flat areas as they were
+assert result['fxaaAlpha'], result            # alpha kept
+print(f"FXAA: {result['fxaaEdge']} pixels of a hard staircase smoothed, flat areas and alpha unchanged.")
 print(f"Depth of field: focus {result['focus1']:.2f} (10), then {result['focus3']:.2f} toward 500; far checkers "
       f"within {result['farSpread']} of grey, the block in focus exact, the weapon's red {result['redNear']}/255 beside it.")

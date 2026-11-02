@@ -45,6 +45,7 @@ final class SettingsOverlay {
     static native void nativeMsaa(int samples);
     static native void nativeDepthOfField(boolean on);
     static native int nativeMsaaLimit();
+    static native void nativeFxaa(boolean on);
 
     static final int HOME=0, DISPLAY=1, CONTROLS=2, AUDIO=3, CHEATS=4;
     // Halo's blues instead of CubeEvil4's greens and gold; the update button keeps green and red
@@ -114,7 +115,7 @@ final class SettingsOverlay {
     // 60 FPS with interpolation; off, the original 30 (sdl_platform.c)
     private boolean sixtyFps;
     private int textureFilter, cheatBits, msaaSamples;
-    private boolean depthOfField;
+    private boolean depthOfField, fxaa;
     private FrameLayout root;
     private LinearLayout body;
     private ScrollView scroll;
@@ -148,11 +149,13 @@ final class SettingsOverlay {
         cheatBits=prefs.getInt("cheats",0)&CHEAT_SWITCHES;
         msaaSamples=msaa(prefs.getInt("msaa",0));
         depthOfField=prefs.getBoolean("depth_of_field",false);
+        fxaa=prefs.getBoolean("fxaa",false);
         apply();
         nativeTextureFilter(textureFilter);
         nativeCheats(cheatBits);
         nativeMsaa(msaaSamples);
         nativeDepthOfField(depthOfField);
+        nativeFxaa(fxaa);
     }
     boolean isOpen(){return root!=null;}
     int page(){return page;}
@@ -485,6 +488,11 @@ final class SettingsOverlay {
             msaaSamples=samples;nativeMsaa(samples);prefs.edit().putInt("msaa",samples).apply();
         });
         help(limit==0?R.string.menu_msaa_none:R.string.menu_msaa_help);
+        // FXAA as CubeEvil4's (wish of the project owner, 02.11.2026): under MSAA, on its own or with it
+        toggle(optionsRow(),s(R.string.menu_fxaa),fxaa,on->{
+            fxaa=on;nativeFxaa(on);prefs.edit().putBoolean("fxaa",on).apply();
+        });
+        help(R.string.menu_fxaa_help);
         choices(R.string.menu_texture_filter,new String[]{s(R.string.menu_off),"2×","4×","8×"},FILTERS,textureFilter,level->{
             textureFilter=level;nativeTextureFilter(level);prefs.edit().putInt("texture_filter",level).apply();
         });

@@ -24,6 +24,8 @@ int host_settings_msaa(void);
 void host_settings_msaa_limit(int samples);
 /* Nonzero: the menu's depth of field. */
 int host_settings_depth_of_field(void);
+/* Nonzero: the menu's FXAA. */
+int host_settings_fxaa(void);
 /* The menu's cheats (SettingsOverlay.java, cheats.c): the switches, kept
 while on; the buttons, each done once in the game's next frame. */
 #define HALO_ANDROID_CHEAT_HEALTH 1u

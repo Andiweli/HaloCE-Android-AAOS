@@ -5,7 +5,7 @@ const src = n => fs.readFileSync(dir + '/' + n, 'utf8');
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage();
-  const result = await page.evaluate(({ vs, mask, focus, blur }) => {
+  const result = await page.evaluate(({ vs, mask, focus, blur, fxaa }) => {
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl2');
     if (!gl) return { error: 'no webgl2' };
@@ -23,7 +23,7 @@ const src = n => fs.readFileSync(dir + '/' + n, 'utf8');
       gl.uniform1i(gl.getUniformLocation(p, 'focus_texture'), 2);
       return p;
     }
-    const pm = program(mask, 'mask'), pf = program(focus, 'focus'), pb = program(blur, 'blur');
+    const pm = program(mask, 'mask'), pf = program(focus, 'focus'), pb = program(blur, 'blur'), px2 = program(fxaa, 'fxaa');
     if (out.logs.length) return out;
     const W = 96, H = 48, near = 0.05, far = 1024;
     const d = z => far / (far - near) * (1 - near / z);
@@ -75,9 +75,28 @@ const src = n => fs.readFileSync(dir + '/' + n, 'utf8');
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) depth[y * W + x] = d(500);
     gl.bindTexture(gl.TEXTURE_2D, td); gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F, W, H, 0, gl.DEPTH_COMPONENT, gl.FLOAT, depth);
     out.focus3 = runFocus(0, 1, 0.1);
+    // FXAA: a hard diagonal staircase (white below x = y / 2 + 10), alpha 0.5 everywhere
+    const edge = new Uint8Array(W * H * 4);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const v = x < Math.floor(y / 2) + 10 ? 255 : 0;
+      edge.set([v, v, v, 128], (y * W + x) * 4);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, tc); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, W, H, 0, gl.RGBA, gl.UNSIGNED_BYTE, edge);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fo); gl.viewport(0, 0, W, H); gl.useProgram(px2);
+    gl.uniform2f(gl.getUniformLocation(px2, 'texel'), 1 / W, 1 / H);
+    bind(tf[0]); gl.drawArrays(gl.TRIANGLES, 0, 3);
+    const fx = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, fx);
+    let between = 0, flat = true, alpha = true;
+    for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) {
+      const v = fx[(y * W + x) * 4], e = Math.floor(y / 2) + 10;
+      if (v > 20 && v < 235) between++;
+      if ((x < e - 3 && v !== 255) || (x > e + 3 && v !== 0)) flat = false;
+      if (fx[(y * W + x) * 4 + 3] !== 128) alpha = false;
+    }
+    out.fxaaEdge = between; out.fxaaFlat = flat; out.fxaaAlpha = alpha;
     out.error = gl.getError();
     return out;
-  }, { vs: src('vertex.glsl'), mask: src('mask.glsl'), focus: src('focus.glsl'), blur: src('blur.glsl') });
+  }, { vs: src('vertex.glsl'), mask: src('mask.glsl'), focus: src('focus.glsl'), blur: src('blur.glsl'), fxaa: src('fxaa.glsl') });
   console.log(JSON.stringify(result));
   await browser.close();
 })();

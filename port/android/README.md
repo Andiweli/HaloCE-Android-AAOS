@@ -195,7 +195,7 @@ These settings are only for Android:
 The in-game menu (`SettingsOverlay.java`, laid out like CubeEvil4's in
 Halo's colours) shows the version, an update button and **Back to the
 game**, four pages: **Display** (brightness, gamma, 60 FPS, MSAA, texture
-filtering, depth of field), **Controls** (gyroscope, stick sensitivity),
+filtering, FXAA, depth of field), **Controls** (gyroscope, stick sensitivity),
 **Volume** and **Cheats**, and at the bottom a button to this port's page on
 GitHub. Every change applies and is saved at once. The D-pad or the
 left stick moves, A presses, B goes back a page, Start closes. Its texts
@@ -213,24 +213,32 @@ installer. Android Automotive builds have no button.
 at once (`anisotropic_filtering` in `port/linux/src/d3d8_gl.c`, asked once a
 frame), at most the GPU's maximum. 4x is the default.
 
-**MSAA** (Off, 2x, 4x; off by default) smooths the edges of the screen's
-render targets with `GL_EXT_multisampled_render_to_texture`, which the GPUs
-of phones have: the samples live in the GPU's tiles and are resolved into
-the targets' textures as the tiles are written out, so render-to-texture,
-the copies and Present read the targets as ever (`framebuffer_get_samples`
-and `bind_targets` in `port/linux/src/d3d8_gl.c`). Without the extension,
-or once a framebuffer cannot be made with it, the menu offers Off only.
+**MSAA** (Off, 2x, 4x; off by default) draws the screen's render targets
+into multisampled renderbuffers (OpenGL ES 3.0), the color's and the
+depth's, which keep their samples from one framebuffer to the next: Halo
+draws its walls in several passes over the same depth, with its other
+targets drawn in between. A color target is resolved into its texture when
+something reads it: a draw that samples it, the screenshot, Present
+(`msaa_framebuffer`, `msaa_resolve` and `bind_targets` in
+`port/linux/src/d3d8_gl.c`). The first try,
+`GL_EXT_multisampled_render_to_texture`, lost the depth whenever the
+framebuffer changed: the walls turned bright and see-through. Where the
+GPU has no samples, or a renderbuffer cannot be made, the menu offers Off
+only.
+
+**FXAA** (off by default; CubeEvil4's shader) smooths the edges once more
+on the world and the weapon, with or without MSAA, before the HUD.
 
 **Depth of field** (off by default) is an autofocus of this port's own
-(`xgpu_depth_of_field` in `d3d8_gl.c`, called by `render_window` in
+(`xgpu_post_process` in `d3d8_gl.c`, called by `render_window` in
 `source/render/render.c` after the world, its effects and fog, before the
 lens flares, the HUD and the menus): the distance at the crosshair is in
 focus, followed over about a third of a second; what lies behind it blurs
 more the farther it is, never what is in front. The first-person weapon,
 which the game marks in bit 0 of the stencil, stays sharp and is not
 blurred into the world. Only with one player on the screen.
-`tools/test_android_depth_of_field.py` runs its shaders in Chromium's
-WebGL2 (the GLSL ES of the phones) on a made-up frame.
+`tools/test_android_depth_of_field.py` runs its shaders and FXAA's in
+Chromium's WebGL2 (the GLSL ES of the phones) on made-up frames.
 
 **Cheats**: the switches *Infinite health*, *Infinite ammo*, *Never
 reload* and *One-hit kill* set the original game's `cheat_deathless_player`,

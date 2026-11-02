@@ -408,13 +408,13 @@ static void render_window(
 		rasterizer_transparent_geometry_stop();
 		structure_render_fog_screen();
 #ifdef HALO_ANDROID
-		/* port: the in-game menu's depth of field, on the world before the
-		lens flares, the HUD and the menus (port/linux/src/d3d8_gl.c) */
+		/* port: the in-game menu's depth of field and FXAA, on the world
+		before the lens flares, the HUD and the menus (port/linux/src/d3d8_gl.c) */
 		if (rasterizer_target==_render_target_primary && local_player_index!=NONE && main_get_window_count()==1)
 		{
-			extern void xgpu_depth_of_field(float z_near, float z_far);
+			extern void xgpu_post_process(float z_near, float z_far);
 
-			xgpu_depth_of_field(rasterizer_camera->z_near, rasterizer_camera->z_far);
+			xgpu_post_process(rasterizer_camera->z_near, rasterizer_camera->z_far);
 		}
 #endif
 		rasterizer_lens_flares_draw();

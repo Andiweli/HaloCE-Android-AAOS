@@ -11,7 +11,7 @@
     <string name="menu_update_failed">The update failed: %1$s</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_display">Display</string>
-    <string name="menu_display_summary">Picture, frame rate, anti-aliasing, depth of field</string>
+    <string name="menu_display_summary">Picture, frame rate, anti-aliasing, FXAA, depth of field</string>
     <string name="menu_controls">Controls</string>
     <string name="menu_controls_summary">Gyroscope and stick sensitivity</string>
     <string name="menu_audio">Volume</string>
@@ -64,4 +64,6 @@
     <string name="menu_msaa_none">This GPU does not offer this anti-aliasing.</string>
     <string name="menu_dof">Depth of field</string>
     <string name="menu_dof_help">Focuses on what the crosshair points at and softly blurs the distance behind it; the weapon, the HUD and the menus stay sharp. Costs some performance.</string>
+    <string name="menu_fxaa">FXAA</string>
+    <string name="menu_fxaa_help">Smooths jagged edges in a last step. Works with or without MSAA; the picture gets slightly softer, the HUD stays sharp.</string>
 </resources>
