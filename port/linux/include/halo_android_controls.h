@@ -18,6 +18,12 @@ void host_settings_stick_look_mask(unsigned int mask);
 int host_settings_sixty_fps(void);
 /* The menu's texture filtering: 1 (off), 2, 4 or 8; 0 for the configuration's. */
 int host_settings_texture_filter(void);
+/* The menu's anti-aliasing: 0 (off), 2 or 4 samples. */
+int host_settings_msaa(void);
+/* The most samples the GPU renders with (0: no anti-aliasing), said once. */
+void host_settings_msaa_limit(int samples);
+/* Nonzero: the menu's depth of field. */
+int host_settings_depth_of_field(void);
 /* The menu's cheats (SettingsOverlay.java, cheats.c): the switches, kept
 while on; the buttons, each done once in the game's next frame. */
 #define HALO_ANDROID_CHEAT_HEALTH 1u

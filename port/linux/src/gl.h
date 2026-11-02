@@ -83,6 +83,7 @@ this list to generate the guest's entry points */
 	X(glDeleteFramebuffers) \
 	X(glBindFramebuffer) \
 	X(glFramebufferTexture2D) \
+	X(glFramebufferTexture2DMultisampleEXT) \
 	X(glCheckFramebufferStatus) \
 	X(glBlitFramebuffer) \
 	X(glDrawBuffers) \
@@ -307,6 +308,7 @@ pointers, sees the declarations without these aliases */
 #define glDeleteFramebuffers halo_glDeleteFramebuffers
 #define glBindFramebuffer halo_glBindFramebuffer
 #define glFramebufferTexture2D halo_glFramebufferTexture2D
+#define glFramebufferTexture2DMultisampleEXT halo_glFramebufferTexture2DMultisampleEXT
 #define glCheckFramebufferStatus halo_glCheckFramebufferStatus
 #define glBlitFramebuffer halo_glBlitFramebuffer
 #define glDrawBuffers halo_glDrawBuffers

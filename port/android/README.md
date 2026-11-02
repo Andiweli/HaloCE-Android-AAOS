@@ -194,21 +194,43 @@ These settings are only for Android:
 
 The in-game menu (`SettingsOverlay.java`, laid out like CubeEvil4's in
 Halo's colours) shows the version, an update button and **Back to the
-game**, and four pages: **Display** (brightness, gamma, 60 FPS, texture
-filtering), **Controls** (gyroscope, stick sensitivity), **Volume** and
-**Cheats**. Every change applies and is saved at once. The D-pad or the
+game**, four pages: **Display** (brightness, gamma, 60 FPS, MSAA, texture
+filtering, depth of field), **Controls** (gyroscope, stick sensitivity),
+**Volume** and **Cheats**, and at the bottom a button to this port's page on
+GitHub. Every change applies and is saved at once. The D-pad or the
 left stick moves, A presses, B goes back a page, Start closes. Its texts
 are in English, German, French and Italian (`res/values*/strings_menu.xml`).
 
-The update button asks GitHub for the latest release of
-`Andiweli/HaloCE-Android-AAOS` (`AppUpdate.java`): green when the app is
-up to date, red with a newer release. It downloads the release's APK (the
+The update button asks GitHub for the releases of
+`Andiweli/HaloCE-Android-AAOS` (`AppUpdate.java`) and takes the one with the
+highest version (its tag `1.0.17`; drafts, pre-releases and the CI's
+`build-N` releases do not count): green when the app is up to date, red
+with a newer release. It downloads the release's APK (the
 first `.apk` without `aaos` in its name) and hands it to Android's package
 installer. Android Automotive builds have no button.
 
 **Texture filtering** (Off, 2x, 4x, 8x) replaces `display.anisotropic_filtering`
 at once (`anisotropic_filtering` in `port/linux/src/d3d8_gl.c`, asked once a
 frame), at most the GPU's maximum. 4x is the default.
+
+**MSAA** (Off, 2x, 4x; off by default) smooths the edges of the screen's
+render targets with `GL_EXT_multisampled_render_to_texture`, which the GPUs
+of phones have: the samples live in the GPU's tiles and are resolved into
+the targets' textures as the tiles are written out, so render-to-texture,
+the copies and Present read the targets as ever (`framebuffer_get_samples`
+and `bind_targets` in `port/linux/src/d3d8_gl.c`). Without the extension,
+or once a framebuffer cannot be made with it, the menu offers Off only.
+
+**Depth of field** (off by default) is an autofocus of this port's own
+(`xgpu_depth_of_field` in `d3d8_gl.c`, called by `render_window` in
+`source/render/render.c` after the world, its effects and fog, before the
+lens flares, the HUD and the menus): the distance at the crosshair is in
+focus, followed over about a third of a second; what lies behind it blurs
+more the farther it is, never what is in front. The first-person weapon,
+which the game marks in bit 0 of the stencil, stays sharp and is not
+blurred into the world. Only with one player on the screen.
+`tools/test_android_depth_of_field.py` runs its shaders in Chromium's
+WebGL2 (the GLSL ES of the phones) on a made-up frame.
 
 **Cheats**: the switches *Infinite health*, *Infinite ammo*, *Never
 reload* and *One-hit kill* set the original game's `cheat_deathless_player`,

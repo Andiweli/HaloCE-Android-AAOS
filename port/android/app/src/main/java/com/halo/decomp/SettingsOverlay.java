@@ -42,6 +42,9 @@ final class SettingsOverlay {
     static native void nativeCheats(int bits);
     static native void nativeCheatAction(int action);
     static native int nativeCheatResult(int action);
+    static native void nativeMsaa(int samples);
+    static native void nativeDepthOfField(boolean on);
+    static native int nativeMsaaLimit();
 
     static final int HOME=0, DISPLAY=1, CONTROLS=2, AUDIO=3, CHEATS=4;
     // Halo's blues instead of CubeEvil4's greens and gold; the update button keeps green and red
@@ -58,6 +61,9 @@ final class SettingsOverlay {
     // the texture filtering's choices (texels along a pixel's footprint; 1 off); 4 as the configuration's
     static final int[] FILTERS={1,2,4,8};
     static final int DEFAULT_FILTER=4;
+    // MSAA's choices (samples; 0 off), off by default
+    static final int[] MSAA={0,2,4};
+    static final String SOURCE_URL="https://github.com/Andiweli/HaloCE-Android-AAOS";
     // the cheats: the switches' bits and the buttons as halo_android_controls.h numbers them
     static final int CHEAT_HEALTH=1, CHEAT_AMMO=2, CHEAT_RELOAD=4, CHEAT_ONE_HIT=8, CHEAT_SWITCHES=15;
     static final int ACTION_WEAPONS=0, ACTION_WARTHOG=1;
@@ -91,6 +97,13 @@ final class SettingsOverlay {
         for(int choice:FILTERS) if(choice==stored) return stored;
         return DEFAULT_FILTER;
     }
+    /** A stored MSAA that is one of the choices, else off. */
+    static int msaa(int stored) {
+        for(int choice:MSAA) if(choice==stored) return stored;
+        return 0;
+    }
+    /** Whether a choice of samples is offered: off always; more while the GPU's limit is unknown (-1) or allows it. */
+    static boolean msaaOffered(int samples,int limit) { return samples==0 || limit<0 || samples<=limit; }
 
     private interface Changed<T> { void accept(T value); }
     private final HaloActivity activity;
@@ -100,7 +113,8 @@ final class SettingsOverlay {
     private boolean gyroEnabled, gyroInvertPitch;
     // 60 FPS with interpolation; off, the original 30 (sdl_platform.c)
     private boolean sixtyFps;
-    private int textureFilter, cheatBits;
+    private int textureFilter, cheatBits, msaaSamples;
+    private boolean depthOfField;
     private FrameLayout root;
     private LinearLayout body;
     private ScrollView scroll;
@@ -132,9 +146,13 @@ final class SettingsOverlay {
         sixtyFps=prefs.getBoolean("sixty_fps",false);
         textureFilter=filter(prefs.getInt("texture_filter",DEFAULT_FILTER));
         cheatBits=prefs.getInt("cheats",0)&CHEAT_SWITCHES;
+        msaaSamples=msaa(prefs.getInt("msaa",0));
+        depthOfField=prefs.getBoolean("depth_of_field",false);
         apply();
         nativeTextureFilter(textureFilter);
         nativeCheats(cheatBits);
+        nativeMsaa(msaaSamples);
+        nativeDepthOfField(depthOfField);
     }
     boolean isOpen(){return root!=null;}
     int page(){return page;}
@@ -220,7 +238,11 @@ final class SettingsOverlay {
         b.setText(activity.getString(R.string.menu_toggle_value,label,s(on?R.string.menu_on:R.string.menu_off)));
     }
     /** One choice of several in a row beside its label, the chosen one lit. */
+    private interface Offered { boolean test(int choice); }
     private Button[] choices(int label,String[] labels,int[] choices,int selected,Changed<Integer> changed){
+        return choices(label,labels,choices,selected,choice->true,changed);
+    }
+    private Button[] choices(int label,String[] labels,int[] choices,int selected,Offered offered,Changed<Integer> changed){
         MenuLayout.Columns outer=new MenuLayout.Columns(activity,170,640,false);
         outer.addView(rowLabel(s(label)));
         MenuLayout.Buttons options=new MenuLayout.Buttons(activity,labels.length);
@@ -229,6 +251,7 @@ final class SettingsOverlay {
         for(int i=0;i<labels.length;i++){
             final int index=i;
             Button b=cellAction(options,labels[i],v->{select(buttons,labels,index);changed.accept(choices[index]);});
+            b.setEnabled(offered.test(choices[i]));
             buttons[i]=b;
         }
         for(int i=0;i<labels.length;i++)if(choices[i]==selected)select(buttons,labels,i);
@@ -426,6 +449,16 @@ final class SettingsOverlay {
         navigation[CONTROLS]=nav(first,R.string.menu_controls,R.string.menu_controls_summary,CONTROLS);
         navigation[AUDIO]=nav(second,R.string.menu_audio,R.string.menu_audio_summary,AUDIO);
         navigation[CHEATS]=nav(second,R.string.menu_cheats,R.string.menu_cheats_summary,CHEATS);
+        // where the port is (as CubeEvil4's menu says it; wish of the project owner, 02.11.2026)
+        heading(R.string.menu_source);
+        cellAction(buttonsRow(1),activity.getString(R.string.menu_source_line,SOURCE_URL),v->openSource());
+    }
+    private void openSource(){
+        try{
+            activity.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(SOURCE_URL)));
+        }catch(android.content.ActivityNotFoundException e){
+            Toast.makeText(activity,s(R.string.menu_no_browser),Toast.LENGTH_SHORT).show();
+        }
     }
     private void display(){
         heading(R.string.menu_picture);
@@ -436,10 +469,20 @@ final class SettingsOverlay {
         });
         help(R.string.menu_sixty_fps_help);
         heading(R.string.menu_graphics);
+        final int limit=nativeMsaaLimit();
+        choices(R.string.menu_msaa,new String[]{s(R.string.menu_off),"2×","4×"},MSAA,msaaSamples,
+            choice->msaaOffered(choice,limit),samples->{
+            msaaSamples=samples;nativeMsaa(samples);prefs.edit().putInt("msaa",samples).apply();
+        });
+        help(limit==0?R.string.menu_msaa_none:R.string.menu_msaa_help);
         choices(R.string.menu_texture_filter,new String[]{s(R.string.menu_off),"2×","4×","8×"},FILTERS,textureFilter,level->{
             textureFilter=level;nativeTextureFilter(level);prefs.edit().putInt("texture_filter",level).apply();
         });
         help(R.string.menu_texture_filter_help);
+        toggle(buttonsRow(1),s(R.string.menu_dof),depthOfField,on->{
+            depthOfField=on;nativeDepthOfField(on);prefs.edit().putBoolean("depth_of_field",on).apply();
+        });
+        help(R.string.menu_dof_help);
     }
     private void controls(){
         heading(R.string.menu_motion);

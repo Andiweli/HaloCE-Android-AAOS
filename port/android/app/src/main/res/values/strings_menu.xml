@@ -11,7 +11,7 @@
     <string name="menu_update_failed">The update failed: %1$s</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_display">Display</string>
-    <string name="menu_display_summary">Brightness, gamma, frame rate, texture filtering</string>
+    <string name="menu_display_summary">Picture, frame rate, anti-aliasing, depth of field</string>
     <string name="menu_controls">Controls</string>
     <string name="menu_controls_summary">Gyroscope and stick sensitivity</string>
     <string name="menu_audio">Volume</string>
@@ -56,4 +56,12 @@
     <string name="menu_cheat_none">This level has no Warthog.</string>
     <string name="menu_cheat_no_game">Only in a game of your own, not in the main menu.</string>
     <string name="menu_cheats_help">The switches stay on until you turn them off. The weapons and the Warthog appear where the level has them; in another player\'s network game, cheats are off.</string>
+    <string name="menu_source">Source</string>
+    <string name="menu_source_line">More on this port at %1$s</string>
+    <string name="menu_no_browser">No browser found.</string>
+    <string name="menu_msaa">Anti-aliasing (MSAA)</string>
+    <string name="menu_msaa_help">Smooths the jagged edges of the 3D world. 4× costs more on weaker GPUs.</string>
+    <string name="menu_msaa_none">This GPU does not offer this anti-aliasing.</string>
+    <string name="menu_dof">Depth of field</string>
+    <string name="menu_dof_help">Focuses on what the crosshair points at and softly blurs the distance behind it; the weapon, the HUD and the menus stay sharp. Costs some performance.</string>
 </resources>

@@ -77,6 +77,9 @@ host_settings_present
 host_settings_sticks
 host_settings_sixty_fps
 host_settings_texture_filter
+host_settings_msaa
+host_settings_msaa_limit
+host_settings_depth_of_field
 host_settings_cheats
 host_settings_cheat_done
 host_settings_stick_look_mask

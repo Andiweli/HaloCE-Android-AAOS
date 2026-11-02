@@ -22,7 +22,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * The in-game menu's update button (from CubeEvil4-Android): the newest release on GitHub (its tag the
+ * The in-game menu's update button (from CubeEvil4-Android): of the releases on GitHub
+ * (github.com/Andiweli/HaloCE-Android-AAOS/releases), the one with the highest version (its tag the
  * version, "1.0.15", its phone .apk, "HaloCE.1.0.15.apk") against the installed version. The same: "Up
  * to date", green and off; the installed one older: "Update", red, which downloads the APK into
  * Android's package installer, and Android asks before it installs (the game closes then). Asked once
@@ -31,7 +32,7 @@ import org.json.JSONObject;
  */
 final class AppUpdate {
   static final String TAG = "halo";
-  static final String LATEST = "https://api.github.com/repos/Andiweli/HaloCE-Android-AAOS/releases/latest";
+  static final String RELEASES = "https://api.github.com/repos/Andiweli/HaloCE-Android-AAOS/releases?per_page=30";
   private static final String ACTION = "com.halo.decomp.UPDATE_INSTALLED";
   /** the most an APK may be (a release's is about 40 MB) */
   private static final long MAXIMUM_SIZE = 256L * 1024 * 1024;
@@ -59,6 +60,13 @@ final class AppUpdate {
     try {
       return c.getPackageManager().getPackageInfo(c.getPackageName(), 0).versionName;
     } catch (android.content.pm.PackageManager.NameNotFoundException e) { return null; }
+  }
+
+  /** A release named by its version ("1.0.17", "v1.0.17"), not the CI's "build-37". */
+  static boolean versionTag(String tag) {
+    String v = tag == null ? "" : tag.trim();
+    if (v.startsWith("v") || v.startsWith("V")) v = v.substring(1);
+    return v.matches("\\d+(\\.\\d+)*(-.*)?");
   }
 
   /** The phone app among a release's files: an .apk, not the AAOS one. */
@@ -105,16 +113,24 @@ final class AppUpdate {
     new Thread(() -> {
       int answer = UNKNOWN;
       try {
-        JSONObject release = new JSONObject(get(LATEST));
-        String tag = release.getString("tag_name");
-        JSONArray assets = release.getJSONArray("assets");
-        String url = null; long size = 0;
-        for (int i = 0; i < assets.length(); i++) {
-          JSONObject a = assets.getJSONObject(i);
-          if (phoneApk(a.getString("name")) && a.optLong("size") <= MAXIMUM_SIZE) {
-            url = a.getString("browser_download_url"); size = a.optLong("size"); break;
+        // the releases page, newest first: the highest version among the published releases with a phone APK
+        // ("1.0.17"; the CI's automatic "build-N" releases and drafts or pre-releases do not count)
+        JSONArray releases = new JSONArray(get(RELEASES));
+        String tag = null, url = null; long size = 0;
+        for (int r = 0; r < releases.length(); r++) {
+          JSONObject release = releases.getJSONObject(r);
+          String name = release.optString("tag_name", "");
+          if (release.optBoolean("draft") || release.optBoolean("prerelease") || !versionTag(name)) continue;
+          if (tag != null && compare(name, tag) <= 0) continue;
+          JSONArray assets = release.getJSONArray("assets");
+          for (int i = 0; i < assets.length(); i++) {
+            JSONObject a = assets.getJSONObject(i);
+            if (phoneApk(a.getString("name")) && a.optLong("size") <= MAXIMUM_SIZE) {
+              tag = name; url = a.getString("browser_download_url"); size = a.optLong("size"); break;
+            }
           }
         }
+        if (tag == null) throw new java.io.IOException("no release with an APK");
         if (mine != null) answer = compare(mine, tag) < 0 && url != null ? OLDER : CURRENT;
         latest = tag; apkUrl = url; apkSize = size;
         Log.i(TAG, "GitHub's latest release " + tag + ", installed " + mine

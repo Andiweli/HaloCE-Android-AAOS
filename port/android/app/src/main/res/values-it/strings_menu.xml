@@ -11,7 +11,7 @@
     <string name="menu_update_failed">L\'aggiornamento non è riuscito: %1$s</string>
     <string name="menu_settings">Impostazioni</string>
     <string name="menu_display">Schermo</string>
-    <string name="menu_display_summary">Luminosità, gamma, frame rate, filtro texture</string>
+    <string name="menu_display_summary">Immagine, frame rate, antialiasing, profondità di campo</string>
     <string name="menu_controls">Controlli</string>
     <string name="menu_controls_summary">Giroscopio e sensibilità degli stick</string>
     <string name="menu_audio">Volumi</string>
@@ -56,4 +56,12 @@
     <string name="menu_cheat_none">Questo livello non ha un Warthog.</string>
     <string name="menu_cheat_no_game">Solo in una partita tua, non nel menu principale.</string>
     <string name="menu_cheats_help">Gli interruttori restano attivi finché non li spegni. Armi e Warthog compaiono se il livello li contiene; nella partita di rete di un altro giocatore i trucchi sono disattivati.</string>
+    <string name="menu_source">Codice sorgente</string>
+    <string name="menu_source_line">Maggiori informazioni su questo port: %1$s</string>
+    <string name="menu_no_browser">Nessun browser trovato.</string>
+    <string name="menu_msaa">Antialiasing (MSAA)</string>
+    <string name="menu_msaa_help">Leviga i bordi seghettati del mondo 3D. 4× costa di più sulle GPU deboli.</string>
+    <string name="menu_msaa_none">Questa GPU non offre questo antialiasing.</string>
+    <string name="menu_dof">Profondità di campo</string>
+    <string name="menu_dof_help">Mette a fuoco ciò che punta il mirino e sfoca dolcemente la distanza dietro; arma, HUD e menu restano nitidi. Costa un po\' di prestazioni.</string>
 </resources>

@@ -46,7 +46,8 @@ for path in JAVA.glob('*.java'):
 assert used <= set(base), used - set(base)
 assert strings('values-de')['menu_title'] == 'HALO CE Ingame-Menü'
 assert strings('values-de')['menu_resume'] == 'Zurück zum Spiel'
-for name in ('menu_display', 'menu_controls', 'menu_audio', 'menu_cheats'):
+assert strings('values-de')['menu_dof'] == 'Tiefenschärfe'
+for name in ('menu_display', 'menu_controls', 'menu_audio', 'menu_cheats', 'menu_msaa', 'menu_dof', 'menu_source_line'):
     assert name in used, name
 
 # ---------- 2. the Java side
@@ -71,7 +72,8 @@ class KeyEvent {
 }
 public class MenuCheck {
 ''' + constants + '\n' + '\n'.join(method(m) for m in (
-    'static int action(', 'static int stepped(', 'static int toggled(', 'static int filter(')) + r'''
+    'static int action(', 'static int stepped(', 'static int toggled(', 'static int filter(',
+    'static int msaa(', 'static boolean msaaOffered(')) + r'''
     static void check(boolean condition,String what){if(!condition)throw new AssertionError(what);}
     public static void main(String[] args){
         check(action(KeyEvent.KEYCODE_VOLUME_UP)==PASS && action(KeyEvent.KEYCODE_VOLUME_MUTE)==PASS,"volume keys stay Android's");
@@ -99,6 +101,11 @@ public class MenuCheck {
         check(filter(1)==1 && filter(2)==2 && filter(8)==8 && filter(16)==DEFAULT_FILTER && filter(0)==DEFAULT_FILTER,
               "texture filtering: off, 2, 4, 8, else the configuration's 4");
         check(FILTERS.length==4 && FILTERS[0]==1,"the choices off, 2x, 4x, 8x");
+        check(msaa(0)==0 && msaa(2)==2 && msaa(4)==4 && msaa(8)==0 && msaa(-1)==0,"MSAA: off, 2x, 4x, else off");
+        check(msaaOffered(0,0) && !msaaOffered(2,0) && !msaaOffered(4,0),"no MSAA on the GPU: only off");
+        check(msaaOffered(2,2) && !msaaOffered(4,2) && msaaOffered(4,4),"the GPU's most samples and fewer");
+        check(msaaOffered(4,-1),"all while the GPU is not yet asked");
+        check(SOURCE_URL.equals("https://github.com/Andiweli/HaloCE-Android-AAOS"),"the port's page");
         System.out.println("menu java ok");
     }
 }

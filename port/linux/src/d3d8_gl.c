@@ -286,6 +286,9 @@ struct render_target_entry
 	struct render_target_entry *next_in_bucket;
 	struct xgpu_render_target target;
 	unsigned long last_rendered;
+	/* the screen's size (at the screen's scale): anti-aliased with the
+	in-game menu's MSAA (bind_targets) */
+	BOOL screen;
 };
 
 /* every draw looks up its targets and whether its textures are render
@@ -304,6 +307,8 @@ struct framebuffer_entry
 	struct framebuffer_entry *next;
 	GLuint color;
 	GLuint depth;
+	/* 0, or the samples of the in-game menu's MSAA (msaa_samples) */
+	GLsizei samples;
 	GLuint framebuffer;
 };
 
@@ -906,7 +911,7 @@ static struct render_target_entry *render_target_get(const D3DSurface *surface)
 	struct render_target_entry *entry;
 	unsigned long width, height, slot;
 	long screen;
-	BOOL depth;
+	BOOL depth, screen_sized = FALSE;
 
 	if (!surface || !surface->Data)
 		return NULL;
@@ -930,6 +935,7 @@ static struct render_target_entry *render_target_get(const D3DSurface *surface)
 	{
 		scale[0] = screen_scale[0];
 		scale[1] = screen_scale[1];
+		screen_sized = TRUE;
 	}
 	for (entry = *render_target_bucket(surface->Data); entry; entry = entry->next_in_bucket)
 	{
@@ -947,6 +953,7 @@ static struct render_target_entry *render_target_get(const D3DSurface *surface)
 	entry->target.depth = depth;
 	entry->target.scale[0] = scale[0];
 	entry->target.scale[1] = scale[1];
+	entry->screen = screen_sized;
 	entry->target.gl_width = (unsigned long)(width * scale[0] + 0.5f);
 	entry->target.gl_height = (unsigned long)(height * scale[1] + 0.5f);
 	glGenTextures(1, &entry->target.texture);
@@ -978,7 +985,61 @@ struct xgpu_render_target *xgpu_render_target_find(unsigned long data)
 	return best ? &best->target : NULL;
 }
 
-static GLuint framebuffer_get(GLuint color, GLuint depth)
+#ifdef HALO_ANDROID
+/* ---------- the in-game menu's anti-aliasing
+
+MSAA by GL_EXT_multisampled_render_to_texture, which the GPUs of phones
+(Mali, Adreno, PowerVR) have: the screen's targets are drawn with 2 or 4
+samples in the GPU's tiles and resolved into their textures as each tile is
+written out, so whatever reads them afterwards (render-to-texture, the
+copies, Present) reads them as ever. 0 where the GPU has no such extension,
+or once a framebuffer could not be made with it. */
+static GLint msaa_maximum;
+static BOOL msaa_failed;
+
+static void msaa_initialize(void)
+{
+	msaa_maximum = 0;
+	if (host_gl_has_extension("GL_EXT_multisampled_render_to_texture"))
+		glGetIntegerv(GL_MAX_SAMPLES_EXT, &msaa_maximum);
+	platform_log("MSAA: %s (the GPU's most %d samples)", msaa_maximum >= 2 ? "available" :
+		"not available", (int)msaa_maximum);
+	host_settings_msaa_limit(msaa_maximum >= 4 ? 4 : msaa_maximum >= 2 ? 2 : 0);
+}
+
+/* the menu's samples, asked once a frame: 0 (off), 2 or 4 */
+static GLsizei msaa_samples(void)
+{
+	static unsigned long asked_frame;
+	static GLsizei samples;
+	static BOOL asked;
+
+	if (msaa_failed || msaa_maximum < 2)
+		return 0;
+	if (!asked || asked_frame != device.frame)
+	{
+		GLsizei chosen = (GLsizei)host_settings_msaa();
+
+		if (chosen > (GLsizei)msaa_maximum)
+			chosen = (GLsizei)msaa_maximum;
+		if (chosen < 2)
+			chosen = 0;
+		if (asked && chosen != samples)
+			platform_log("MSAA: %dx from the menu", (int)chosen);
+		samples = chosen;
+		asked_frame = device.frame;
+		asked = TRUE;
+	}
+	return samples;
+}
+#else
+static GLsizei msaa_samples(void)
+{
+	return 0;
+}
+#endif
+
+static GLuint framebuffer_get_samples(GLuint color, GLuint depth, GLsizei samples)
 {
 	struct framebuffer_entry *entry, **link;
 	GLenum draw_buffer = color ? GL_COLOR_ATTACHMENT0 : GL_NONE;
@@ -987,7 +1048,7 @@ static GLuint framebuffer_get(GLuint color, GLuint depth)
 	the draw before it did) */
 	for (link = &framebuffers; (entry = *link) != NULL; link = &entry->next)
 	{
-		if (entry->color == color && entry->depth == depth)
+		if (entry->color == color && entry->depth == depth && entry->samples == samples)
 		{
 			*link = entry->next;
 			entry->next = framebuffers;
@@ -998,8 +1059,41 @@ static GLuint framebuffer_get(GLuint color, GLuint depth)
 	entry = calloc(1, sizeof(*entry));
 	entry->color = color;
 	entry->depth = depth;
+	entry->samples = samples;
 	glGenFramebuffers(1, &entry->framebuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, entry->framebuffer);
+#ifdef HALO_ANDROID
+	if (samples)
+	{
+		BOOL complete;
+
+		while (glGetError() != GL_NO_ERROR)
+			;
+		if (color)
+			glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0, samples);
+		if (depth)
+			glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depth, 0,
+				samples);
+		glDrawBuffers(1, &draw_buffer);
+		complete = glGetError() == GL_NO_ERROR && glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+		if (!complete)
+		{
+			/* the targets as before, without anti-aliasing from now on */
+			platform_log("MSAA: no %dx framebuffer for %u/%u; anti-aliasing off", (int)samples, color, depth);
+			msaa_failed = TRUE;
+			host_settings_msaa_limit(0);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glDeleteFramebuffers(1, &entry->framebuffer);
+			free(entry);
+			xgpu_gl_state_invalidate();
+			return framebuffer_get_samples(color, depth, 0);
+		}
+		xgpu_gl_state_invalidate();
+		entry->next = framebuffers;
+		framebuffers = entry;
+		return entry->framebuffer;
+	}
+#endif
 	if (color)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
 	if (depth)
@@ -1011,6 +1105,11 @@ static GLuint framebuffer_get(GLuint color, GLuint depth)
 	entry->next = framebuffers;
 	framebuffers = entry;
 	return entry->framebuffer;
+}
+
+static GLuint framebuffer_get(GLuint color, GLuint depth)
+{
+	return framebuffer_get_samples(color, depth, 0);
 }
 
 /* the pixels per unit of the bound targets (render_target_get) */
@@ -1047,7 +1146,16 @@ static BOOL bind_targets(BOOL *has_depth)
 	/* viewports and clears are in the targets' units (render_target_get) */
 	target_scale[0] = color ? color->target.scale[0] : depth->target.scale[0];
 	target_scale[1] = color ? color->target.scale[1] : depth->target.scale[1];
-	state_framebuffer(framebuffer_get(color ? color->target.texture : 0, depth ? depth->target.texture : 0));
+	/* the screen's targets with the menu's MSAA, when all that is bound
+	is the screen's */
+	{
+		GLsizei samples = msaa_samples();
+
+		if (samples && ((color && !color->screen) || (depth && !depth->screen)))
+			samples = 0;
+		state_framebuffer(framebuffer_get_samples(color ? color->target.texture : 0,
+			depth ? depth->target.texture : 0, samples));
+	}
 	*has_depth = depth != NULL;
 	return TRUE;
 }
@@ -1103,6 +1211,7 @@ static void gl_initialize(void)
 			(int)major, (int)minor, xgpu_capabilities.copy_image, xgpu_capabilities.border_clamp,
 			xgpu_capabilities.anisotropy, xgpu_capabilities.s3tc, xgpu_capabilities.astc, xgpu_capabilities.atomic_counters);
 		platform_log("Patch42: persistent geometry mirror bypassed; fresh vertex/index streaming");
+		msaa_initialize();
 	}
 #else
 	if (config_boolean("debug.gl_debug"))
@@ -4574,3 +4683,330 @@ HRESULT WINAPI D3DDevice_PersistDisplay(void)
 {
 	return S_OK;
 }
+
+#ifdef HALO_ANDROID
+/* ---------- the in-game menu's depth of field
+
+render_window calls xgpu_depth_of_field after the world, its effects and
+fog, before the lens flares, the HUD and the menus, which therefore stay
+sharp. An autofocus: the distance at the crosshair (nine samples around
+the screen's middle), followed over some frames, is in focus; what lies
+far behind it is blurred the more, the farther it is, never what is in
+front of it. The first-person weapon (bit 0 of the stencil, which the game
+writes with it: rasterizer_set_stencil_mode) is neither blurred nor blurred
+into the world.
+
+The passes: the screen's color, depth and stencil are copied; the copy's
+alpha is cleared to 1 and set to 0 where the weapon is; the focus moves
+toward the new distance in one of two 1x1 textures (ping-pong, 16 bits in
+red and green); the world where the weapon is not is drawn again from the
+copy, each pixel gathering twelve taps within its blur. */
+#define DOF_LOW_LOG2 (-6.64f)
+#define DOF_RANGE_LOG2 18.64f
+
+static struct
+{
+	BOOL failed, ready;
+	GLuint vertex_array;
+	GLuint mask_program, focus_program, blur_program;
+	GLint focus_clip, focus_rate, blur_clip, blur_radius;
+	GLuint color, depth, framebuffer;
+	GLuint focus[2], focus_framebuffer[2];
+	int focus_current;
+	GLsizei width, height;
+	unsigned long last_frame;
+} dof;
+
+static const char dof_vertex[] =
+	"out vec2 uv;\n"
+	"void main()\n"
+	"{\n"
+	"\tvec2 corner = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));\n"
+	"\tuv = corner;\n"
+	"\tgl_Position = vec4(corner * 2.0 - 1.0, 0.0, 1.0);\n"
+	"}\n";
+
+static const char dof_common[] =
+	"precision highp float;\n"
+	"in vec2 uv;\n"
+	"out vec4 result;\n"
+	"uniform vec2 clip;\n"
+	"uniform highp sampler2D color_texture;\n"
+	"uniform highp sampler2D depth_texture;\n"
+	"uniform highp sampler2D focus_texture;\n"
+	"float linear_depth(float d)\n"
+	"{\n"
+	"\treturn clip.x * clip.y / max(clip.y - d * (clip.y - clip.x), 1e-6);\n"
+	"}\n";
+
+static const char dof_mask[] =
+	"void main()\n"
+	"{\n"
+	"\tresult = vec4(0.0);\n"
+	"}\n";
+
+static const char dof_focus[] =
+	"uniform float rate;\n"
+	"void main()\n"
+	"{\n"
+	"\tfloat sum = 0.0, weight = 0.0;\n"
+	"\tfor (int y = -1; y <= 1; y++)\n"
+	"\t\tfor (int x = -1; x <= 1; x++)\n"
+	"\t\t{\n"
+	"\t\t\tvec2 at = vec2(0.5) + vec2(float(x) * 0.025, float(y) * 0.04);\n"
+	"\t\t\tfloat world = texture(color_texture, at).a;\n"
+	"\t\t\tsum += log2(max(linear_depth(texture(depth_texture, at).r), 0.01)) * world;\n"
+	"\t\t\tweight += world;\n"
+	"\t\t}\n"
+	"\tvec4 previous = texture(focus_texture, vec2(0.5));\n"
+	"\tfloat old = previous.r + previous.g / 255.0;\n"
+	"\tfloat now = weight > 0.0 ? clamp((sum / weight - (%.4f)) / %.4f, 0.0, 0.999) : old;\n"
+	"\tfloat value = previous.a < 0.5 ? now : mix(old, now, rate);\n"
+	"\tfloat high = floor(value * 255.0) / 255.0;\n"
+	"\tresult = vec4(high, (value - high) * 255.0, 0.0, 1.0);\n"
+	"}\n";
+
+static const char dof_blur[] =
+	"uniform vec2 radius;\n"
+	"float focus;\n"
+	"float blur(float z)\n"
+	"{\n"
+	"\tfloat start = max(focus * 1.5, focus + 3.0);\n"
+	"\treturn smoothstep(start, start * 2.5 + 20.0, z);\n"
+	"}\n"
+	"void main()\n"
+	"{\n"
+	"\tvec4 encoded = texture(focus_texture, vec2(0.5));\n"
+	"\tfocus = exp2((encoded.r + encoded.g / 255.0) * %.4f + (%.4f));\n"
+	"\tvec4 sharp = texture(color_texture, uv);\n"
+	"\tfloat amount = blur(linear_depth(texture(depth_texture, uv).r));\n"
+	"\tif (amount < 0.02)\n"
+	"\t{\n"
+	"\t\tresult = sharp;\n"
+	"\t\treturn;\n"
+	"\t}\n"
+	"\tvec3 sum = sharp.rgb;\n"
+	"\tfloat total = 1.0;\n"
+	"\tfor (int index = 0; index < 12; index++)\n"
+	"\t{\n"
+	"\t\tfloat reach = sqrt((float(index) + 0.5) / 12.0);\n"
+	"\t\tfloat angle = float(index) * 2.39996323;\n"
+	"\t\tvec2 at = uv + vec2(cos(angle), sin(angle)) * reach * radius * amount;\n"
+	"\t\tvec4 tap = texture(color_texture, at);\n"
+	"\t\tfloat weight = smoothstep(0.75, 1.0, tap.a) * clamp(blur(linear_depth(texture(depth_texture, at).r)) * 4.0, 0.0, 1.0);\n"
+	"\t\tsum += tap.rgb * weight;\n"
+	"\t\ttotal += weight;\n"
+	"\t}\n"
+	"\tresult = vec4(mix(sharp.rgb, sum / total, amount), sharp.a);\n"
+	"}\n";
+
+static GLuint dof_program(const char *fragment_body, const char *what)
+{
+	char vertex_source[512], fragment_source[4096];
+	GLuint vertex, fragment, program;
+	GLint linked = 0;
+
+	snprintf(vertex_source, sizeof(vertex_source), "#version %s\n%s", xgpu_capabilities.shading_language, dof_vertex);
+	snprintf(fragment_source, sizeof(fragment_source), "#version %s\n%s%s", xgpu_capabilities.shading_language,
+		dof_common, fragment_body);
+	vertex = compile_shader(GL_VERTEX_SHADER, vertex_source, what);
+	fragment = compile_shader(GL_FRAGMENT_SHADER, fragment_source, what);
+	if (!vertex || !fragment)
+		return 0;
+	program = glCreateProgram();
+	glAttachShader(program, vertex);
+	glAttachShader(program, fragment);
+	glLinkProgram(program);
+	glDeleteShader(vertex);
+	glDeleteShader(fragment);
+	glGetProgramiv(program, GL_LINK_STATUS, &linked);
+	if (!linked)
+	{
+		char log[2048];
+
+		glGetProgramInfoLog(program, sizeof(log), NULL, log);
+		platform_log("cannot link the %s program: %s", what, log);
+		return 0;
+	}
+	glUseProgram(program);
+	glUniform1i(glGetUniformLocation(program, "color_texture"), 0);
+	glUniform1i(glGetUniformLocation(program, "depth_texture"), 1);
+	glUniform1i(glGetUniformLocation(program, "focus_texture"), 2);
+	return program;
+}
+
+static void dof_texture(GLuint texture, GLenum internal, GLsizei width, GLsizei height, GLenum format, GLenum type,
+	GLint filter)
+{
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, (GLint)internal, width, height, 0, format, type, NULL);
+}
+
+/* the programs once, the copy at the screen's size */
+static BOOL dof_prepare(GLsizei width, GLsizei height)
+{
+	if (!dof.ready)
+	{
+		char focus[2048], blur[4096];
+		int index;
+
+		snprintf(focus, sizeof(focus), dof_focus, DOF_LOW_LOG2, DOF_RANGE_LOG2);
+		snprintf(blur, sizeof(blur), dof_blur, DOF_RANGE_LOG2, DOF_LOW_LOG2);
+		dof.mask_program = dof_program(dof_mask, "depth of field mask");
+		dof.focus_program = dof_program(focus, "depth of field focus");
+		dof.blur_program = dof_program(blur, "depth of field blur");
+		if (!dof.mask_program || !dof.focus_program || !dof.blur_program)
+		{
+			platform_log("depth of field: not available (its shaders)");
+			dof.failed = TRUE;
+			xgpu_gl_state_invalidate();
+			return FALSE;
+		}
+		dof.focus_clip = glGetUniformLocation(dof.focus_program, "clip");
+		dof.focus_rate = glGetUniformLocation(dof.focus_program, "rate");
+		dof.blur_clip = glGetUniformLocation(dof.blur_program, "clip");
+		dof.blur_radius = glGetUniformLocation(dof.blur_program, "radius");
+		glGenVertexArrays(1, &dof.vertex_array);
+		glGenTextures(1, &dof.color);
+		glGenTextures(1, &dof.depth);
+		glGenFramebuffers(1, &dof.framebuffer);
+		glGenTextures(2, dof.focus);
+		glGenFramebuffers(2, dof.focus_framebuffer);
+		for (index = 0; index < 2; index++)
+		{
+			dof_texture(dof.focus[index], GL_RGBA8, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, GL_NEAREST);
+			glBindFramebuffer(GL_FRAMEBUFFER, dof.focus_framebuffer[index]);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dof.focus[index], 0);
+		}
+		dof.ready = TRUE;
+		platform_log("depth of field: ready");
+	}
+	if (dof.width != width || dof.height != height)
+	{
+		GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
+
+		dof_texture(dof.color, GL_RGBA8, width, height, GL_RGBA, GL_UNSIGNED_BYTE, GL_LINEAR);
+		dof_texture(dof.depth, GL_DEPTH24_STENCIL8, width, height, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, GL_NEAREST);
+		glBindFramebuffer(GL_FRAMEBUFFER, dof.framebuffer);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dof.color, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, dof.depth, 0);
+		glDrawBuffers(1, &draw_buffer);
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			platform_log("depth of field: not available (its %dx%d copy)", (int)width, (int)height);
+			dof.failed = TRUE;
+			xgpu_gl_state_invalidate();
+			return FALSE;
+		}
+		dof.width = width;
+		dof.height = height;
+	}
+	return TRUE;
+}
+
+static void dof_bind_textures(GLuint focus)
+{
+	GLuint textures[3];
+	int unit;
+
+	textures[0] = dof.color;
+	textures[1] = dof.depth;
+	textures[2] = focus;
+	for (unit = 0; unit < 3; unit++)
+	{
+		glActiveTexture(GL_TEXTURE0 + (GLenum)unit);
+		glBindTexture(GL_TEXTURE_2D, textures[unit]);
+		glBindSampler((GLuint)unit, 0);
+	}
+}
+
+void xgpu_depth_of_field(float z_near, float z_far)
+{
+	struct render_target_entry *color, *depth;
+	GLuint game_framebuffer;
+	GLsizei width, height;
+	BOOL has_depth;
+	int next;
+
+	if (dof.failed || !host_settings_depth_of_field() || !(z_near > 0.0f) || !(z_far > z_near))
+		return;
+	color = render_target_get(device.render_target);
+	depth = render_target_get(device.depth_stencil);
+	if (!color || !depth || color->target.depth || !depth->target.depth || !color->screen || !depth->screen ||
+		color->target.gl_width != depth->target.gl_width || color->target.gl_height != depth->target.gl_height)
+		return;
+	width = (GLsizei)color->target.gl_width;
+	height = (GLsizei)color->target.gl_height;
+	if (!bind_targets(&has_depth) || !has_depth)
+		return;
+	game_framebuffer = gl_state.framebuffer;
+	if (!dof_prepare(width, height))
+		return;
+
+	glBindVertexArray(dof.vertex_array);
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glDisable(GL_BLEND);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_POLYGON_OFFSET_FILL);
+	/* the screen as it is: color, depth and the weapon's stencil */
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, game_framebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dof.framebuffer);
+	glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+		GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+	/* the copy's alpha: 1 the world, 0 the weapon */
+	glBindFramebuffer(GL_FRAMEBUFFER, dof.framebuffer);
+	glViewport(0, 0, width, height);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glEnable(GL_STENCIL_TEST);
+	glStencilMask(0);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+	glStencilFunc(GL_EQUAL, 1, 1);
+	glUseProgram(dof.mask_program);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	/* the focus, from where it was (afresh after frames without) */
+	glDisable(GL_STENCIL_TEST);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	if (dof.last_frame + 2 < device.frame || dof.last_frame > device.frame)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, dof.focus_framebuffer[dof.focus_current]);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	next = 1 - dof.focus_current;
+	glBindFramebuffer(GL_FRAMEBUFFER, dof.focus_framebuffer[next]);
+	glViewport(0, 0, 1, 1);
+	glUseProgram(dof.focus_program);
+	glUniform2f(dof.focus_clip, z_near, z_far);
+	/* about a third of a second to settle at 30 frames a second, as long at 60 */
+	glUniform1f(dof.focus_rate, halo_interpolation_enabled() ? 0.05f : 0.1f);
+	dof_bind_textures(dof.focus[dof.focus_current]);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	dof.focus_current = next;
+	/* the world again, blurred behind the focus; not the weapon, not alpha */
+	glBindFramebuffer(GL_FRAMEBUFFER, game_framebuffer);
+	glViewport(0, 0, width, height);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_EQUAL, 0, 1);
+	glUseProgram(dof.blur_program);
+	glUniform2f(dof.blur_clip, z_near, z_far);
+	glUniform2f(dof.blur_radius, 0.007f * (float)height / (float)width, 0.007f);
+	dof_bind_textures(dof.focus[next]);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	glDisable(GL_STENCIL_TEST);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glBindVertexArray(device.vertex_array);
+	dof.last_frame = device.frame;
+	xgpu_gl_state_invalidate();
+}
+#endif

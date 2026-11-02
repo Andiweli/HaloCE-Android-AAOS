@@ -258,3 +258,25 @@ void host_settings_cheat_done(int action,int result) {
     if(action<0||action>=HALO_ANDROID_CHEAT_ACTIONS) return;
     pthread_mutex_lock(&lock); settings_cheat_results[action]=result; pthread_mutex_unlock(&lock);
 }
+/* the menu's anti-aliasing (0 off, 2 or 4 samples) and depth of field;
+d3d8_gl.c asks once a frame and says once what the GPU allows (the menu
+leaves the larger choices off): -1 not yet known, 0 none */
+static int settings_msaa, settings_depth_of_field, settings_msaa_limit=-1;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeMsaa(JNIEnv *e,jclass c,jint samples) {
+    pthread_mutex_lock(&lock); settings_msaa=samples<2?0:samples>8?8:samples; pthread_mutex_unlock(&lock);
+}
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeDepthOfField(JNIEnv *e,jclass c,jboolean on) {
+    pthread_mutex_lock(&lock); settings_depth_of_field=on!=0; pthread_mutex_unlock(&lock);
+}
+JNIEXPORT jint JNICALL Java_com_halo_decomp_SettingsOverlay_nativeMsaaLimit(JNIEnv *e,jclass c) {
+    pthread_mutex_lock(&lock); int limit=settings_msaa_limit; pthread_mutex_unlock(&lock); return limit;
+}
+int host_settings_msaa(void) {
+    pthread_mutex_lock(&lock); int samples=settings_msaa; pthread_mutex_unlock(&lock); return samples;
+}
+int host_settings_depth_of_field(void) {
+    pthread_mutex_lock(&lock); int on=settings_depth_of_field; pthread_mutex_unlock(&lock); return on;
+}
+void host_settings_msaa_limit(int samples) {
+    pthread_mutex_lock(&lock); settings_msaa_limit=samples<0?0:samples; pthread_mutex_unlock(&lock);
+}

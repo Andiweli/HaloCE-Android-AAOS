@@ -11,7 +11,7 @@
     <string name="menu_update_failed">La mise à jour a échoué : %1$s</string>
     <string name="menu_settings">Paramètres</string>
     <string name="menu_display">Affichage</string>
-    <string name="menu_display_summary">Luminosité, gamma, images par seconde, filtrage des textures</string>
+    <string name="menu_display_summary">Image, fréquence d\'images, anticrénelage, profondeur de champ</string>
     <string name="menu_controls">Commandes</string>
     <string name="menu_controls_summary">Gyroscope et sensibilité des sticks</string>
     <string name="menu_audio">Volumes</string>
@@ -56,4 +56,12 @@
     <string name="menu_cheat_none">Ce niveau n\'a pas de Warthog.</string>
     <string name="menu_cheat_no_game">Seulement dans votre propre partie, pas au menu principal.</string>
     <string name="menu_cheats_help">Les interrupteurs restent activés jusqu\'à ce que vous les désactiviez. Armes et Warthog apparaissent si le niveau les contient ; dans la partie réseau d\'un autre joueur, les codes sont désactivés.</string>
+    <string name="menu_source">Code source</string>
+    <string name="menu_source_line">Plus d\'infos sur ce portage : %1$s</string>
+    <string name="menu_no_browser">Aucun navigateur trouvé.</string>
+    <string name="menu_msaa">Anticrénelage (MSAA)</string>
+    <string name="menu_msaa_help">Lisse les bords crénelés du monde 3D. 4× coûte plus sur les GPU modestes.</string>
+    <string name="menu_msaa_none">Ce GPU ne propose pas cet anticrénelage.</string>
+    <string name="menu_dof">Profondeur de champ</string>
+    <string name="menu_dof_help">Fait la mise au point sur ce que vise le réticule et adoucit le lointain derrière ; l\'arme, le HUD et les menus restent nets. Coûte un peu de performances.</string>
 </resources>

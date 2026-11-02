@@ -11,7 +11,7 @@
     <string name="menu_update_failed">Die Aktualisierung ist fehlgeschlagen: %1$s</string>
     <string name="menu_settings">Einstellungen</string>
     <string name="menu_display">Anzeige</string>
-    <string name="menu_display_summary">Helligkeit, Gamma, Bildrate, Texturfilterung</string>
+    <string name="menu_display_summary">Bild, Bildrate, Kantenglättung, Tiefenschärfe</string>
     <string name="menu_controls">Steuerung</string>
     <string name="menu_controls_summary">Gyroskop und Stick-Empfindlichkeit</string>
     <string name="menu_audio">Lautstärke</string>
@@ -56,4 +56,12 @@
     <string name="menu_cheat_none">Dieses Level hat keinen Warthog.</string>
     <string name="menu_cheat_no_game">Nur in einem eigenen Spiel, nicht im Hauptmenü.</string>
     <string name="menu_cheats_help">Die Schalter bleiben an, bis du sie ausschaltest. Waffen und Warthog erscheinen, sofern das Level sie enthält; im Netzwerkspiel eines anderen Spielers sind Cheats aus.</string>
+    <string name="menu_source">Quelle</string>
+    <string name="menu_source_line">Mehr zu dieser Portierung unter %1$s</string>
+    <string name="menu_no_browser">Kein Browser gefunden.</string>
+    <string name="menu_msaa">Kantenglättung (MSAA)</string>
+    <string name="menu_msaa_help">Glättet die Treppenkanten der 3D-Welt. 4× kostet auf schwächeren GPUs mehr.</string>
+    <string name="menu_msaa_none">Diese GPU bietet diese Kantenglättung nicht.</string>
+    <string name="menu_dof">Tiefenschärfe</string>
+    <string name="menu_dof_help">Stellt scharf, worauf das Fadenkreuz zeigt, und zeichnet die Ferne dahinter weich unscharf; Waffe, HUD und Menüs bleiben scharf. Kostet etwas Leistung.</string>
 </resources>
