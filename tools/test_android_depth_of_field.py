@@ -2,7 +2,7 @@
 """Run the in-game menu's depth of field and FXAA (port/linux/src/d3d8_gl.c) on made-up frames.
 
 The production shaders (dof_vertex, dof_common, dof_mask, dof_focus,
-dof_blur), formatted as xgpu_depth_of_field formats them, compile and run
+dof_blur), formatted as xgpu_post_process formats them, compile and run
 as GLSL ES 3.00 in Chromium's WebGL2 (the OpenGL ES 3.0 of the phones),
 through Playwright (tools/test_android_depth_of_field.js). On a frame with
 a near block in the middle of a far checkerboard and a stripe of the

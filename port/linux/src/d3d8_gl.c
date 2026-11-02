@@ -4786,7 +4786,7 @@ HRESULT WINAPI D3DDevice_PersistDisplay(void)
 #ifdef HALO_ANDROID
 /* ---------- the in-game menu's depth of field
 
-render_window calls xgpu_depth_of_field after the world, its effects and
+render_window calls xgpu_post_process after the world, its effects and
 fog, before the lens flares, the HUD and the menus, which therefore stay
 sharp. An autofocus: the distance at the crosshair (nine samples around
 the screen's middle), followed over some frames, is in focus; what lies
