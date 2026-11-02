@@ -62,7 +62,7 @@ final class AppUpdate {
     } catch (android.content.pm.PackageManager.NameNotFoundException e) { return null; }
   }
 
-  /** A release named by its version ("1.0.17", "v1.0.17"), not the CI's "build-37". */
+  /** A release named by its version ("1.0.16", "v1.0.16"), not the CI's "build-37". */
   static boolean versionTag(String tag) {
     String v = tag == null ? "" : tag.trim();
     if (v.startsWith("v") || v.startsWith("V")) v = v.substring(1);
@@ -114,7 +114,7 @@ final class AppUpdate {
       int answer = UNKNOWN;
       try {
         // the releases page, newest first: the highest version among the published releases with a phone APK
-        // ("1.0.17"; the CI's automatic "build-N" releases and drafts or pre-releases do not count)
+        // ("1.0.16"; the CI's automatic "build-N" releases and drafts or pre-releases do not count)
         JSONArray releases = new JSONArray(get(RELEASES));
         String tag = null, url = null; long size = 0;
         for (int r = 0; r < releases.length(); r++) {

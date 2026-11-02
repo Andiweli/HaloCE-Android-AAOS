@@ -203,7 +203,7 @@ are in English, German, French and Italian (`res/values*/strings_menu.xml`).
 
 The update button asks GitHub for the releases of
 `Andiweli/HaloCE-Android-AAOS` (`AppUpdate.java`) and takes the one with the
-highest version (its tag `1.0.17`; drafts, pre-releases and the CI's
+highest version (its tag `1.0.16`; drafts, pre-releases and the CI's
 `build-N` releases do not count): green when the app is up to date, red
 with a newer release. It downloads the release's APK (the
 first `.apk` without `aaos` in its name) and hands it to Android's package
