@@ -41,7 +41,7 @@
     <string name="menu_sticks_help">Die Empfindlichkeit gilt für den Stick, mit dem man sich umsieht (das Controller-Profil legt ihn fest).</string>
     <string name="menu_volumes">Lautstärken</string>
     <string name="menu_master">Gesamtlautstärke</string>
-    <string name="menu_effects">Soundeffektlautstärke</string>
+    <string name="menu_effects">Effektlautstärke</string>
     <string name="menu_music">Musiklautstärke</string>
     <string name="menu_cheat_switches">Schalter</string>
     <string name="menu_cheat_health">Unendlich Gesundheit</string>

@@ -217,6 +217,16 @@ final class SettingsOverlay {
         MenuLayout.Buttons buttons=new MenuLayout.Buttons(activity,columns);
         body.addView(buttons,new LinearLayout.LayoutParams(-1,-2));return buttons;
     }
+    /** A row of buttons in the choices' column, left-aligned with their buttons (CubeEvil4's labelledOptions(0));
+     *  narrow, where the choices stack under their labels, across the whole width. */
+    private MenuLayout.Buttons optionsRow(){
+        MenuLayout.Columns outer=new MenuLayout.Columns(activity,170,640,true);
+        outer.addView(new View(activity));
+        MenuLayout.Buttons buttons=new MenuLayout.Buttons(activity,1);
+        outer.addView(buttons);
+        body.addView(outer);
+        return buttons;
+    }
     private Button cellAction(MenuLayout.Buttons parent,String label,View.OnClickListener click){
         Button b=button(label,click);parent.addButton(b);return b;
     }
@@ -464,7 +474,7 @@ final class SettingsOverlay {
         heading(R.string.menu_picture);
         slider(R.string.menu_brightness,BRIGHTNESS);
         slider(R.string.menu_gamma,GAMMA);
-        toggle(buttonsRow(1),s(R.string.menu_sixty_fps),sixtyFps,on->{
+        toggle(optionsRow(),s(R.string.menu_sixty_fps),sixtyFps,on->{
             sixtyFps=on;apply();prefs.edit().putBoolean("sixty_fps",on).apply();
         });
         help(R.string.menu_sixty_fps_help);
@@ -479,7 +489,7 @@ final class SettingsOverlay {
             textureFilter=level;nativeTextureFilter(level);prefs.edit().putInt("texture_filter",level).apply();
         });
         help(R.string.menu_texture_filter_help);
-        toggle(buttonsRow(1),s(R.string.menu_dof),depthOfField,on->{
+        toggle(optionsRow(),s(R.string.menu_dof),depthOfField,on->{
             depthOfField=on;nativeDepthOfField(on);prefs.edit().putBoolean("depth_of_field",on).apply();
         });
         help(R.string.menu_dof_help);
