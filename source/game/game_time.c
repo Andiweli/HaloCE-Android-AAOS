@@ -451,6 +451,11 @@ void game_time_update(
 				long final_local_time;
 				long maximum_possible_server_time;
 
+#ifdef HALO_ANDROID
+				/* port: the in-game menu's FPS display counts the frames the game advanced in */
+				{ extern void host_settings_game_frame(void); host_settings_game_frame(); }
+#endif
+
 				final_local_time = game_time_globals->local_time + ticks_elapsed;
 				switch (game_connection())
 				{

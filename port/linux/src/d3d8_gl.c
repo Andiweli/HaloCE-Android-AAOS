@@ -4693,6 +4693,8 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 #ifdef HALO_ANDROID
 		/* the menu's MSAA: the frame's samples into the texture shown */
 		msaa_resolve(back_buffer);
+		/* the menu's FPS display: one picture more, at this size */
+		host_settings_picture((int)back_buffer->target.gl_width, (int)back_buffer->target.gl_height);
 #endif
 		if (screenshot_every > 0 && device.frame % (unsigned long)screenshot_every == 0)
 			write_screenshot(back_buffer);

@@ -66,4 +66,8 @@
     <string name="menu_dof_help">Stellt scharf, worauf das Fadenkreuz zeigt, und zeichnet die Ferne dahinter weich unscharf; Waffe, HUD und Menüs bleiben scharf. Kostet etwas Leistung.</string>
     <string name="menu_fxaa">FXAA</string>
     <string name="menu_fxaa_help">Glättet Kanten in einem letzten Schritt. Geht mit und ohne MSAA; das Bild wird etwas weicher, das HUD bleibt scharf.</string>
+    <string name="menu_fps_display">FPS-Anzeige unten links</string>
+    <string name="menu_fps_none">-- FPS (Spiel)</string>
+    <string name="menu_fps">%1$d FPS (Spiel)</string>
+    <string name="menu_fps_smooth">%1$d FPS (Spiel) · %2$d FPS (Bild)</string>
 </resources>

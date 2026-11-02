@@ -288,3 +288,23 @@ JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeFxaa(JNIEnv *e
 int host_settings_fxaa(void) {
     pthread_mutex_lock(&lock); int on=settings_fxaa; pthread_mutex_unlock(&lock); return on;
 }
+/* the menu's FPS display (FpsCounter.java): the pictures shown and the frames
+the game advanced in, counted since the start, and the size the pictures are
+drawn at */
+static unsigned int counted_pictures, counted_game_frames;
+static int picture_width, picture_height;
+void host_settings_picture(int width,int height) {
+    pthread_mutex_lock(&lock); counted_pictures++; picture_width=width; picture_height=height; pthread_mutex_unlock(&lock);
+}
+void host_settings_game_frame(void) {
+    pthread_mutex_lock(&lock); counted_game_frames++; pthread_mutex_unlock(&lock);
+}
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeCounters(JNIEnv *e,jclass c,jintArray out) {
+    jint values[4];
+    if(!out || (*e)->GetArrayLength(e,out)<4) return;
+    pthread_mutex_lock(&lock);
+    values[0]=(jint)counted_pictures; values[1]=(jint)counted_game_frames;
+    values[2]=picture_width; values[3]=picture_height;
+    pthread_mutex_unlock(&lock);
+    (*e)->SetIntArrayRegion(e,out,0,4,values);
+}

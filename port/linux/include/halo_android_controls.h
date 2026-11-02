@@ -24,6 +24,9 @@ int host_settings_msaa(void);
 void host_settings_msaa_limit(int samples);
 /* Nonzero: the menu's depth of field. */
 int host_settings_depth_of_field(void);
+/* The menu's FPS display: a picture shown (at the size it was drawn), a frame the game advanced in. */
+void host_settings_picture(int width, int height);
+void host_settings_game_frame(void);
 /* Nonzero: the menu's FXAA. */
 int host_settings_fxaa(void);
 /* The menu's cheats (SettingsOverlay.java, cheats.c): the switches, kept

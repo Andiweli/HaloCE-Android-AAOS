@@ -46,6 +46,7 @@ final class SettingsOverlay {
     static native void nativeDepthOfField(boolean on);
     static native int nativeMsaaLimit();
     static native void nativeFxaa(boolean on);
+    static native void nativeCounters(int[] out);
 
     static final int HOME=0, DISPLAY=1, CONTROLS=2, AUDIO=3, CHEATS=4;
     // Halo's blues instead of CubeEvil4's greens and gold; the update button keeps green and red
@@ -115,7 +116,8 @@ final class SettingsOverlay {
     // 60 FPS with interpolation; off, the original 30 (sdl_platform.c)
     private boolean sixtyFps;
     private int textureFilter, cheatBits, msaaSamples;
-    private boolean depthOfField, fxaa;
+    private boolean depthOfField, fxaa, fpsDisplay;
+    private final FpsCounter fps;
     private FrameLayout root;
     private LinearLayout body;
     private ScrollView scroll;
@@ -150,6 +152,9 @@ final class SettingsOverlay {
         msaaSamples=msaa(prefs.getInt("msaa",0));
         depthOfField=prefs.getBoolean("depth_of_field",false);
         fxaa=prefs.getBoolean("fxaa",false);
+        fpsDisplay=prefs.getBoolean("fps_display",false);
+        fps=new FpsCounter(activity,parent);
+        fps.configure(fpsDisplay,sixtyFps);
         apply();
         nativeTextureFilter(textureFilter);
         nativeCheats(cheatBits);
@@ -334,7 +339,7 @@ final class SettingsOverlay {
         if(isOpen() || suspended)return;
         activity.releaseGameKeys();
         stickLookMask=nativeLookSticks();
-        nativeOpen(true);activity.settingsVisibility(true);
+        nativeOpen(true);activity.settingsVisibility(true);fps.pause(true);
         final LinearLayout panel=column();
         panel.setPadding(dp(20),dp(16),dp(20),dp(12));
         panel.setBackground(shape(PANEL,BORDER,10));
@@ -381,7 +386,7 @@ final class SettingsOverlay {
         back=resume=update=null;java.util.Arrays.fill(navigation,null);
         java.util.Arrays.fill(sliders,null);java.util.Arrays.fill(sliderRows,null);
         ++serial;
-        nativeOpen(false);activity.settingsVisibility(false);
+        nativeOpen(false);activity.settingsVisibility(false);fps.pause(false);
     }
     void suspend(){suspended=true;close();}
     void resume(){suspended=false;}
@@ -478,9 +483,13 @@ final class SettingsOverlay {
         slider(R.string.menu_brightness,BRIGHTNESS);
         slider(R.string.menu_gamma,GAMMA);
         toggle(optionsRow(),s(R.string.menu_sixty_fps),sixtyFps,on->{
-            sixtyFps=on;apply();prefs.edit().putBoolean("sixty_fps",on).apply();
+            sixtyFps=on;apply();prefs.edit().putBoolean("sixty_fps",on).apply();fps.configure(fpsDisplay,sixtyFps);
         });
         help(R.string.menu_sixty_fps_help);
+        // the FPS display as CubeEvil4's (wish of the project owner, 02.11.2026)
+        toggle(optionsRow(),s(R.string.menu_fps_display),fpsDisplay,on->{
+            fpsDisplay=on;prefs.edit().putBoolean("fps_display",on).apply();fps.configure(fpsDisplay,sixtyFps);
+        });
         heading(R.string.menu_graphics);
         final int limit=nativeMsaaLimit();
         choices(R.string.menu_msaa,new String[]{s(R.string.menu_off),"2×","4×"},MSAA,msaaSamples,

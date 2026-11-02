@@ -66,4 +66,8 @@
     <string name="menu_dof_help">Mette a fuoco ciò che punta il mirino e sfoca dolcemente la distanza dietro; arma, HUD e menu restano nitidi. Costa un po\' di prestazioni.</string>
     <string name="menu_fxaa">FXAA</string>
     <string name="menu_fxaa_help">Attenua i bordi seghettati in un passaggio finale. Funziona con o senza MSAA; l\'immagine diventa un po\' più morbida, l\'HUD resta nitido.</string>
+    <string name="menu_fps_display">Mostra gli FPS in basso a sinistra</string>
+    <string name="menu_fps_none">-- FPS (gioco)</string>
+    <string name="menu_fps">%1$d FPS (gioco)</string>
+    <string name="menu_fps_smooth">%1$d FPS (gioco) · %2$d FPS (schermo)</string>
 </resources>

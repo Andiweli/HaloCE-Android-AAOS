@@ -194,7 +194,7 @@ These settings are only for Android:
 
 The in-game menu (`SettingsOverlay.java`, laid out like CubeEvil4's in
 Halo's colours) shows the version, an update button and **Back to the
-game**, four pages: **Display** (brightness, gamma, 60 FPS, MSAA, texture
+game**, four pages: **Display** (brightness, gamma, 60 FPS, FPS display, MSAA, texture
 filtering, FXAA, depth of field), **Controls** (gyroscope, stick sensitivity),
 **Volume** and **Cheats**, and at the bottom a button to this port's page on
 GitHub. Every change applies and is saved at once. The D-pad or the
@@ -225,6 +225,12 @@ something reads it: a draw that samples it, the screenshot, Present
 framebuffer changed: the walls turned bright and see-through. Where the
 GPU has no samples, or a renderbuffer cannot be made, the menu offers Off
 only.
+
+**FPS display bottom left** (off by default; `FpsCounter.java`, as
+CubeEvil4's): the frames the game advanced in each second
+(`game_time_update`), with 60 FPS also the pictures shown (Present), the
+screen's refresh rate and the size the pictures are drawn at, as
+"30 FPS (Game) · 60 Hz · 2400×1080". Hidden while the menu is open.
 
 **FXAA** (off by default; CubeEvil4's shader) smooths the edges once more
 on the world and the weapon, with or without MSAA, before the HUD.

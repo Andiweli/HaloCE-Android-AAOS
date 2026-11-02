@@ -60,9 +60,23 @@ def method(start):
             return overlay[at:index + 1]
     raise ValueError(start)
 
+fps_source = (JAVA / 'FpsCounter.java').read_text()
+
+
+def braced(source, start):
+    at = source.index(start)
+    depth = 0
+    for index in range(source.index('{', at), len(source)):
+        depth += {'{': 1, '}': -1}.get(source[index], 0)
+        if depth == 0:
+            return source[at:index + 1]
+    raise ValueError(start)
+
+
+fps_methods = '\n'.join(braced(fps_source, m) for m in ('static String line(', 'static String hz(', 'static String size('))
 constants = '\n'.join(line for line in overlay.splitlines()
                       if re.match(r'\s+static final (int|String)(\[\])? [A-Z_]+[ =,].*;$', line))
-java = 'package check;\n' + r'''
+java = 'package check;\nimport java.util.Locale;\n' + r'''
 class KeyEvent {
     static final int KEYCODE_VOLUME_UP=24,KEYCODE_VOLUME_DOWN=25,KEYCODE_VOLUME_MUTE=164,KEYCODE_DPAD_UP=19,
         KEYCODE_DPAD_DOWN=20,KEYCODE_DPAD_LEFT=21,KEYCODE_DPAD_RIGHT=22,KEYCODE_BUTTON_A=96,KEYCODE_DPAD_CENTER=23,
@@ -73,7 +87,7 @@ class KeyEvent {
 public class MenuCheck {
 ''' + constants + '\n' + '\n'.join(method(m) for m in (
     'static int action(', 'static int stepped(', 'static int toggled(', 'static int filter(',
-    'static int msaa(', 'static boolean msaaOffered(')) + r'''
+    'static int msaa(', 'static boolean msaaOffered(')) + '\n' + fps_methods + r'''
     static void check(boolean condition,String what){if(!condition)throw new AssertionError(what);}
     public static void main(String[] args){
         check(action(KeyEvent.KEYCODE_VOLUME_UP)==PASS && action(KeyEvent.KEYCODE_VOLUME_MUTE)==PASS,"volume keys stay Android's");
@@ -106,6 +120,10 @@ public class MenuCheck {
         check(msaaOffered(2,2) && !msaaOffered(4,2) && msaaOffered(4,4),"the GPU's most samples and fewer");
         check(msaaOffered(4,-1),"all while the GPU is not yet asked");
         check(SOURCE_URL.equals("https://github.com/Andiweli/HaloCE-Android-AAOS"),"the port's page");
+        check(line("%1$d FPS (Spiel)","%1$d FPS (Spiel) · %2$d FPS (Bild)",false,30,30).equals("30 FPS (Spiel)"),"30 FPS");
+        check(line("%1$d FPS (Spiel)","%1$d FPS (Spiel) · %2$d FPS (Bild)",true,30,60).equals("30 FPS (Spiel) · 60 FPS (Bild)"),"60 FPS");
+        check(hz(59.94f).equals(" · 60 Hz") && hz(0).equals(""),"the screen's rate");
+        check(size(2400,1080).equals(" · 2400×1080") && size(0,0).equals(""),"the picture's size");
         System.out.println("menu java ok");
     }
 }

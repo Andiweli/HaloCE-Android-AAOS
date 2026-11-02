@@ -66,4 +66,8 @@
     <string name="menu_dof_help">Focuses on what the crosshair points at and softly blurs the distance behind it; the weapon, the HUD and the menus stay sharp. Costs some performance.</string>
     <string name="menu_fxaa">FXAA</string>
     <string name="menu_fxaa_help">Smooths jagged edges in a last step. Works with or without MSAA; the picture gets slightly softer, the HUD stays sharp.</string>
+    <string name="menu_fps_display">FPS display bottom left</string>
+    <string name="menu_fps_none">-- FPS (Game)</string>
+    <string name="menu_fps">%1$d FPS (Game)</string>
+    <string name="menu_fps_smooth">%1$d FPS (Game) · %2$d FPS (Screen)</string>
 </resources>
