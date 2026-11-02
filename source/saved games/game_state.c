@@ -401,10 +401,24 @@ static boolean game_state_header_valid(
 
 	/* a save written where the game state sat at some other address holds
 	pointers into a range this process is not using, so there is nothing in it
-	to restore. Not worth reporting: a save from another device or another
-	build is simply not ours, and the caller starts a new game instead */
+	to restore, and the caller starts a new game instead. Said once, in the
+	port's log: on Android the memory window can lie elsewhere from one run
+	to the next (port/android/host/host_memory.c), and a player sees only
+	the level starting again */
 	if (header->layout_address != (unsigned long)game_state_globals.base_address)
+	{
+		static boolean reported;
+
+		if (!reported)
+		{
+			extern void platform_log(const char *format, ...);
+
+			reported = TRUE;
+			platform_log("saved game not loaded: written with the game state at %08lx, this run has it at %08lx",
+				(unsigned long)header->layout_address, (unsigned long)game_state_globals.base_address);
+		}
 		return FALSE;
+	}
 
 	if (csstrcmp(header->map_name, tag_get_name(global_scenario_index)))
 	{

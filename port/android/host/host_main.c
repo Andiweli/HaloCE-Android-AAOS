@@ -279,6 +279,61 @@ static uint32_t make_boot(const struct environment *environment)
 
 #define MAIN_STACK_SIZE (16 * 1024 * 1024)
 
+/* The Xbox memory window's address, kept beside the saves for the next run
+(host_memory_prefer_window): a saved game holds pointers into the window,
+and the game takes it only while the window lies where it was written
+(source/saved games/game_state.c). Where the runtime holds the Xbox's own
+address, the first free one differs from run to run, and checkpoints and
+Save and Quit were lost on the next start. */
+static void window_preference_path(char *path, size_t size)
+{
+	snprintf(path, size, "%s/memory_window.txt", save_root);
+}
+
+static void window_preference_read(void)
+{
+	char path[600];
+	unsigned int base = 0;
+	FILE *file;
+
+	window_preference_path(path, sizeof(path));
+	file = fopen(path, "r");
+	if (!file)
+		return;
+	if (fscanf(file, "%x", &base) == 1)
+		host_memory_prefer_window(base);
+	fclose(file);
+}
+
+static void window_preference_write(void)
+{
+	char path[600], temporary[640];
+	unsigned int base = host_memory_window_base(), kept = 0;
+	FILE *file;
+
+	window_preference_path(path, sizeof(path));
+	file = fopen(path, "r");
+	if (file)
+	{
+		int read = fscanf(file, "%x", &kept);
+		fclose(file);
+		if (read == 1 && kept == base)
+			return;
+	}
+	snprintf(temporary, sizeof(temporary), "%s.tmp", path);
+	file = fopen(temporary, "w");
+	if (!file)
+		return;
+	{
+		int written = fprintf(file, "%08x\n", base) > 0;
+
+		if (fclose(file) == 0 && written)
+			rename(temporary, path);
+		else
+			unlink(temporary);
+	}
+}
+
 static void *game_main(void *unused)
 {
 	struct environment environment = { { 0 }, 0 };
@@ -313,6 +368,7 @@ static void *game_main(void *unused)
 	time_zone(zone, sizeof(zone));
 	environment_set(&environment, "TZ", zone);
 	snprintf(path, sizeof(path), "%s/config.toml", data_root);
+	window_preference_read();
 
     {
         static const char *images[] = { "halo_guest.elf", "halo_guest_20000000.elf",
@@ -331,6 +387,7 @@ static void *game_main(void *unused)
         if (attempt == sizeof(images)/sizeof(images[0]))
             host_fatal("All four linked game-image addresses are occupied; see diagnostic for details");
     }
+	window_preference_write();
 
 	/* only now that the image holds its address: bringing the display up
 	maps memory of its own, and on a device where one of those mappings

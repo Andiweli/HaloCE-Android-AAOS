@@ -223,6 +223,17 @@ uint32_t host_memory_window_base(void)
 	return (uint32_t)window_base;
 }
 
+/* host_memory_prefer_window's address; 0 for none */
+static uint64_t preferred_window;
+
+void host_memory_prefer_window(uint32_t base)
+{
+	/* only an address the search below could have chosen */
+	if (base >= LOW_START && !(base % HALO_GUEST_WINDOW_ALIGNMENT) &&
+		(uint64_t)base + HALO_GUEST_WINDOW_SIZE <= 0x100000000ULL)
+		preferred_window = base;
+}
+
 int host_memory_initialize(uint32_t base, uint32_t size)
 {
 	uint64_t minimum = LOW_START;
@@ -243,9 +254,21 @@ int host_memory_initialize(uint32_t base, uint32_t size)
 		return reason == EEXIST ? -2 : -1; /* retry only an occupied address */
 	}
 
-	/* the window where the game and its data expect it, if it is free */
-	if (reserve(HALO_GUEST_WINDOW_BASE, HALO_GUEST_WINDOW_SIZE) == 0)
+	/* the window where the last run had it, so that its saved games load
+	(they hold pointers into the window); the runtime's own mappings differ
+	from run to run, so the first free address below need not be the same */
+	if (preferred_window && reserve(preferred_window, HALO_GUEST_WINDOW_SIZE) == 0)
 	{
+		window_base = preferred_window;
+		host_logf(HOST_LOG_INFO, "the window where the last run had it, at %08llx, for its saved games",
+			(unsigned long long)window_base);
+	}
+	/* the window where the game and its data expect it, if it is free */
+	else if (reserve(HALO_GUEST_WINDOW_BASE, HALO_GUEST_WINDOW_SIZE) == 0)
+	{
+		if (preferred_window)
+			host_logf(HOST_LOG_INFO, "the last run's window at %08llx is taken: its saved games do not load",
+				(unsigned long long)preferred_window);
 		window_base = HALO_GUEST_WINDOW_BASE;
 	}
 	else
@@ -253,6 +276,9 @@ int host_memory_initialize(uint32_t base, uint32_t size)
 		/* the runtime holds the address. The game can still run with the
 		window elsewhere, as long as the map data is moved with it, which
 		the port does and is told about here. */
+		if (preferred_window)
+			host_logf(HOST_LOG_INFO, "the last run's window at %08llx is taken: its saved games do not load",
+				(unsigned long long)preferred_window);
 		host_logf(HOST_LOG_INFO, "the window at %08llx is taken; putting it somewhere free",
 			(unsigned long long)HALO_GUEST_WINDOW_BASE);
 		window_base = 0;

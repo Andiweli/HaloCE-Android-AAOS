@@ -403,6 +403,11 @@ assembly of the port is necessary:
 - The loader tries linked game images at `0x40000000`, `0x20000000`,
   `0x60000000`, and `0xa0000000` when an image address is occupied.
   The Xbox data window is separately placed in free low-address memory.
+  A saved game (checkpoint, Save and Quit) loads only where the window lay
+  when it was written, so the host keeps the window's address in
+  `save/memory_window.txt` and takes it first the next time. When that
+  address is taken, the log says so, and such a saved game starts the
+  level again.
   Existing Android mappings are never overwritten; startup fails with a
   diagnostic if no suitable address is available.
 - Kernels with 16 KB pages (a developer option of Android 15) do not

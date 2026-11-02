@@ -38,6 +38,10 @@ mappings) from pools of address space it reserves below 4 GB on demand. */
 /* where the window was placed, for the guest's boot structure */
 uint32_t host_memory_window_base(void);
 
+/* the window's address in the last run, tried first (0: none): a saved
+game holds pointers into the window and loads only while the window lies
+where it was written (source/saved games/game_state.c) */
+void host_memory_prefer_window(uint32_t base);
 /* -2: image address occupied, no mappings changed; -1: other failure. */
 int host_memory_initialize(uint32_t image_base, uint32_t image_size);
 /* starts the thread that reports the window's own contents (host_probe.c) */
