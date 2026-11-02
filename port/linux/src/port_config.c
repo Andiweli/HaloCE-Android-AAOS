@@ -78,6 +78,10 @@ static const struct config_setting config_settings[] =
 		"Sharpen textures seen at a grazing angle (floors, walls, terrain), which\n"
 		"the Xbox did not: 2, 4, 8 or 16 times; 0 filters as the Xbox did. 4 keeps\n"
 		"most of 16's sharpness at less cost on slower GPUs." },
+	{ "display.dxt1_astc", _config_boolean, "true", "HALO_DXT1_ASTC", _environment_value, _platform_android,
+		"On a GPU without DXT textures (Mali), give it the DXT1 textures as ASTC,\n"
+		"which holds them nearly as they are in a quarter of the memory of the\n"
+		"32-bit texels they are otherwise decoded to; false decodes them." },
 	{ "display.vsync", _config_boolean, "true", "HALO_NO_VSYNC", _environment_set_is_false, _platform_all,
 		"Wait for the display between frames; false draws as fast as possible." },
 	{ "display.interpolation", _config_boolean, "true", "HALO_INTERPOLATION", _environment_value, _platform_all,
