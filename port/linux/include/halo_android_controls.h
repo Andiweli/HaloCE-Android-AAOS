@@ -16,6 +16,26 @@ void host_settings_sticks(float *left, float *right);
 void host_settings_stick_look_mask(unsigned int mask);
 /* Nonzero: the settings' 60 FPS (interpolation); zero: the original 30. */
 int host_settings_sixty_fps(void);
+/* The menu's texture filtering: 1 (off), 2, 4 or 8; 0 for the configuration's. */
+int host_settings_texture_filter(void);
+/* The menu's cheats (SettingsOverlay.java, cheats.c): the switches, kept
+while on; the buttons, each done once in the game's next frame. */
+#define HALO_ANDROID_CHEAT_HEALTH 1u
+#define HALO_ANDROID_CHEAT_AMMO 2u
+#define HALO_ANDROID_CHEAT_NEVER_RELOAD 4u
+#define HALO_ANDROID_CHEAT_ONE_HIT_KILL 8u
+#define HALO_ANDROID_CHEAT_SWITCHES 15u
+#define HALO_ANDROID_CHEAT_ACTION_WEAPONS 0
+#define HALO_ANDROID_CHEAT_ACTION_WARTHOG 1
+#define HALO_ANDROID_CHEAT_ACTIONS 2
+#define HALO_ANDROID_CHEAT_RESULT_NONE 0
+#define HALO_ANDROID_CHEAT_RESULT_PENDING 1
+#define HALO_ANDROID_CHEAT_RESULT_DONE 2
+#define HALO_ANDROID_CHEAT_RESULT_MISSING 3
+#define HALO_ANDROID_CHEAT_RESULT_NO_GAME 4
+/* The switches; *actions gets the buttons pressed since the last call (bit = action). */
+unsigned int host_settings_cheats(unsigned int *actions);
+void host_settings_cheat_done(int action, int result);
 float host_audio_gain(int category);
 void host_audio_profile(const char *key);
 int host_audio_level(int category);

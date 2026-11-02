@@ -35,6 +35,7 @@ Conventions carried over from the Xbox:
 #ifdef HALO_ANDROID
 #include <pthread.h>
 #include <unistd.h>
+#include "halo_android_controls.h"
 #endif
 
 void d3d8_surface_initialize(D3DSurface *surface, D3DFORMAT format, unsigned long width, unsigned long height);
@@ -2277,29 +2278,57 @@ linearly, 0 or 1 for the game's own filtering. The Xbox game asks for none
 (it never sets D3DTEXF_ANISOTROPIC or D3DTSS_MAXANISOTROPY), so the floors,
 walls and terrain seen at a grazing angle blur toward their smaller mip
 levels. At most the GPU's most (16 on the desktop's), and none on GLES
-without GL_EXT_texture_filter_anisotropic. Read once. */
+without GL_EXT_texture_filter_anisotropic. Read once; on Android the in-game
+menu's choice (Off, 2x, 4x, 8x; host_settings_texture_filter) instead, asked
+once a frame: configure_sampler then sets each sampler again. */
 static DWORD anisotropic_filtering(void)
 {
-	static long level = -1;
+	static long configured = -1;
+	static GLint maximum = 1;
+#ifdef HALO_ANDROID
+	static unsigned long asked_frame;
+	static long level;
+	static BOOL asked;
+#endif
 
-	if (level < 0)
+	if (configured < 0)
 	{
-		GLint maximum = 1;
-
-		level = config_integer("display.anisotropic_filtering");
+		configured = config_integer("display.anisotropic_filtering");
 #ifdef HALO_ANDROID
 		if (xgpu_capabilities.anisotropy)
 			glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximum);
 #else
 		glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &maximum);
 #endif
-		if (level > (long)maximum)
-			level = (long)maximum;
-		if (level < 1)
-			level = 1;
-		platform_log("anisotropic filtering: %ldx (the GPU's most %dx)", level, (int)maximum);
+		if (maximum < 1)
+			maximum = 1;
+		if (configured > (long)maximum)
+			configured = (long)maximum;
+		if (configured < 1)
+			configured = 1;
+		platform_log("anisotropic filtering: %ldx (the GPU's most %dx)", configured, (int)maximum);
+	}
+#ifdef HALO_ANDROID
+	if (!asked || asked_frame != device.frame)
+	{
+		long chosen = host_settings_texture_filter();
+
+		if (chosen <= 0)
+			chosen = configured;
+		if (chosen > (long)maximum)
+			chosen = (long)maximum;
+		if (chosen < 1)
+			chosen = 1;
+		if (asked && chosen != level)
+			platform_log("anisotropic filtering: %ldx from the menu (the GPU's most %dx)", chosen, (int)maximum);
+		level = chosen;
+		asked_frame = device.frame;
+		asked = TRUE;
 	}
 	return (DWORD)level;
+#else
+	return (DWORD)configured;
+#endif
 }
 
 /* hires: a high-res HUD texture (hud_hires.h), drawn smaller than it is, so
