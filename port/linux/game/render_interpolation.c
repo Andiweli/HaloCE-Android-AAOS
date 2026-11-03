@@ -606,6 +606,28 @@ real_matrix4x3 *render_interpolation_object_node_matrices(long object_index)
 	return record->nodes + 2 * record->node_capacity;
 }
 
+/* a point on an object (its bounding sphere's center: render_objects.c's
+shadow), moved by as much as the frame draws the object's root node away
+from where the tick left it (upstream 0e7233f3, as in upstream's
+render_interpolation.c) */
+void render_interpolation_object_point(long object_index, real_point3d *point)
+{
+	struct object_datum *object;
+	real_matrix4x3 const *drawn;
+	real_matrix4x3 const *simulated;
+
+	if (!interpolation_rendering || object_index == NONE)
+		return;
+	drawn = render_interpolation_object_node_matrices(object_index);
+	object = object_try_and_get(object_index);
+	if (!drawn || !object || object->object.node_matrices.size < (short)sizeof(real_matrix4x3))
+		return;
+	simulated = object_header_block_get(object_index, &object->object.node_matrices);
+	point->x += drawn[0].position.x - simulated[0].position.x;
+	point->y += drawn[0].position.y - simulated[0].position.y;
+	point->z += drawn[0].position.z - simulated[0].position.z;
+}
+
 /* ---------- corrections */
 
 /* the object (and what it carries) moved by the netcode from where it was,
