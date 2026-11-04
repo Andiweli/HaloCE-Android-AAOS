@@ -39,6 +39,14 @@ final class HaloPort {
             return touch.getMode() != RetroTouchMode.OFF || handled;
         });
         for (int i=0;i<IDS.length;i++) touch.registerAction(IDS[i], LABELS[i]);
+        // RetroTouch 1.0.0-beta.9 draws shoulder buttons and START/SELECT in shapes of their own, but finds
+        // them only by labels such as "R2" or "START"; Halo's are named by what they do. As on the
+        // controller: the triggers (Fire, Grenade) and the bumpers (Light, Type) as shoulder buttons,
+        // Start (Pause) and SELECT as rectangles; the face buttons stay round.
+        for (String id : new String[] {"fire", "grenade", "flashlight", "grenade_type"})
+            touch.setButtonShape(id, RetroTouchButtonShape.SHOULDER);
+        for (String id : new String[] {"pause", "select"})
+            touch.setButtonShape(id, RetroTouchButtonShape.RECTANGLE);
         touch.setGameplayLayout(new RetroTouchLayout("halo_ce_gameplay_v1", Arrays.asList(
             RetroTouchControl.lookZone("look", .72f,.50f,.55f,.85f),
             RetroTouchControl.moveStick("move", .17f,.72f,.30f),

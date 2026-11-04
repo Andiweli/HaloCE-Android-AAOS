@@ -157,6 +157,8 @@ stubs = {
         private RetroTouchMode mode=RetroTouchMode.OFF;private boolean editing,selectPressed;
         public RetroTouchView(android.content.Context context){last=this;}
         public void registerAction(String id,String label){actions.put(id,label);}
+        public final java.util.Map<String,RetroTouchButtonShape> shapes=new java.util.HashMap<>();
+        public void setButtonShape(String id,RetroTouchButtonShape shape){shapes.put(id,shape);}
         public void setGameplayLayout(RetroTouchLayout layout){gameplay=layout;}
         public void setNavigationLayout(RetroTouchLayout layout){navigation=layout;}
         public void setLookWhileHoldingAction(String id,boolean enabled){}
@@ -196,6 +198,13 @@ class TouchSelectTest {
         HaloActivity a=new HaloActivity();HaloPort p=new HaloPort(a,new ViewGroup());a.port=p;
         RetroTouchView v=RetroTouchView.last;
         check(v.actions.containsKey("select"),"editor SELECT registration");
+        check(v.shapes.get("fire")==com.ast.retrotouch.RetroTouchButtonShape.SHOULDER &&
+              v.shapes.get("grenade")==com.ast.retrotouch.RetroTouchButtonShape.SHOULDER &&
+              v.shapes.get("flashlight")==com.ast.retrotouch.RetroTouchButtonShape.SHOULDER &&
+              v.shapes.get("grenade_type")==com.ast.retrotouch.RetroTouchButtonShape.SHOULDER &&
+              v.shapes.get("pause")==com.ast.retrotouch.RetroTouchButtonShape.RECTANGLE &&
+              v.shapes.get("select")==com.ast.retrotouch.RetroTouchButtonShape.RECTANGLE &&
+              !v.shapes.containsKey("jump"),"triggers and bumpers as shoulder buttons, Start and SELECT rectangles");
         check(containsSelect(v.gameplay) && containsSelect(v.navigation),"both default layouts have SELECT");
         check(v.gameplay.getGameId().equals("halo_ce_gameplay_v1") &&
             v.navigation.getGameId().equals("halo_ce_navigation_v1"),"saved layout identities preserved");

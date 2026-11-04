@@ -154,7 +154,11 @@ open the settings never quits (`source/interface/ui_widget.c`).
 The controller gets the rumble. The back gesture of Android is the B
 button. A Bluetooth or USB keyboard operates as on Linux.
 
-Without a controller, the screen shows touch controls (RetroTouch). They
+Without a controller, the screen shows touch controls (RetroTouch). As
+on a controller, the triggers (Fire, Grenade) and the bumpers (Light,
+Type) are drawn as shoulder buttons, Pause and SELECT as rectangles
+(`setButtonShape` in `HaloPort.java`; RetroTouch would find them only by
+labels such as "R2"). They
 hide while a controller is connected: a physical device with a gamepad or
 joystick source that also has a stick or a D-pad on axes
 (`ControllerPresence.java`). Phones list more devices as gamepads, such as
