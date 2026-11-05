@@ -1754,23 +1754,6 @@ boolean network_game_client_remove_player(
 				machine_remove_player(player_index);
 			}
 
-			/* port: a local player who leaves no longer has its slot: its entry in
-			the local players is cleared here, as the datum stays until a joiner
-			takes the slot (network_game_spawn_player), which then deletes it and
-			makes another with a new identifier, and the entry would name a player
-			that no longer exists (player_get halts on it) */
-			if (player->machine_index == client->machine_index &&
-				player->controller_index >= 0 && player->controller_index < MAXIMUM_LOCAL_PLAYERS &&
-				local_player_get_player_index(player->controller_index) == player_index)
-			{
-				local_player_set_player_index(player->controller_index, NONE);
-				/* (and its control, which names its unit: the datum no longer has a
-				local player index, so the host deleting the unit does not reset it
-				(network_player_detach_unit), and player_control_update would get a
-				unit that is gone) */
-				player_control_new_unit(player->controller_index, NONE);
-			}
-
 			for (network_player_index = 0;
 				network_player_index < MAXIMUM_NUMBER_OF_PLAYERS;
 				network_player_index++)
@@ -1780,6 +1763,26 @@ boolean network_game_client_remove_player(
 				{
 					break;
 				}
+			}
+
+			/* port: a local player who leaves while another remains no longer has
+			its slot: its entry in the local players is cleared here, as the datum
+			stays until a joiner takes the slot (network_game_spawn_player), which
+			then deletes it and makes another with a new identifier, and the entry
+			would name a player that no longer exists (player_get halts on it). The
+			last to leave ends the game, whose sounds and views still name it until
+			then, so its entry stays */
+			if (network_player_index != MAXIMUM_NUMBER_OF_PLAYERS &&
+				player->machine_index == client->machine_index &&
+				player->controller_index >= 0 && player->controller_index < MAXIMUM_LOCAL_PLAYERS &&
+				local_player_get_player_index(player->controller_index) == player_index)
+			{
+				local_player_set_player_index(player->controller_index, NONE);
+				/* (and its control, which names its unit: the datum no longer has a
+				local player index, so the host deleting the unit does not reset it
+				(network_player_detach_unit), and player_control_update would get a
+				unit that is gone) */
+				player_control_new_unit(player->controller_index, NONE);
 			}
 
 			if (network_player_index == MAXIMUM_NUMBER_OF_PLAYERS)
