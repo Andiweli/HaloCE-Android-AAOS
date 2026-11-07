@@ -356,6 +356,23 @@ static byte local_lens_flare_occlusion_test_results2[MAXIMUM_LENS_FLARE_MARKERS_
 static struct rasterizer_lens_flare_submit_parameters local_lens_flare_parameters[MAXIMUM_LENS_FLARES_PER_FRAME] = {0};
 static long local_lens_flare_count = 0;
 extern short global_screenshot_count;
+#ifdef HALO_ANDROID
+/* port: for each occlusion result above, whether its last test was a 0
+held over (rasterizer_lights_begin_for_new_frame), in the same places */
+static byte local_lens_flare_zero_held[sizeof(local_lens_flare_occlusion_test_results)];
+static byte local_lens_flare_zero_held2[sizeof(local_lens_flare_occlusion_test_results2)];
+
+static byte *lens_flare_zero_held_get(
+	byte const *occlusion_test_result)
+{
+	byte const *results = (byte const *)local_lens_flare_occlusion_test_results;
+	byte const *results2 = (byte const *)local_lens_flare_occlusion_test_results2;
+
+	if (occlusion_test_result >= results2 && occlusion_test_result < results2 + sizeof(local_lens_flare_zero_held2))
+		return &local_lens_flare_zero_held2[occlusion_test_result - results2];
+	return &local_lens_flare_zero_held[occlusion_test_result - results];
+}
+#endif
 
 /* ---------- private code */
 
@@ -506,6 +523,10 @@ void rasterizer_lights_reset_for_new_map(
 		0,
 		sizeof(local_lens_flare_occlusion_test_results));
 	memset(local_lens_flare_occlusion_test_results2, 0, sizeof(local_lens_flare_occlusion_test_results2));
+#ifdef HALO_ANDROID
+	memset(local_lens_flare_zero_held, 0, sizeof(local_lens_flare_zero_held));
+	memset(local_lens_flare_zero_held2, 0, sizeof(local_lens_flare_zero_held2));
+#endif
 	local_lens_flare_count = 0;
 
 	return;
@@ -646,6 +667,19 @@ void rasterizer_lights_begin_for_new_frame(
 				latest_visibility= 0;
 			}
 
+#ifdef HALO_ANDROID
+			/* port: a single test of 0 between visible ones is held over: the
+			phones' GPUs (an Adreno 650's, device diagnosis of 08.11.2026) now and
+			then count no pixel for a light in plain view, and a lens flare then
+			went out for that one frame, a light flickering; two in a row put it
+			out, as one did on the Xbox, a frame later */
+			if (!latest_visibility && *occlusion_test_result && !*lens_flare_zero_held_get(occlusion_test_result))
+			{
+				*lens_flare_zero_held_get(occlusion_test_result)= TRUE;
+				continue;
+			}
+			*lens_flare_zero_held_get(occlusion_test_result)= FALSE;
+#endif
 			if (!latest_visibility)
 			{
 				*occlusion_test_result= 0;
