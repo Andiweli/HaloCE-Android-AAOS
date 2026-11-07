@@ -192,6 +192,7 @@ These settings are only for Android:
 | Setting | Function |
 | --- | --- |
 | `display.screen_width` | The number of columns of the 480-line picture. `0` (the default): the shape of the display (1068 on a 20:9 phone). `640`: the 4:3 shape of the Xbox. |
+| `display.direct_camera` | `true` (the default): in first person, on foot, the view points where the player aims in each frame, not where the last tick left it, a tick less behind the stick. `false`: as before. |
 | `debug.sample_seconds` | Refer to "Find problems". |
 
 ### In-game menu
