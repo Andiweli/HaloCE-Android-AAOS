@@ -91,7 +91,14 @@ Halo, Halo: Combat Evolved, Xbox and their associated assets and trademarks
 belong to their respective owners, including Microsoft. This community project
 is not affiliated with or endorsed by Microsoft or Bungie.
 
-See [LICENSE.md](LICENSE.md) for the repository's license notice. Third-party
+This project is licensed under the GNU Affero General Public License,
+version 3 or (at your option) any later version (`AGPL-3.0-or-later`); the
+full text is in [LICENSE](LICENSE). It takes fixes from
+[thelinkin3000/halo-ce-universal](https://github.com/thelinkin3000/halo-ce-universal)
+(SlipstreamCE), which moved to the AGPL 3.0 in its commit `4b09168e7`
+(19.10.2026). The commits of this repository before the change to the AGPL
+(up to and including release 1.0.17) were released under
+[CC0 1.0](LICENSES/CC0-1.0.txt) and stay that way. Third-party
 components retain their own licenses, including
 [SDL](port/android/native/SDL-LICENSE.txt) and
 [musl](port/android/native/MUSL-COPYRIGHT.txt). These notices do not grant rights
