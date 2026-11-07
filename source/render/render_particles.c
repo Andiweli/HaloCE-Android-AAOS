@@ -230,10 +230,7 @@ void render_particles(
 			boolean owned_by_local_player =
 				particle->local_player_index == local_player_index;
 
-			/* port: particle_drawn holds back a particle until a tick's
-			update has passed, as the Xbox's frame a tick did */
-			if (particle_drawn(particle_index) &&
-				render_location_visible(&particle->location) &&
+			if (render_location_visible(&particle->location) &&
 				(!TEST_FLAG(
 					particle->flags,
 					_particle_datum_dont_draw_first_person_bit) ||
