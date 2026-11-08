@@ -483,6 +483,9 @@ assembly of the port is necessary:
   `save/memory_window.txt` and takes it first the next time. When that
   address is taken, the log says so, and such a saved game starts the
   level again.
+- Save and Quit in the pause menu keeps the game as it is at that moment,
+  not the last checkpoint as on the Xbox. While the player is dead or
+  falling, or a cinematic plays, it keeps the last checkpoint.
   Existing Android mappings are never overwritten; startup fails with a
   diagnostic if no suitable address is available.
 - Kernels with 16 KB pages (a developer option of Android 15) do not

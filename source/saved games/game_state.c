@@ -122,6 +122,7 @@ symbols in this file:
 #include "lruv_cache.h"
 #include "memory_pool.h"
 #include "cluster_partitions.h"
+#include "cinematics.h"
 
 /* ---------- constants */
 
@@ -322,11 +323,55 @@ void game_state_revert(
 	return;
 }
 
+#ifdef HALO_ANDROID
+/* port: whether the game may be kept as it is at this moment: not while the
+player is dead or dying, falling or flying through the air, or a cinematic
+plays; then the last checkpoint is kept, as on the Xbox */
+static boolean game_state_moment_saveable(
+	void)
+{
+	struct data_iterator iterator;
+	struct player_datum *player;
+
+	if (cinematic_in_progress() || any_player_is_dead() || any_player_is_in_the_air())
+		return FALSE;
+	data_iterator_new(&iterator, player_data);
+	while ((player = (struct player_datum *)data_iterator_next(&iterator)) != NULL)
+	{
+		if (TEST_FLAG(object_get(player->unit_index)->object.damage_flags, _object_dead_bit))
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+#endif
 void game_state_save_to_persistent_storage(
 	void)
 {
 	if (player_spawn_count==1)
 	{
+#ifdef HALO_ANDROID
+		/* port: Save & Quit keeps the game as it is when it is chosen (wish of
+		the project owner, 08.11.2026), not the last checkpoint, which the
+		Xbox went back to first and which lost everything since. The pause
+		menu holds the game's clock: the game state is written as running,
+		or the game loaded from it would stand still */
+		if (game_state_moment_saveable())
+		{
+			boolean paused = game_time_get_paused();
+
+			game_time_set_paused(FALSE);
+			game_state_write_to_persistent_storage(
+				game_state_globals.base_address,
+				&game_state_globals.header->checksum,
+				sizeof(*game_state_globals.header),
+				/* the whole of the native builds' larger game state */
+				GAME_STATE_SIZE);
+			game_time_set_paused(paused);
+			return;
+		}
+#endif
 		game_state_revert();
 		game_state_write_to_persistent_storage(
 			game_state_globals.base_address,
