@@ -10,7 +10,7 @@ keyboard insets shared by SDL and RetroTouch. System bars remain accessible.
 The adaptive launcher icon stays within its safe zone and is also used as the
 round icon. The AAOS activities are resizable and do not request rotation.
 Native rendering/audio is paused at onPause, including when AAOS blocks the
-activity. The mobile self-updater is disabled in the AAOS variant.
+activity. The AAOS variant has no update button.
 
 Build commands from this directory:
 
@@ -210,9 +210,9 @@ The update button asks GitHub for the releases of
 `Andiweli/HaloCE-Android-AAOS` (`AppUpdate.java`) and takes the one with the
 highest version (its tag `1.0.16`; drafts, pre-releases and the CI's
 `build-N` releases do not count): green when the app is up to date, red
-with a newer release. It downloads the release's APK (the
-first `.apk` without `aaos` in its name) and hands it to Android's package
-installer. Android Automotive builds have no button.
+with a newer release (one with an `.apk` without `aaos` in its name). It
+opens the releases page in the browser; the app downloads and installs
+nothing itself. Android Automotive builds have no button.
 
 **Texture filtering** (Off, 2x, 4x, 8x) replaces `display.anisotropic_filtering`
 at once (`anisotropic_filtering` in `port/linux/src/d3d8_gl.c`, asked once a
@@ -302,15 +302,10 @@ drop it, and when it hosts, its players leave.
 
 ## Updates
 
-The app from GitHub Actions can update itself, as on Linux (refer to
-"Updates" in [port/linux/README.md](../linux/README.md#updates)). When you
-select "Yes":
-
-1. The app downloads the new version.
-2. The package installer of Android opens. At the first update, Android asks
-   you to let Halo install apps. Allow it.
-3. Select "Update". Android replaces the app.
-4. Select "Open" to start the new version.
+The app does not update itself. When a newer release is on GitHub, the
+update button of the in-game menu turns red; it opens the releases page
+(https://github.com/Andiweli/HaloCE-Android-AAOS/releases). Download the
+`.apk` there and install it.
 
 To install over the previous version, each build must have the same
 signature. GitHub Actions signs each build with the key in the

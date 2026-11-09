@@ -7,8 +7,7 @@ plugins {
 def staged = new File(projectDir, "../native")
 
 // a build of main knows its number (tools/ci_build.py), which names its
-// release and which the self-updater (Updater.java) compares; others have
-// none and never look for updates
+// release
 def buildNumberText = System.getenv("HALO_BUILD_NUMBER") ?: "0"
 def buildNumber = buildNumberText.isInteger() ? buildNumberText.toInteger() : 0
 

@@ -406,7 +406,7 @@ final class SettingsOverlay {
         title=text("",22,true);
         resume=button(s(R.string.menu_resume),v->close());
         // the update button left of "Back to the game", hidden until GitHub answered (AppUpdate)
-        update=button(s(R.string.menu_update),v->AppUpdate.install(activity,updates));
+        update=button(s(R.string.menu_update),v->openPage(AppUpdate.RELEASES_PAGE));
         update.setVisibility(View.GONE);
         LinearLayout actions=row();
         LinearLayout.LayoutParams gap=new LinearLayout.LayoutParams(-2,-2);
@@ -421,7 +421,7 @@ final class SettingsOverlay {
         parent.addView(root,new ViewGroup.LayoutParams(-1,-1));
         java.util.Arrays.fill(scrollY,0);page=HOME;lastMotion=0;lastDirection=0;
         showPage(HOME,controller);
-        if(AppUpdate.loading())updates.progress(0,null);else AppUpdate.check(activity,updates);
+        AppUpdate.check(activity,updates);
         root.post(refreshStickRoles);
     }
     void close(){
@@ -443,20 +443,7 @@ final class SettingsOverlay {
         showPage(HOME,false);
         if(navigation[from]!=null && !root.isInTouchMode())navigation[from].requestFocus();
     }
-    private final AppUpdate.Listener updates=new AppUpdate.Listener(){
-        @Override public void checked(int state){showUpdate(state);}
-        @Override public void progress(int percent,String problem){
-            if(percent<0){
-                if(problem!=null)Toast.makeText(activity,problem,Toast.LENGTH_LONG).show();
-                showUpdate(AppUpdate.OLDER);
-                return;
-            }
-            if(update==null)return;
-            showUpdate(AppUpdate.OLDER);
-            update.setEnabled(false);
-            update.setText(percent>=100?s(R.string.menu_update_install):activity.getString(R.string.menu_update_loading,percent));
-        }
-    };
+    private final AppUpdate.Listener updates=this::showUpdate;
     private void showUpdate(int state){
         if(update==null)return;
         if(state==AppUpdate.UNKNOWN){update.setVisibility(View.GONE);return;}
@@ -514,11 +501,12 @@ final class SettingsOverlay {
         navigation[CHEATS]=nav(second,R.string.menu_cheats,R.string.menu_cheats_summary,CHEATS);
         // where the port is (as CubeEvil4's menu says it; wish of the project owner, 02.11.2026)
         heading(R.string.menu_source);
-        cellAction(buttonsRow(1),activity.getString(R.string.menu_source_line,SOURCE_URL),v->openSource());
+        cellAction(buttonsRow(1),activity.getString(R.string.menu_source_line,SOURCE_URL),v->openPage(SOURCE_URL));
     }
-    private void openSource(){
+    /** A page in the browser: the source, the releases (the update button). */
+    private void openPage(String url){
         try{
-            activity.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(SOURCE_URL)));
+            activity.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(url)));
         }catch(android.content.ActivityNotFoundException e){
             Toast.makeText(activity,s(R.string.menu_no_browser),Toast.LENGTH_SHORT).show();
         }

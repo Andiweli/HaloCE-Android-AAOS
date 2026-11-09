@@ -5,10 +5,6 @@
     <string name="menu_resume">Back to the game</string>
     <string name="menu_update">Update</string>
     <string name="menu_up_to_date">Up to date</string>
-    <string name="menu_update_loading">Downloading… %1$d %%</string>
-    <string name="menu_update_install">Installing…</string>
-    <string name="menu_update_allow">Allow Halo to install apps, then press Update again.</string>
-    <string name="menu_update_failed">The update failed: %1$s</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_display">Display</string>
     <string name="menu_display_summary">Picture, frame rate, anti-aliasing, FXAA, depth of field</string>

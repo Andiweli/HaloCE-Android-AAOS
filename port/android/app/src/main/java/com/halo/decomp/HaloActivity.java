@@ -104,8 +104,6 @@ public class HaloActivity extends SDLActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (!Fullscreen.isAutomotive(this)) preferHighestRefreshRate();
         acquireMulticastLock();
-        // a new version looked for while the game starts
-        if (!Fullscreen.isAutomotive(this)) Updater.start(this);
     }
 
     /** The game's surface without Android's focus highlight: focused from a controller

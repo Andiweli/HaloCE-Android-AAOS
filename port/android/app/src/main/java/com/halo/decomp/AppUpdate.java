@@ -1,59 +1,41 @@
 package com.halo.decomp;
 
-import android.app.Activity;
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.pm.PackageInstaller;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
 import android.util.Log;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * The in-game menu's update button (from CubeEvil4-Android): of the releases on GitHub
- * (github.com/Andiweli/HaloCE-Android-AAOS/releases), the one with the highest version (its tag the
- * version, "1.0.15", its phone .apk, "HaloCE.1.0.15.apk") against the installed version. The same: "Up
- * to date", green and off; the installed one older: "Update", red, which downloads the APK into
- * Android's package installer, and Android asks before it installs (the game closes then). Asked once
- * per run, in the background; without the internet, and in the AAOS build (installed by its store), the
- * button stays hidden. Android installs only an APK signed with the installed one's key.
+ * The in-game menu's update button: of the releases on GitHub (github.com/Andiweli/HaloCE-Android-AAOS/releases),
+ * the one with the highest version (its tag the version, "1.0.15", with a phone .apk, "HaloCE.1.0.15.apk")
+ * against the installed version. The same: "Up to date", green and off; the installed one older: "Update",
+ * red, which opens the releases page (wish of the project owner, 09.11.2026: the game no longer downloads
+ * or installs a new version itself). Asked once per run, in the background; without the internet, and in
+ * the AAOS build (installed by its store), the button stays hidden.
  */
 final class AppUpdate {
   static final String TAG = "halo";
   static final String RELEASES = "https://api.github.com/repos/Andiweli/HaloCE-Android-AAOS/releases?per_page=30";
-  private static final String ACTION = "com.halo.decomp.UPDATE_INSTALLED";
-  /** the most an APK may be (a release's is about 40 MB) */
-  private static final long MAXIMUM_SIZE = 256L * 1024 * 1024;
+  static final String RELEASES_PAGE = "https://github.com/Andiweli/HaloCE-Android-AAOS/releases";
   /** The check's answer: not known (yet, or no internet), the same version (or newer), an older one. */
   static final int UNKNOWN = 0, CURRENT = 1, OLDER = 2;
 
   interface Listener {
     /** The check answered (main thread). */
     void checked(int state);
-    /** The download's progress in percent, -1 when it stopped with `problem` (main thread). */
-    void progress(int percent, String problem);
   }
 
   private static int state = UNKNOWN;
-  private static String latest, apkUrl;
-  private static long apkSize;
-  private static boolean asked, loading;
+  private static boolean asked;
   private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
   static int state() { return state; }
-  static boolean loading() { return loading; }
 
   /** The installed version as the releases name it ("1.0.15"). */
   static String installed(Context c) {
@@ -116,7 +98,7 @@ final class AppUpdate {
         // the releases page, newest first: the highest version among the published releases with a phone APK
         // ("1.0.16"; the CI's automatic "build-N" releases and drafts or pre-releases do not count)
         JSONArray releases = new JSONArray(get(RELEASES));
-        String tag = null, url = null; long size = 0;
+        String tag = null;
         for (int r = 0; r < releases.length(); r++) {
           JSONObject release = releases.getJSONObject(r);
           String name = release.optString("tag_name", "");
@@ -125,14 +107,11 @@ final class AppUpdate {
           JSONArray assets = release.getJSONArray("assets");
           for (int i = 0; i < assets.length(); i++) {
             JSONObject a = assets.getJSONObject(i);
-            if (phoneApk(a.getString("name")) && a.optLong("size") <= MAXIMUM_SIZE) {
-              tag = name; url = a.getString("browser_download_url"); size = a.optLong("size"); break;
-            }
+            if (phoneApk(a.getString("name"))) { tag = name; break; }
           }
         }
         if (tag == null) throw new java.io.IOException("no release with an APK");
-        if (mine != null) answer = compare(mine, tag) < 0 && url != null ? OLDER : CURRENT;
-        latest = tag; apkUrl = url; apkSize = size;
+        if (mine != null) answer = compare(mine, tag) < 0 ? OLDER : CURRENT;
         Log.i(TAG, "GitHub's latest release " + tag + ", installed " + mine
             + (answer == OLDER ? ": an update" : ": up to date"));
       } catch (Exception e) {
@@ -154,91 +133,5 @@ final class AppUpdate {
       for (int n; (n = in.read(buffer)) > 0; ) out.write(buffer, 0, n);
       return out.toString("UTF-8");
     } finally { c.disconnect(); }
-  }
-
-  /**
-   * The button: Android's permission to install first (its settings page when missing, the player comes
-   * back and presses again), then the APK into a session of the package installer, which asks.
-   */
-  static void install(Activity activity, Listener listener) {
-    if (loading || apkUrl == null) return;
-    if (Build.VERSION.SDK_INT >= 26 && !activity.getPackageManager().canRequestPackageInstalls()) {
-      listener.progress(-1, activity.getString(R.string.menu_update_allow));
-      try {
-        activity.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-            Uri.parse("package:" + activity.getPackageName())));
-      } catch (Exception e) { Log.w(TAG, "no settings page for installing apps: " + e); }
-      return;
-    }
-    loading = true;
-    final Context app = activity.getApplicationContext();
-    final String url = apkUrl, version = latest;
-    final long size = apkSize;
-    listener.progress(0, null);
-    new Thread(() -> {
-      PackageInstaller installer = app.getPackageManager().getPackageInstaller();
-      int session = -1;
-      try {
-        PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(
-            PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-        params.setAppPackageName(app.getPackageName());
-        if (size > 0) params.setSize(size);
-        session = installer.createSession(params);
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setConnectTimeout(10000); c.setReadTimeout(20000);
-        try (PackageInstaller.Session s = installer.openSession(session)) {
-          long total = size > 0 ? size : c.getContentLength(), done = 0;
-          try (InputStream in = c.getInputStream();
-               OutputStream out = s.openWrite("HaloCE-" + version + ".apk", 0, size > 0 ? size : -1)) {
-            int shown = 0;
-            byte[] buffer = new byte[65536];
-            for (int n; (n = in.read(buffer)) > 0; ) {
-              done += n;
-              if (done > MAXIMUM_SIZE) throw new java.io.IOException("the download is larger than expected");
-              out.write(buffer, 0, n);
-              int percent = total > 0 ? (int) Math.min(99, done * 100 / total) : 0;
-              if (percent != shown) { shown = percent; MAIN.post(() -> listener.progress(percent, null)); }
-            }
-            s.fsync(out);
-          }
-          listenForResult(app, listener);
-          Intent answer = new Intent(ACTION).setPackage(app.getPackageName());
-          int flags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
-          s.commit(PendingIntent.getBroadcast(app, session, answer, flags).getIntentSender());
-          Log.i(TAG, "downloaded " + version + " (" + done + " bytes), Android installs it");
-          MAIN.post(() -> listener.progress(100, null));
-        } finally { c.disconnect(); }
-      } catch (Exception e) {
-        Log.w(TAG, "update failed: " + e);
-        if (session >= 0) try { installer.abandonSession(session); } catch (Exception ignored) {}
-        final String why = String.valueOf(e.getMessage());
-        MAIN.post(() -> { loading = false; listener.progress(-1, app.getString(R.string.menu_update_failed, why)); });
-      }
-    }, "update-download").start();
-  }
-
-  /** The installer's answer: its question to the player (an activity of its own), or why it stopped. */
-  private static void listenForResult(Context app, Listener listener) {
-    BroadcastReceiver receiver = new BroadcastReceiver() {
-      @Override public void onReceive(Context context, Intent intent) {
-        int status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
-        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
-          Intent ask = intent.getParcelableExtra(Intent.EXTRA_INTENT);
-          if (ask != null) context.startActivity(ask.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-          return;
-        }
-        context.unregisterReceiver(this);
-        loading = false;
-        if (status != PackageInstaller.STATUS_SUCCESS) {
-          String why = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
-          Log.w(TAG, "the installer stopped: " + status + " " + why);
-          listener.progress(-1, context.getString(R.string.menu_update_failed, String.valueOf(why)));
-        }
-      }
-    };
-    // before the commit (the answer can come at once); onReceive runs on the main thread
-    IntentFilter filter = new IntentFilter(ACTION);
-    if (Build.VERSION.SDK_INT >= 33) app.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
-    else app.registerReceiver(receiver, filter);
   }
 }

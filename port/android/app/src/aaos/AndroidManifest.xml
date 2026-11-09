@@ -5,7 +5,6 @@
     <uses-feature android:name="android.hardware.wifi" android:required="false" />
     <uses-feature android:name="android.hardware.screen.landscape" android:required="false" />
     <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
     <application android:roundIcon="@mipmap/ic_launcher" android:resizeableActivity="true">
         <!-- Allow more scheduling headroom on automotive systems. SDL imports
              SDL_ENV metadata before opening audio; mobile keeps its default. -->
@@ -16,7 +15,5 @@
         <activity android:name=".HaloActivity" android:screenOrientation="unspecified"
             android:resizeableActivity="true" android:launchMode="standard"
             tools:replace="android:screenOrientation,android:resizeableActivity,android:launchMode" />
-        <provider android:name=".UpdateProvider" tools:node="remove" />
-        <receiver android:name=".UpdateReceiver" tools:node="remove" />
     </application>
 </manifest>

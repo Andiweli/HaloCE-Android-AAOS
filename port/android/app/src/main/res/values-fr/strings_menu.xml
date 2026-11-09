@@ -5,10 +5,6 @@
     <string name="menu_resume">Retour au jeu</string>
     <string name="menu_update">Mettre à jour</string>
     <string name="menu_up_to_date">À jour</string>
-    <string name="menu_update_loading">Téléchargement… %1$d %%</string>
-    <string name="menu_update_install">Installation…</string>
-    <string name="menu_update_allow">Autorisez Halo à installer des applications, puis appuyez de nouveau sur Mettre à jour.</string>
-    <string name="menu_update_failed">La mise à jour a échoué : %1$s</string>
     <string name="menu_settings">Paramètres</string>
     <string name="menu_display">Affichage</string>
     <string name="menu_display_summary">Image, fréquence d\'images, anticrénelage, FXAA, profondeur de champ</string>
