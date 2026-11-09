@@ -314,6 +314,21 @@ repository. If you installed a build that has a different signature, remove
 that build before you install a new build. Removing the app deletes its data
 folder: first make a copy of `maps/` and `save/`.
 
+### Changes in 1.0.18
+
+- License: AGPL-3.0-or-later (releases up to 1.0.17 stay CC0).
+- Save & Quit saves the game at the moment it is chosen, not the last
+  checkpoint (the last checkpoint while dead, falling or in a cinematic).
+- No grey veil after the in-game menu or a return from the background
+  (Android's focus highlight on the game's surface is off).
+- No self-update: the update button opens the releases page.
+- From upstream: particles drawn after a tick's update (60 FPS), shorter
+  sound start and stop, no level flashing at portal edges, NaN-safe
+  particles, fog screen per split-screen window, faster LRU caches, a Theater
+  menu crash, the network port asked once.
+- The first-person view turns in the frame the stick moves.
+- Lens flares hold over a single occlusion test of 0.
+
 ## Widescreen
 
 The game shows 480 lines in the shape of the display, not the 640x480 of
