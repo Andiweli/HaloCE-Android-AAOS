@@ -4733,6 +4733,15 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 			x, y + height, x + width, y, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 #ifdef HALO_ANDROID
         }
+		/* the screen opaque: the blit brings the game's own alpha along, and
+		Android composes the surface with it once the in-game menu has been
+		over it, the picture brightened (Retroid Pocket Flip 2, 09.11.2026);
+		the menu's brightness and gamma pass writes 1 itself */
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 #endif
 		platform_video_swap();
 		xgpu_gl_state_invalidate();
