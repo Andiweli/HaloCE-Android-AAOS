@@ -6,7 +6,7 @@
   "assets/halo_guest_60000000.elf": "360f94705f092d6bb1e1e64d7cd39b4d5e2d5ffd0915417196cc20d60adeb3e8",
   "assets/halo_guest_a0000000.elf": "9c9d9ff8b64dd4a50762a6d82ff369660b0545abb3ee12f24d7cab02be86b35e",
   "jniLibs/arm64-v8a/libSDL3.so": "541ea3884ec0006c7e23ba4fe19887f8f3f8e3b240e5447fdecee9e95f1da8b9",
-  "jniLibs/arm64-v8a/libmain.so": "4860a665951b5dd7708d69c09ce26ae0a1dcc1da3200268c2117e707cf6f35b1",
+  "jniLibs/arm64-v8a/libmain.so": "e617c4cacff6ba8db2a3fcdd6e596ad86636d505a94935d8212e141c6e2cb682",
   "sdl-java/org/libsdl/app/HIDDevice.java": "afdeaf583f051583eff5cc9dcbfb983e3e8923e66d1130ff3e30c21afc8f87f1",
   "sdl-java/org/libsdl/app/HIDDeviceBLESteamController.java": "2f88711d2c5bb2114be4273b6f3461b165cf19fcedae714d0c0105b2422a4c36",
   "sdl-java/org/libsdl/app/HIDDeviceManager.java": "5bff9432726930a17cad9502191dd807da2e3cbcff2ad6990966b4b4bd9a7757",
