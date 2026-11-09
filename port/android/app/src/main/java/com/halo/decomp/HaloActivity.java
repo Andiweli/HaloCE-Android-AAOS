@@ -51,7 +51,7 @@ public class HaloActivity extends SDLActivity {
         if (!visible) {
             restoreFullscreen();
             // the game's keys go to SDL's surface again (SDLSurface.onKey)
-            if (mSurface != null) mSurface.requestFocus();
+            if (mSurface != null) { noFocusHighlight(); mSurface.requestFocus(); }
         }
     }
     boolean motionAvailable() { return motionAim != null && motionAim.available(); }
@@ -93,6 +93,7 @@ public class HaloActivity extends SDLActivity {
     protected void onCreate(Bundle savedInstanceState) {
         if (BuildConfig.HALO_DIAGNOSTICS_ENABLED) StartDiagnostics.prepare(this);
         super.onCreate(savedInstanceState);
+        noFocusHighlight();
         if (BuildConfig.HALO_DIAGNOSTICS_ENABLED) StartDiagnostics.connect(this);
         haloPort = new HaloPort(this, mLayout);
         motionAim = new MotionAim(this);
@@ -105,6 +106,14 @@ public class HaloActivity extends SDLActivity {
         acquireMulticastLock();
         // a new version looked for while the game starts
         if (!Fullscreen.isAutomotive(this)) Updater.start(this);
+    }
+
+    /** The game's surface without Android's focus highlight: focused from a controller
+     *  (the in-game menu closed, not in touch mode) Android drew it over the whole surface,
+     *  a white veil of about a quarter over the game and its HUD (Retroid Pocket Flip 2,
+     *  09.11.2026), until a touch put the window in touch mode. */
+    private void noFocusHighlight() {
+        if (mSurface != null) mSurface.setDefaultFocusHighlightEnabled(false);
     }
 
     private void restoreFullscreen() {
