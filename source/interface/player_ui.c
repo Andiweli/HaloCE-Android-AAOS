@@ -616,7 +616,15 @@ void player_ui_set_single_player_local_player_controller(
 long player_ui_get_player1_last_used_profile_index(
 	void)
 {
-	if (!player1_profile_path[0] &&
+	/* port: z:\lastprof.txt read once a run. Absent (no profile chosen yet
+	on this install), it was read again at every ask, and asked each frame
+	while no profile is active (hosting from the menus has no player): two
+	lines in debug.txt each time, ten a second. A profile chosen since sets
+	the path itself (player_ui_remember_player1_profile) */
+	static boolean player1_profile_path_read = FALSE;
+
+	if (!player1_profile_path[0] && !player1_profile_path_read &&
+		(player1_profile_path_read = TRUE) &&
 		saved_game_file_retrieve_player1_last_used_profile_directory(
 			player1_profile_path))
 	{
