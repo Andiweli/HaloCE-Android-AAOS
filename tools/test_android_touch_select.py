@@ -13,6 +13,7 @@ root = Path(__file__).resolve().parents[1]
 java_root = root / "port/android/app/src/main/java/com/halo/decomp"
 activity = (java_root / "HaloActivity.java").read_text()
 port = (java_root / "HaloPort.java").read_text()
+style = (java_root / "HaloTouchStyle.java").read_text()
 jdk = Path(os.environ["JAVA_HOME"])
 
 def block(source, marker):
@@ -150,6 +151,13 @@ stubs = {
         public static boolean connected;
         public static boolean isControllerConnected(android.content.Context context){return connected;}
     }''',
+    # RetroTouch's icons build their paths when the class loads (1.0.0-beta.13)
+    "android/graphics/Path": '''public class Path {
+        public void moveTo(float x,float y){} public void lineTo(float x,float y){}
+        public void cubicTo(float a,float b,float c,float d,float e,float f){} public void close(){}
+        public void computeBounds(RectF bounds,boolean exact){}
+    }''',
+    "android/graphics/RectF": "public class RectF {}",
     "com/ast/retrotouch/RetroTouchView": '''public class RetroTouchView extends android.view.View {
         public static RetroTouchView last;
         public final java.util.Map<String,String> actions=new java.util.LinkedHashMap<>();
@@ -157,6 +165,19 @@ stubs = {
         private RetroTouchMode mode=RetroTouchMode.OFF;private boolean editing,selectPressed;
         public RetroTouchView(android.content.Context context){last=this;}
         public void registerAction(String id,String label){actions.put(id,label);}
+        public final java.util.Map<String,RetroTouchIcon> icons=new java.util.HashMap<>();
+        public void registerAction(String id,String label,RetroTouchColors colors,RetroTouchIcon icon){
+            actions.put(id,label);if(icon!=null)icons.put(id,icon);}
+        public final java.util.List<RetroTouchButtonStyle> styles=new java.util.ArrayList<>();
+        public void setAvailableButtonStyles(RetroTouchButtonStyle... styles){
+            this.styles.clear();this.styles.addAll(java.util.Arrays.asList(styles));}
+        public void setDefaultButtonStyle(RetroTouchButtonStyle style){}
+        public void setDefaultColors(RetroTouchColors colors){}
+        public final java.util.List<RetroTouchSkin> skins=new java.util.ArrayList<>();
+        public String skin;
+        public void registerSkin(RetroTouchSkin skin){skins.add(skin);}
+        public void setDefaultSkin(String id){}
+        public void setSkin(String id){skin=id;}
         public final java.util.Map<String,RetroTouchButtonShape> shapes=new java.util.HashMap<>();
         public void setButtonShape(String id,RetroTouchButtonShape shape){shapes.put(id,shape);}
         public void setGameplayLayout(RetroTouchLayout layout){gameplay=layout;}
@@ -198,16 +219,24 @@ class TouchSelectTest {
         HaloActivity a=new HaloActivity();HaloPort p=new HaloPort(a,new ViewGroup());a.port=p;
         RetroTouchView v=RetroTouchView.last;
         check(v.actions.containsKey("select"),"editor SELECT registration");
-        check(v.shapes.get("fire")==com.ast.retrotouch.RetroTouchButtonShape.SHOULDER &&
-              v.shapes.get("grenade")==com.ast.retrotouch.RetroTouchButtonShape.SHOULDER &&
-              v.shapes.get("flashlight")==com.ast.retrotouch.RetroTouchButtonShape.SHOULDER &&
-              v.shapes.get("grenade_type")==com.ast.retrotouch.RetroTouchButtonShape.SHOULDER &&
-              v.shapes.get("pause")==com.ast.retrotouch.RetroTouchButtonShape.RECTANGLE &&
-              v.shapes.get("select")==com.ast.retrotouch.RetroTouchButtonShape.RECTANGLE &&
-              !v.shapes.containsKey("jump"),"triggers and bumpers as shoulder buttons, Start and SELECT rectangles");
+        // one skin, the ICONS style only (nothing to switch), the RE-like shapes in it
+        check(v.styles.equals(java.util.List.of(RetroTouchButtonStyle.ICONS)),"only the ICONS style");
+        check(v.skins.size()==1 && "halo".equals(v.skin),"one skin, chosen");
+        RetroTouchSkin skin=v.skins.get(0);
+        for(String id:new String[]{"fire","grenade","flashlight","grenade_type"})
+            check(skin.getLook(id).getShape()==RetroTouchButtonShape.ROUNDED_RECT &&
+                skin.getLook(id).getAspect()==HaloTouchStyle.SHOULDER_ASPECT,id+" a wide rounded rectangle");
+        for(String id:new String[]{"pause","select"})
+            check(skin.getLook(id).getShape()==RetroTouchButtonShape.CAPSULE,id+" a capsule");
+        check(skin.getLook("jump")==null,"face buttons round");
+        for(String id:new String[]{"fire","jump","crouch","use","melee","weapon","grenade","grenade_type",
+                "flashlight","zoom","pause","select"})
+            check(v.icons.containsKey(id),id+" has a symbol");
+        for(String id:new String[]{"menu_ok","menu_back","menu_x","menu_y"})
+            check(v.actions.containsKey(id) && !v.icons.containsKey(id),id+" keeps its word");
         check(containsSelect(v.gameplay) && containsSelect(v.navigation),"both default layouts have SELECT");
         check(v.gameplay.getGameId().equals("halo_ce_gameplay_v1") &&
-            v.navigation.getGameId().equals("halo_ce_navigation_v1"),"saved layout identities preserved");
+            v.navigation.getGameId().equals("halo_ce_navigation_v2"),"gameplay layout kept, menus' layout new");
         press(v,true);Handler.advance(600);check(a.settings.opens==0,"inactive adapter blocks SELECT");
         p.resume();Handler.advance(0);HaloPort.actions.clear();
         press(v,true);Handler.advance(499);check(a.settings.opens==0,"499 ms cannot open overlay");
@@ -240,6 +269,12 @@ class TouchSelectTest {
 
         v.press("nav_right",true);v.press("nav_right",false);
         check(HaloPort.actions.equals(java.util.Arrays.asList("15:true","15:false")),"existing native action indices preserved");
+        // the menus' face buttons carry their words but do what Jump, Melee, Reload and Weapon do
+        HaloPort.actions.clear();v.press("menu_ok",true);v.press("menu_ok",false);v.press("menu_back",true);
+        v.press("menu_x",true);v.press("menu_y",true);
+        check(HaloPort.actions.equals(java.util.Arrays.asList("0:true","0:false","1:true","2:true","3:true")),
+            "menu buttons press the actions they stand for");
+        v.press("menu_back",false);v.press("menu_x",false);v.press("menu_y",false);HaloPort.actions.clear();
         HaloPort.actions.clear();a.physical(key(true,false,0));Handler.advance(100);a.physical(key(false,false,0));
         check(HaloPort.actions.equals(java.util.Arrays.asList("9:true","9:false")),"physical short SELECT retains Back");
         HaloPort.actions.clear();a.physical(key(true,false,0));a.physical(key(true,false,1));
@@ -287,7 +322,7 @@ with tempfile.TemporaryDirectory(prefix="halo-select-") as directory:
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text("package " + name.rsplit("/", 1)[0].replace("/", ".") + ";\n" + body)
         sources.append(str(file))
-    for name, body in (("HaloActivity", shell), ("HaloPort", port), ("TouchSelectTest", checks)):
+    for name, body in (("HaloActivity", shell), ("HaloPort", port), ("HaloTouchStyle", style), ("TouchSelectTest", checks)):
         file = work / "com/halo/decomp" / (name + ".java")
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(body)

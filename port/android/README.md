@@ -154,11 +154,16 @@ open the settings never quits (`source/interface/ui_widget.c`).
 The controller gets the rumble. The back gesture of Android is the B
 button. A Bluetooth or USB keyboard operates as on Linux.
 
-Without a controller, the screen shows touch controls (RetroTouch). As
-on a controller, the triggers (Fire, Grenade) and the bumpers (Light,
-Type) are drawn as shoulder buttons, Pause and SELECT as rectangles
-(`setButtonShape` in `HaloPort.java`; RetroTouch would find them only by
-labels such as "R2"). They
+Without a controller, the screen shows touch controls (RetroTouch
+1.0.0-beta.13). The buttons show symbols for what they do, as the RE
+style of CubeEvil4-Android, in the in-game menu's blues: one skin, the
+ICONS style, nothing to switch (`HaloTouchStyle.java`). The triggers
+(Fire, Grenade) and the bumpers (Light, Type) are wide rounded
+rectangles, Pause and SELECT capsules. RetroTouch's own symbols are used
+where one fits (the crosshair, the cartridge, pause, the menu, the
+arrows); Jump, Crouch, Melee, Switch weapon, Grenade, Switch grenade,
+Flashlight and Zoom have simple line drawings of the port's own. The
+menus' buttons keep their words (OK, Back, X, Y). The touch controls
 hide while a controller is connected: a physical device with a gamepad or
 joystick source that also has a stick or a D-pad on axes
 (`ControllerPresence.java`). Phones list more devices as gamepads, such as

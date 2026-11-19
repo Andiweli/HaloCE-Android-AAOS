@@ -27,6 +27,10 @@ final class HaloPort {
     private static final String[] LABELS = {"Jump / OK", "Melee / Back", "Reload / Use", "Switch weapon",
         "Flashlight", "Switch grenade", "Throw grenade", "Fire", "Pause / Start", "Back",
         "Crouch", "Zoom", "Up", "Down", "Left", "Right", "SELECT"};
+    // the menus' face buttons: the actions above, but with their words, not the game's symbols
+    private static final String[] MENU_IDS = {"menu_ok", "menu_back", "menu_x", "menu_y"};
+    private static final String[] MENU_LABELS = {"OK", "Back", "X", "Y"};
+    private static final String[] MENU_ACTIONS = {"jump", "melee", "use", "weapon"};
     HaloPort(HaloActivity activity, ViewGroup parent) {
         this.activity = activity;
         prefs = activity.getSharedPreferences("halo_android_controls", 0);
@@ -38,15 +42,16 @@ final class HaloPort {
             // Consume blank overlay touches, so SDL cannot turn them into mouse clicks.
             return touch.getMode() != RetroTouchMode.OFF || handled;
         });
-        for (int i=0;i<IDS.length;i++) touch.registerAction(IDS[i], LABELS[i]);
-        // RetroTouch 1.0.0-beta.9 draws shoulder buttons and START/SELECT in shapes of their own, but finds
-        // them only by labels such as "R2" or "START"; Halo's are named by what they do. As on the
-        // controller: the triggers (Fire, Grenade) and the bumpers (Light, Type) as shoulder buttons,
-        // Start (Pause) and SELECT as rectangles; the face buttons stay round.
-        for (String id : new String[] {"fire", "grenade", "flashlight", "grenade_type"})
-            touch.setButtonShape(id, RetroTouchButtonShape.SHOULDER);
-        for (String id : new String[] {"pause", "select"})
-            touch.setButtonShape(id, RetroTouchButtonShape.RECTANGLE);
+        // symbols for what the buttons do, as CubeEvil4's RE skin, in one skin only (HaloTouchStyle):
+        // RetroTouch 1.0.0-beta.13's ICONS style, no style or skin to switch to
+        touch.setAvailableButtonStyles(RetroTouchButtonStyle.ICONS);
+        touch.setDefaultButtonStyle(RetroTouchButtonStyle.ICONS);
+        for (int i=0;i<IDS.length;i++) touch.registerAction(IDS[i], LABELS[i], null, HaloTouchStyle.icon(IDS[i]));
+        for (int i=0;i<MENU_IDS.length;i++) touch.registerAction(MENU_IDS[i], MENU_LABELS[i]);
+        touch.setDefaultColors(HaloTouchStyle.COLOURS);
+        touch.registerSkin(HaloTouchStyle.skin());
+        touch.setDefaultSkin(HaloTouchStyle.SKIN);
+        touch.setSkin(HaloTouchStyle.SKIN);
         touch.setGameplayLayout(new RetroTouchLayout("halo_ce_gameplay_v1", Arrays.asList(
             RetroTouchControl.lookZone("look", .72f,.50f,.55f,.85f),
             RetroTouchControl.moveStick("move", .17f,.72f,.30f),
@@ -62,12 +67,13 @@ final class HaloPort {
             button("grenade_type", "Type", .49f,.35f,.09f),
             button("pause", "Pause", .50f,.10f,.09f),
             button("select", "SELECT", .37f,.10f,.10f))));
-        touch.setNavigationLayout(new RetroTouchLayout("halo_ce_navigation_v1", Arrays.asList(
+        // (v2: the face buttons as the menus' own actions, with their words)
+        touch.setNavigationLayout(new RetroTouchLayout("halo_ce_navigation_v2", Arrays.asList(
             RetroTouchControl.dPad("navigation", .17f,.72f,.30f),
-            button("jump", "OK", .89f,.76f,.13f),
-            button("melee", "Back", .74f,.82f,.12f),
-            button("use", "X", .89f,.53f,.10f),
-            button("weapon", "Y", .76f,.53f,.10f),
+            button("menu_ok", "OK", .89f,.76f,.13f),
+            button("menu_back", "Back", .74f,.82f,.12f),
+            button("menu_x", "X", .89f,.53f,.10f),
+            button("menu_y", "Y", .76f,.53f,.10f),
             button("pause", "Start", .50f,.90f,.09f),
             button("select", "SELECT", .37f,.90f,.10f))));
         touch.setLookWhileHoldingAction("fire", true);
@@ -77,6 +83,7 @@ final class HaloPort {
                 if ("select".equals(id) && !down) { activity.touchSelect(false);return; }
                 if (!active || overlay || controllerConnected || touch.isEditing()) return;
                 if ("select".equals(id)) { activity.touchSelect(true);return; }
+                for (int i=0;i<MENU_IDS.length;i++) if(MENU_IDS[i].equals(id)) { id=MENU_ACTIONS[i];break; }
                 for (int i=0;i<IDS.length;i++) if(IDS[i].equals(id)) { nativeAction(i,down);return; }
             }
             @Override public void onMove(float x,float y) { if(active && !overlay && !controllerConnected) nativeMove(x,y); }
@@ -94,7 +101,7 @@ final class HaloPort {
         updateControllerPresence();
     }
     private static RetroTouchControl button(String id,String label,float x,float y,float size) {
-        return RetroTouchControl.button(id,id,label,x,y,size);
+        return RetroTouchControl.button(id,id,label,x,y,size,null,RetroTouchButtonShape.AUTO,HaloTouchStyle.aspect(id));
     }
     private final Runnable poll = new Runnable() {
         @Override public void run() {
