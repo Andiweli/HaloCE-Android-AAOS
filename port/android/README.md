@@ -324,6 +324,8 @@ folder: first make a copy of `maps/` and `save/`.
 - RetroTouch 1.0.0-beta.13: the touch buttons show symbols (as CubeEvil4's
   RE style, in Halo's blues), one skin, nothing to switch. The menus'
   touch layout is new; the gameplay layout a player made stays.
+- The in-game menu shows the version small left of its buttons, as
+  CubeEvil4's.
 - From upstream: crash fixes (scripts and objects that no longer exist, a
   player leaving split screen, a sound without a listener, a looping sound
   fading out, a projectile without its owner, negative periodic
