@@ -227,7 +227,8 @@ class TouchSelectTest {
             check(skin.getLook(id).getShape()==RetroTouchButtonShape.ROUNDED_RECT &&
                 skin.getLook(id).getAspect()==HaloTouchStyle.SHOULDER_ASPECT,id+" a wide rounded rectangle");
         for(String id:new String[]{"pause","select"})
-            check(skin.getLook(id).getShape()==RetroTouchButtonShape.CAPSULE,id+" a capsule");
+            check(skin.getLook(id).getShape()==RetroTouchButtonShape.ROUNDED_RECT &&
+                skin.getLook(id).getAspect()==HaloTouchStyle.START_ASPECT,id+" a rectangle");
         check(skin.getLook("jump")==null,"face buttons round");
         for(String id:new String[]{"fire","jump","crouch","use","melee","weapon","grenade","grenade_type",
                 "flashlight","zoom","pause","select"})

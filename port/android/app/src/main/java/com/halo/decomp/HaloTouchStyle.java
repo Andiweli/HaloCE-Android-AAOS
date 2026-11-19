@@ -9,9 +9,10 @@ import com.ast.retrotouch.RetroTouchSkin;
 
 /**
  * The touch controls' look (RetroTouch 1.0.0-beta.13; wish of the project owner, 19.11.2026): as the "RE"
- * skin of CubeEvil4-Android, symbols for what each button does instead of words, one colour set for every
- * button, the shoulder buttons as rounded rectangles and Pause and SELECT as capsules; in the in-game menu's
- * Halo blues. One skin only: no style or skin to switch between.
+ * skin of CubeEvil4-Android, symbols for what each button does instead of words (the symbol alone, centred on
+ * its ink: RetroTouch draws no label with an icon), one colour set for every button, the shoulder buttons
+ * (L1/L2, R1/R2) and Pause and SELECT as rectangles, not round (the project owner, 19.11.2026); in the in-game
+ * menu's Halo blues. One skin only: no style or skin to switch between.
  *
  * The symbols are RetroTouch's own where one fits (the crosshair, the cartridge, pause, the menu, the
  * arrows) and simple line drawings of the port's own for the rest (24 x 24, drawn as RetroTouch draws its
@@ -60,8 +61,8 @@ final class HaloTouchStyle {
     static final RetroTouchIcon MELEE = RetroTouchIcon.fromPaths(24f, "M12 2v5", "M12 17v5", "M2 12h5", "M17 12h5",
         "m4.9 4.9 3.5 3.5", "m15.6 15.6 3.5 3.5", "m4.9 19.1 3.5-3.5", "m15.6 8.4 3.5-3.5");
 
-    /** Width over height of the shoulder buttons (rounded rectangles) and of Pause and SELECT (capsules). */
-    static final float SHOULDER_ASPECT = 1.6f, CAPSULE_ASPECT = 1.8f;
+    /** Width over height of the shoulder buttons and of Pause and SELECT (all rectangles). */
+    static final float SHOULDER_ASPECT = 1.6f, START_ASPECT = 1.8f;
 
     /** An action's symbol (HaloPort.IDS), null for none: the button shows its label. */
     static RetroTouchIcon icon(String action) {
@@ -91,24 +92,24 @@ final class HaloTouchStyle {
     static float aspect(String action) {
         switch (action) {
             case "fire": case "grenade": case "flashlight": case "grenade_type": return SHOULDER_ASPECT;
-            case "pause": case "select": return CAPSULE_ASPECT;
+            case "pause": case "select": return START_ASPECT;
             default: return 1f;
         }
     }
 
-    /** The one skin: the colours, the shoulder buttons' and the capsules' shapes. */
+    /** The one skin: the colours, the rectangles of the shoulder buttons and of Pause and SELECT. */
     static RetroTouchSkin skin() {
         RetroTouchLook shoulder = new RetroTouchLook().withShape(RetroTouchButtonShape.ROUNDED_RECT)
             .withAspect(SHOULDER_ASPECT);
-        RetroTouchLook capsule = new RetroTouchLook().withShape(RetroTouchButtonShape.CAPSULE)
-            .withAspect(CAPSULE_ASPECT);
+        RetroTouchLook start = new RetroTouchLook().withShape(RetroTouchButtonShape.ROUNDED_RECT)
+            .withAspect(START_ASPECT);
         return new RetroTouchSkin(SKIN, "Halo", RetroTouchButtonStyle.ICONS)
             .setDefaultColors(COLOURS)
             .setLook("fire", shoulder)
             .setLook("grenade", shoulder)
             .setLook("flashlight", shoulder)
             .setLook("grenade_type", shoulder)
-            .setLook("pause", capsule)
-            .setLook("select", capsule);
+            .setLook("pause", start)
+            .setLook("select", start);
     }
 }
