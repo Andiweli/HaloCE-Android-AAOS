@@ -128,32 +128,55 @@ final class MenuLayout {
 
   /** Back / title / resume in one row; narrow windows put the title above the two actions. */
   static final class Header extends ViewGroup {
-    private boolean horizontal;
-    private final View back, title, resume;
+    private boolean horizontal, noteBelow;
+    private final View back, title, note, resume;
 
     Header(Context context, View back, View title, View resume) {
+      this(context, back, title, null, resume);
+    }
+
+    Header(Context context, View back, View title, View note, View resume) {
       super(context);
       this.back = back;
       this.title = title;
+      this.note = note;
       this.resume = resume;
-      addView(back); addView(title); addView(resume);
+      addView(back); addView(title);
+      if (note != null) addView(note);
+      addView(resume);
+    }
+
+    private boolean hasNote() { return note != null && note.getVisibility() != GONE; }
+
+    private int actionsHeight() {
+      return Math.max(back.getVisibility() == GONE ? 0 : back.getMeasuredHeight(), resume.getMeasuredHeight());
     }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
-      int width = MeasureSpec.getSize(widthSpec), gap = dp(getContext(), 16);
+      int width = MeasureSpec.getSize(widthSpec), gap = dp(getContext(), 16), noteGap = dp(getContext(), 18);
       float textScale = Math.max(1f, getResources().getConfiguration().fontScale);
       horizontal = width >= dp(getContext(), 680 * textScale);
       int actionsWidth = Math.max(1, (width - gap) / 2);
       int actionSpec = MeasureSpec.makeMeasureSpec(actionsWidth, MeasureSpec.AT_MOST);
       int freeHeight = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
       if (back.getVisibility() != GONE) back.measure(actionSpec, freeHeight);
-      resume.measure(actionSpec, freeHeight);
       int backWidth = back.getVisibility() == GONE ? 0 : back.getMeasuredWidth() + gap;
-      int titleWidth = horizontal ? Math.max(1, width - backWidth - resume.getMeasuredWidth() - gap) : width;
+      int noteWidth = 0;
+      if (hasNote()) {
+        note.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), freeHeight);
+        noteWidth = note.getMeasuredWidth() + noteGap;
+      }
+      // beside the title half the width; under it (a narrow window) what the back button leaves of the row, so
+      // "Back to the game" and the update button do not break letter by letter
+      resume.measure(horizontal ? actionSpec
+          : MeasureSpec.makeMeasureSpec(Math.max(1, width - backWidth), MeasureSpec.AT_MOST), freeHeight);
+      noteBelow = hasNote() && !horizontal && backWidth + noteWidth + resume.getMeasuredWidth() > width;
+      int titleWidth = horizontal ? Math.max(1, width - backWidth - resume.getMeasuredWidth() - gap - noteWidth) : width;
       title.measure(MeasureSpec.makeMeasureSpec(titleWidth, MeasureSpec.EXACTLY), freeHeight);
-      int actionsHeight = Math.max(back.getVisibility() == GONE ? 0 : back.getMeasuredHeight(), resume.getMeasuredHeight());
+      int actionsHeight = Math.max(actionsHeight(), hasNote() && !noteBelow ? note.getMeasuredHeight() : 0);
       int height = horizontal ? Math.max(title.getMeasuredHeight(), actionsHeight)
-          : title.getMeasuredHeight() + dp(getContext(), 8) + actionsHeight;
+          : title.getMeasuredHeight() + dp(getContext(), 8) + actionsHeight
+              + (noteBelow ? dp(getContext(), 4) + note.getMeasuredHeight() : 0);
       setMeasuredDimension(width, resolveSize(height, heightSpec));
     }
 
@@ -168,6 +191,16 @@ final class MenuLayout {
       if (back.getVisibility() != GONE) place(back, 0, horizontal ? (getHeight() - back.getMeasuredHeight()) / 2 : actionsTop);
       place(title, horizontal ? titleStart : 0, horizontal ? (getHeight() - title.getMeasuredHeight()) / 2 : 0);
       place(resume, getWidth() - resume.getMeasuredWidth(), horizontal ? (getHeight() - resume.getMeasuredHeight()) / 2 : actionsTop);
+      if (hasNote()) {
+        int noteWidth = note.getMeasuredWidth(), noteHeight = note.getMeasuredHeight();
+        if (noteBelow) {
+          place(note, getWidth() - noteWidth, actionsTop + actionsHeight() + dp(getContext(), 4));
+        } else {
+          int start = getWidth() - resume.getMeasuredWidth() - dp(getContext(), 18) - noteWidth;
+          place(note, start, horizontal ? (getHeight() - noteHeight) / 2
+              : actionsTop + (resume.getMeasuredHeight() - noteHeight) / 2);
+        }
+      }
     }
   }
 }

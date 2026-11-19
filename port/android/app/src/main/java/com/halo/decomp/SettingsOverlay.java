@@ -27,7 +27,7 @@ import java.util.Locale;
 
 /**
  * The in-game menu (SELECT held, or the touch controls' menu button), laid out as CubeEvil4's in Halo's
- * colours (wish of the project owner, 02.11.2026): "HALO CE In-Game Menu (vX)" with the update button and
+ * colours (wish of the project owner, 02.11.2026): "HALO CE In-Game Menu" with the version (vX), the update button and
  * "Back to the game", the pages Display, Controls, Volume and Cheats. Every change applies and is kept at
  * once. An overlay in the activity, not a dialog: the game's surface and immersive window stay as they are.
  * The controller is driven here (key, motion), the touch screen by Android.
@@ -412,7 +412,11 @@ final class SettingsOverlay {
         LinearLayout.LayoutParams gap=new LinearLayout.LayoutParams(-2,-2);
         gap.setMarginEnd(dp(8));
         actions.addView(update,gap);actions.addView(resume);
-        panel.addView(new MenuLayout.Header(activity,back,title,actions),new LinearLayout.LayoutParams(-1,-2));
+        // the installed version left of the buttons, small, as CubeEvil4's (wish of the project owner,
+        // 19.11.2026; until 1.1.0 in brackets after the start page's title): under the buttons where a
+        // narrow window leaves no room beside them (MenuLayout.Header)
+        TextView version=text("v"+BuildConfig.VERSION_NAME,14,false);
+        panel.addView(new MenuLayout.Header(activity,back,title,version,actions),new LinearLayout.LayoutParams(-1,-2));
         separator(panel);
         scroll=new ScrollView(activity);scroll.setFillViewport(false);
         body=column();body.setPadding(0,dp(4),0,dp(8));
@@ -465,13 +469,7 @@ final class SettingsOverlay {
         java.util.Arrays.fill(sliders,null);java.util.Arrays.fill(sliderRows,null);
         back.setVisibility(page==HOME?View.GONE:View.VISIBLE);
         int[] titles={R.string.menu_title,R.string.menu_display,R.string.menu_controls,R.string.menu_audio,R.string.menu_cheats};
-        if(page==HOME){
-            SpannableStringBuilder t=new SpannableStringBuilder(s(titles[page]));
-            int start=t.length();t.append(" (v").append(BuildConfig.VERSION_NAME).append(")");
-            t.setSpan(new RelativeSizeSpan(.6f),start,t.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            t.setSpan(new StyleSpan(Typeface.NORMAL),start,t.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            title.setText(t);
-        } else title.setText(s(titles[page]));
+        title.setText(s(titles[page]));
         if(page==HOME)home();else if(page==DISPLAY)display();else if(page==CONTROLS)controls();
         else if(page==AUDIO)audio();else cheats();
         separator(body);
