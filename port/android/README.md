@@ -387,8 +387,14 @@ repository. If you installed a build that has a different signature, remove
 that build before you install a new build. Removing the app deletes its data
 folder: first make a copy of `maps/` and `save/`.
 
-### Changes after 1.1.0
+### Changes in 1.1.1
 
+- Keyboard and mouse, in the game and in its menus (see Controls); a
+  keyboard or a mouse hides the touch controls, F1 opens the in-game menu.
+- The in-game menu takes CubeEvil4's 1.1.0 look: side labels, settings in
+  pairs, 64 dp cells, arrow cells for MSAA and texture filtering, slider
+  cells; L1 / R1 change a value. New in Controls: **Keyboard & mouse** with
+  the mouse's sensitivity, its Y axis and an overview of the keys.
 - Display: **Resolution** (Original 480p, 720p, 1080p, Native; 1080p by
   default) and **Upscaling** (Linear, SGSR, FSR) as CubeEvil4's 1.1.0;
   both apply at once.
@@ -408,10 +414,6 @@ folder: first make a copy of `maps/` and `save/`.
   touch layout is new; the gameplay layout a player made stays.
 - The in-game menu shows the version small left of its buttons, as
   CubeEvil4's.
-- The in-game menu takes CubeEvil4's 1.1.0 look: side labels, settings in
-  pairs, 64 dp cells, arrow cells for MSAA and texture filtering, slider
-  cells; L1 / R1 change a value. New in Controls: **Keyboard & mouse** with
-  the mouse's sensitivity, its Y axis and an overview of the keys.
 - From upstream: crash fixes (scripts and objects that no longer exist, a
   player leaving split screen, a sound without a listener, a looping sound
   fading out, a projectile without its owner, negative periodic
