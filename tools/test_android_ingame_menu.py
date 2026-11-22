@@ -82,12 +82,17 @@ class KeyEvent {
         KEYCODE_DPAD_DOWN=20,KEYCODE_DPAD_LEFT=21,KEYCODE_DPAD_RIGHT=22,KEYCODE_BUTTON_A=96,KEYCODE_DPAD_CENTER=23,
         KEYCODE_ENTER=66,KEYCODE_NUMPAD_ENTER=160,KEYCODE_SPACE=62,KEYCODE_BUTTON_B=97,KEYCODE_BACK=4,
         KEYCODE_ESCAPE=111,KEYCODE_BUTTON_START=108,KEYCODE_BUTTON_SELECT=109,KEYCODE_MENU=82,KEYCODE_BUTTON_X=99,
-        KEYCODE_BUTTON_L1=102;
+        KEYCODE_BUTTON_L1=102,KEYCODE_BUTTON_R1=103,KEYCODE_Q=45,KEYCODE_E=33,KEYCODE_PAGE_UP=92,KEYCODE_PAGE_DOWN=93,
+        KEYCODE_BUTTON_Y=100;
+}
+class ArrowSelector {
+''' + braced((JAVA / 'ArrowSelector.java').read_text(), 'static int keys(') + r'''
 }
 public class MenuCheck {
 ''' + constants + '\n' + '\n'.join(method(m) for m in (
     'static int action(', 'static int stepped(', 'static int toggled(', 'static int filter(',
-    'static int msaa(', 'static boolean msaaOffered(', 'static int dofStrength(')) + '\n' + fps_methods + r'''
+    'static int msaa(', 'static boolean msaaOffered(', 'static int dofStrength(',
+    'static int mouseSensitivity(')) + '\n' + fps_methods + r'''
     static void check(boolean condition,String what){if(!condition)throw new AssertionError(what);}
     public static void main(String[] args){
         check(action(KeyEvent.KEYCODE_VOLUME_UP)==PASS && action(KeyEvent.KEYCODE_VOLUME_MUTE)==PASS,"volume keys stay Android's");
@@ -98,7 +103,13 @@ public class MenuCheck {
         check(action(KeyEvent.KEYCODE_BUTTON_B)==BACK && action(KeyEvent.KEYCODE_BACK)==BACK &&
               action(KeyEvent.KEYCODE_ESCAPE)==BACK,"B goes back a page");
         check(action(KeyEvent.KEYCODE_BUTTON_START)==CLOSE && action(KeyEvent.KEYCODE_BUTTON_SELECT)==CLOSE,"Start closes");
-        check(action(KeyEvent.KEYCODE_BUTTON_X)==NONE && action(KeyEvent.KEYCODE_BUTTON_L1)==NONE,"other buttons do nothing");
+        check(action(KeyEvent.KEYCODE_BUTTON_X)==NONE && action(KeyEvent.KEYCODE_BUTTON_Y)==NONE,"other buttons do nothing");
+        check(action(KeyEvent.KEYCODE_BUTTON_L1)==STEP_BACK && action(KeyEvent.KEYCODE_Q)==STEP_BACK &&
+              action(KeyEvent.KEYCODE_PAGE_UP)==STEP_BACK,"L1, Q, Page up step a value back");
+        check(action(KeyEvent.KEYCODE_BUTTON_R1)==STEP_ON && action(KeyEvent.KEYCODE_E)==STEP_ON &&
+              action(KeyEvent.KEYCODE_PAGE_DOWN)==STEP_ON,"R1, E, Page down step it on");
+        check(mouseSensitivity(MOUSE_DEFAULT)==100 && mouseSensitivity(0)==MOUSE_MIN && mouseSensitivity(9999)==MOUSE_MAX
+              && mouseSensitivity(102)==100 && (MOUSE_MAX-MOUSE_MIN)%MOUSE_STEP==0,"the mouse's sensitivity: steps in range");
         check(KEYS.length==MIN.length && MIN.length==MAX.length,"one range per slider");
         for(int i=0;i<KEYS.length;i++){
             check(stepped(i,MIN[i],-1)==MIN[i] && stepped(i,MAX[i],1)==MAX[i],"slider "+KEYS[i]+" stays in its range");
@@ -131,6 +142,46 @@ public class MenuCheck {
     }
 }
 '''
+
+# ---------- 2b. the CubeEvil4 1.1.0 look and the keyboard & mouse section (source level)
+assert overlay.count('selector(') >= 3, 'MSAA and texture filtering are arrow cells'
+for choice in ('R.string.menu_msaa,', 'R.string.menu_texture_filter,'):
+    assert 'selector(' + overlay[overlay.index(choice) - 40:overlay.index(choice)].split('selector(')[-1] + choice in overlay, choice
+assert 'setAllowed(i,msaaOffered(MSAA[i],limit))' in overlay, "MSAA steps the GPU can't do are passed over"
+for page in ('private void display(', 'private void controls(', 'private void audio(', 'private void cheats('):
+    assert 'labelled(R.string.menu_side_' in method(page), page + ' has side labels'
+for slider in ('BRIGHTNESS', 'GAMMA', 'GYRO', 'LEFT_STICK', 'RIGHT_STICK', 'MASTER', 'EFFECTS', 'MUSIC'):
+    assert re.search(r'percentCell\(\w+,R\.string\.\w+,%s\)' % slider, overlay), slider + ' is a slider cell'
+assert 'setMinHeight(dp(64))' in method('private Button cellAction('), 'cells 64 dp high'
+assert 'SeekBar' not in overlay, 'no bare slider rows left'
+for key in ('"texture_filter"', '"cheats"', '"msaa"', '"depth_of_field"', '"depth_of_field_strength"', '"fxaa"',
+            '"fps_display"', '"sixty_fps"', '"gyro_aim"', '"gyro_invert_pitch"', '"mouse_sensitivity"', '"mouse_invert"'):
+    assert overlay.count(key) >= 2, key + ' read and kept'
+controls_page = method('private void controls(')
+assert 'R.string.menu_keyboard_mouse' in controls_page and 'R.string.menu_mouse_sensitivity' in controls_page
+assert 'R.string.menu_mouse_invert' in controls_page and 'keyOverview(' in controls_page
+assert 'nativeMouseLook(mouseSensitivity,mouseInvert)' in method('private void apply(')
+rows = re.findall(r'\{R\.string\.(menu_key_\w+),R\.string\.(menu_keys_\w+)\}', overlay)
+assert len(rows) == 16 and all(a[len('menu_key_'):] == b[len('menu_keys_'):] for a, b in rows), rows
+# the overview says what keyboard_gamepad does (xinput_sdl.c)
+xinput = (ROOT / 'port/linux/src/xinput_sdl.c').read_text()
+pad = braced(xinput, 'static void keyboard_gamepad(')
+for code, role in (('W', None), ('A', None), ('S', None), ('D', None), ('SPACE', 'A'), ('RETURN', 'A'), ('F', 'B'),
+                   ('BACKSPACE', 'B'), ('E', 'X'), ('R', 'X'), ('TAB', 'Y'), ('Q', 'WHITE'), ('X', 'BLACK'),
+                   ('G', 'LEFT_TRIGGER'), ('ESCAPE', 'START'), ('F1', 'BACK'), ('LCTRL', 'LEFT_THUMB'), ('C', 'LEFT_THUMB'),
+                   ('Z', 'RIGHT_THUMB')):
+    statement = next((st for st in pad.split(';') if 'k[SDL_SCANCODE_%s]' % code in st), None)
+    assert statement is not None, code
+    assert role is None or 'XINPUT_GAMEPAD_' + role in statement, (code, role)
+assert 'm[SDL_BUTTON_LEFT]' in pad and 'm[SDL_BUTTON_RIGHT]' in pad and 'm[SDL_BUTTON_MIDDLE]' in pad and 'm[SDL_BUTTON_X1]' in pad
+# the menu's mouse look in the game: a host import, under the lock, for the mouse's motion only
+imports = (ROOT / 'port/android/host_imports.list').read_text().split()
+assert 'host_settings_mouse_look' in imports
+look = braced(touch_source := (ROOT / 'port/android/host/host_touch.c').read_text(), 'int host_settings_mouse_look(')
+assert 'pthread_mutex_lock(&lock)' in look and 'pthread_mutex_unlock(&lock)' in look
+assert 'Java_com_halo_decomp_SettingsOverlay_nativeMouseLook' in touch_source
+mouse_look = braced(xinput, 'int halo_linux_mouse_look(')
+assert mouse_look.index('host_settings_mouse_look(') < mouse_look.index('host_touch_look('), 'the touch look keeps its speed'
 
 # ---------- 3. the cheats, host and game together
 controls = (ROOT / 'port/linux/include/halo_android_controls.h').read_text()

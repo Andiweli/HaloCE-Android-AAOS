@@ -304,6 +304,23 @@ JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeFxaa(JNIEnv *e
 int host_settings_fxaa(void) {
     pthread_mutex_lock(&lock); int on=settings_fxaa; pthread_mutex_unlock(&lock); return on;
 }
+/* the menu's mouse look (Controls, Keyboard & mouse): the sensitivity in per
+cent of the configuration's and the Y axis upside down; 0 until the menu sent
+them, then the configuration's values stand */
+static int settings_mouse_set, settings_mouse_percent=100, settings_mouse_invert;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeMouseLook(JNIEnv *e,jclass c,jint percent,jboolean invert) {
+    percent=percent<1?1:percent>1000?1000:percent;
+    pthread_mutex_lock(&lock);
+    settings_mouse_set=1;settings_mouse_percent=percent;settings_mouse_invert=invert!=0;
+    pthread_mutex_unlock(&lock);
+}
+int host_settings_mouse_look(float *sensitivity,int *invert) {
+    pthread_mutex_lock(&lock);
+    int set=settings_mouse_set;
+    if(set){*sensitivity=settings_mouse_percent/100.0f;*invert=settings_mouse_invert;}
+    pthread_mutex_unlock(&lock);
+    return set;
+}
 /* the menu's FPS display (FpsCounter.java): the pictures shown and the frames
 the game advanced in, counted since the start, and the size the pictures are
 drawn at */

@@ -219,11 +219,35 @@ These settings are only for Android:
 The in-game menu (`SettingsOverlay.java`, laid out like CubeEvil4's in
 Halo's colours) shows the version, an update button and **Back to the
 game**, four pages: **Display** (brightness, gamma, 60 FPS, FPS display, MSAA, texture
-filtering, FXAA, depth of field), **Controls** (gyroscope, stick sensitivity),
-**Volume** and **Cheats**, and at the bottom a button to this port's page on
+filtering, FXAA, depth of field), **Controls** (gyroscope, stick sensitivity,
+keyboard & mouse), **Volume** and **Cheats**, and at the bottom a button to this port's page on
 GitHub. Every change applies and is saved at once. The D-pad or the
-left stick moves, A presses, B goes back a page, Start closes. Its texts
+left stick moves, A presses, L1 / R1 (Q / E, Page up / Page down) change the
+value of the focused arrow or slider cell, B goes back a page, Start closes. Its texts
 are in English, German, French and Italian (`res/values*/strings_menu.xml`).
+
+Its look follows CubeEvil4-Android's 1.1.0 menu, in Halo's blues: every
+sub-page has side labels on the left and the settings on the right, in
+pairs where they fit; every cell is 64 dp high; headings carry a faint
+line. Choices of more than two values (MSAA, texture filtering) are arrow
+cells (`ArrowSelector.java`: ‹ › on the sides, the value big, a dot per
+step, lit while not off); sliders are cells too (`SliderCell.java`: name,
+value, bar; ‹ › step, the bar still drags). Narrow windows stack the label
+above its settings and fold the pairs.
+
+**Keyboard & mouse** (Controls): the mouse's sensitivity (25 to 300 %,
+100 % by default, in per cent of `input.mouse_sensitivity`) and **Invert
+mouse Y**, sent to the game through `host_settings_mouse_look`
+(`host/host_touch.c`) and applied in `halo_linux_mouse_look`
+(`port/linux/src/xinput_sdl.c`) to the mouse's motion only, not to the
+touch look. Below them a read-only overview of the keys
+(`keyboard_gamepad`): W A S D move, the mouse aims, left button fires,
+right button or G throws a grenade, Space / Enter jump, E / R reload or
+use, Tab or the wheel switch weapons, X switches grenades, F / Backspace /
+mouse button 4 melee, left Ctrl / C crouch, Z or the middle button zoom,
+Q the flashlight, Esc the pause menu, F1 back (held: this menu), F12 frees
+or captures the mouse, the arrow keys are the D-pad. The keys cannot be
+changed yet.
 
 The update button asks GitHub for the releases of
 `Andiweli/HaloCE-Android-AAOS` (`AppUpdate.java`) and takes the one with the
@@ -340,6 +364,10 @@ folder: first make a copy of `maps/` and `save/`.
   touch layout is new; the gameplay layout a player made stays.
 - The in-game menu shows the version small left of its buttons, as
   CubeEvil4's.
+- The in-game menu takes CubeEvil4's 1.1.0 look: side labels, settings in
+  pairs, 64 dp cells, arrow cells for MSAA and texture filtering, slider
+  cells; L1 / R1 change a value. New in Controls: **Keyboard & mouse** with
+  the mouse's sensitivity, its Y axis and an overview of the keys.
 - From upstream: crash fixes (scripts and objects that no longer exist, a
   player leaving split screen, a sound without a listener, a looping sound
   fading out, a projectile without its owner, negative periodic

@@ -135,6 +135,20 @@ int halo_linux_mouse_look(short gamepad_index, float *yaw, float *pitch)
 	pthread_mutex_unlock(&mouse_lock);
 #ifdef HALO_ANDROID
     { extern int host_settings_active(void); if(host_settings_active()) return FALSE; }
+    /* the menu's mouse sensitivity and Y axis (SettingsOverlay, Keyboard & mouse)
+    for the mouse's motion only, before the touch look joins it */
+    {
+        extern int host_settings_mouse_look(float *sensitivity, int *invert);
+        float menu_sensitivity;
+        int menu_invert;
+        if (host_settings_mouse_look(&menu_sensitivity, &menu_invert))
+        {
+            x *= menu_sensitivity / mouse_sensitivity();
+            y *= menu_sensitivity / mouse_sensitivity();
+            if ((menu_invert != 0) != (invert != 0))
+                y = -y;
+        }
+    }
     { float tx,ty;host_touch_look(&tx,&ty); x+=tx*1400.f; y+=ty*1400.f; }
     host_motion_look(&motion_yaw, &motion_pitch);
 #endif
