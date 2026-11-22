@@ -22,6 +22,9 @@ stubs = {
         public static final java.util.List<String> lines=new java.util.ArrayList<>();
         public static int i(String tag,String text){lines.add(text);return 0;}
     }''',
+    "android/os/Build": '''public class Build {
+        public static class VERSION { public static int SDK_INT=35; }
+    }''',
     "android/view/MotionEvent": '''public class MotionEvent {
         public static final int AXIS_X=0,AXIS_Y=1,AXIS_HAT_X=15,AXIS_HAT_Y=16;
     }''',
@@ -31,6 +34,9 @@ stubs = {
         public static final int KEYBOARD_TYPE_NONE=0,KEYBOARD_TYPE_NON_ALPHABETIC=1,KEYBOARD_TYPE_ALPHABETIC=2;
         public int keyboardType=KEYBOARD_TYPE_NON_ALPHABETIC;
         public InputDevice typed(int type){keyboardType=type;return this;}
+        public boolean external;
+        public InputDevice plugged(){external=true;return this;}
+        public boolean isExternal(){return external;}
         public int getKeyboardType(){return keyboardType;}
         public static final java.util.List<InputDevice> devices=new java.util.ArrayList<>();
         final String name;final int sources;final boolean virtual;final java.util.Set<Integer> axes=new java.util.HashSet<>();
@@ -67,7 +73,7 @@ public class PresenceTest {
         InputDevice.devices.add(new InputDevice("half-stick",InputDevice.SOURCE_JOYSTICK,false,MotionEvent.AXIS_X));
         check(!ControllerPresence.isControllerConnected(c),"fingerprint sensors, a virtual pad and one axis keep touch");
         String line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
-        check(line.startsWith("touch controls: shown") && line.contains("uinput-fpc (no stick or D-pad axes, ignored)")
+        check(line.startsWith("input devices: leave the touch controls") && line.contains("uinput-fpc (no stick or D-pad axes, ignored)")
             && line.contains("virtual-pad (virtual, ignored)"),line);
         int logged=StartDiagnostics.lines.size();
         check(!ControllerPresence.isControllerConnected(c) && StartDiagnostics.lines.size()==logged,"logged once a change");
@@ -82,7 +88,7 @@ public class PresenceTest {
             MotionEvent.AXIS_X,MotionEvent.AXIS_Y,MotionEvent.AXIS_HAT_X,MotionEvent.AXIS_HAT_Y));
         check(ControllerPresence.isControllerConnected(c),"a stick controller hides touch");
         line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
-        check(line.startsWith("touch controls: hidden") && line.contains("Xbox Wireless Controller (controller)"),line);
+        check(line.startsWith("input devices: hide the touch controls") && line.contains("Xbox Wireless Controller (controller)"),line);
         InputDevice.devices.remove(InputDevice.devices.size()-1);
         check(ControllerPresence.inputs(c)==0,"the controller gone: nothing hides touch");
         /* the screen's virtual keyboard and a handheld's built-in buttons (keys, no letters) are no keyboards */
@@ -90,14 +96,27 @@ public class PresenceTest {
         InputDevice.devices.add(new InputDevice("gpio-keys",InputDevice.SOURCE_KEYBOARD,false));
         check(ControllerPresence.inputs(c)==0,"virtual and letterless keyboards keep touch");
         /* a Bluetooth keyboard with letters (and a few gamepad buttons in its HID description) */
+        /* a built-in device that says keyboard with letters (a Galaxy A36, 1.1.1) or a Chromebook's own keyboard:
+           listed, but it hides the touch controls only when used (HaloPort.deskUsed) */
+        InputDevice.devices.add(new InputDevice("sec_builtin",InputDevice.SOURCE_KEYBOARD,false).typed(InputDevice.KEYBOARD_TYPE_ALPHABETIC));
+        InputDevice.devices.add(new InputDevice("builtin-touchpad",InputDevice.SOURCE_MOUSE,false));
+        check(ControllerPresence.inputs(c)==0,"built-in keyboards and touchpads keep touch until used");
+        line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
+        check(line.contains("sec_builtin (built in: when used)") && line.contains("builtin-touchpad (built in: when used)"),line);
+        InputDevice.devices.remove(InputDevice.devices.size()-1);
+        InputDevice.devices.remove(InputDevice.devices.size()-1);
+        /* before Android 10 nothing tells a connected device from a built-in one: when used */
+        android.os.Build.VERSION.SDK_INT=28;
         InputDevice.devices.add(new InputDevice("BT Keyboard",InputDevice.SOURCE_KEYBOARD|InputDevice.SOURCE_GAMEPAD,false)
-            .typed(InputDevice.KEYBOARD_TYPE_ALPHABETIC));
+            .typed(InputDevice.KEYBOARD_TYPE_ALPHABETIC).plugged());
+        check(ControllerPresence.inputs(c)==0,"Android 9: a keyboard hides touch only when used");
+        android.os.Build.VERSION.SDK_INT=35;
         check(ControllerPresence.inputs(c)==ControllerPresence.KEYBOARD && !ControllerPresence.isControllerConnected(c),
             "a keyboard hides touch, and is no controller");
         line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
-        check(line.startsWith("touch controls: hidden") && line.contains("keyboards: BT Keyboard") && line.contains("mice: none"),line);
+        check(line.startsWith("input devices: hide the touch controls") && line.contains("keyboards: BT Keyboard") && line.contains("mice: none"),line);
         /* a mouse; a touch screen is none */
-        InputDevice.devices.add(new InputDevice("Logitech Mouse",InputDevice.SOURCE_MOUSE,false));
+        InputDevice.devices.add(new InputDevice("Logitech Mouse",InputDevice.SOURCE_MOUSE,false).plugged());
         check(ControllerPresence.inputs(c)==(ControllerPresence.KEYBOARD|ControllerPresence.MOUSE),"a mouse too");
         InputDevice.devices.remove(InputDevice.devices.size()-2);
         check(ControllerPresence.inputs(c)==ControllerPresence.MOUSE,"the mouse alone hides touch");
@@ -108,7 +127,7 @@ public class PresenceTest {
             InputDevice.SOURCE_JOYSTICK,false,MotionEvent.AXIS_X,MotionEvent.AXIS_Y).typed(InputDevice.KEYBOARD_TYPE_ALPHABETIC));
         check(ControllerPresence.inputs(c)==(ControllerPresence.CONTROLLER|ControllerPresence.MOUSE),"a stick pad stays a controller");
         check(android.util.Log.lines.equals(StartDiagnostics.lines),"Logcat gets the same lines");
-        System.out.println("Controller presence: fingerprint sensors, button-only, one-axis and virtual gamepad devices keep the touch controls; stick and hat D-pad controllers, physical keyboards with letters and mice hide them; each change logged once.");
+        System.out.println("Controller presence: fingerprint sensors, button-only, one-axis and virtual gamepad devices keep the touch controls; stick and hat D-pad controllers, connected keyboards with letters and mice hide them, built-in ones only when used; each change logged once.");
     }
 }
 '''

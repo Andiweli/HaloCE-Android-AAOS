@@ -43,13 +43,16 @@ final class ControllerPresence {
 
             if (device == null)
                 continue;
+            boolean connected = connected(device);
             if (isKeyboard(device)) {
-                found |= KEYBOARD;
-                keyboards.append(keyboards.length() == 0 ? "" : "; ").append(device.getName());
+                if (connected) found |= KEYBOARD;
+                keyboards.append(keyboards.length() == 0 ? "" : "; ").append(device.getName())
+                    .append(connected ? "" : " (built in: when used)");
             }
             if (isMouse(device)) {
-                found |= MOUSE;
-                mice.append(mice.length() == 0 ? "" : "; ").append(device.getName());
+                if (connected) found |= MOUSE;
+                mice.append(mice.length() == 0 ? "" : "; ").append(device.getName())
+                    .append(connected ? "" : " (built in: when used)");
             }
             if (!claimsController(device.getSources()) || isKeyboard(device))
                 continue;
@@ -64,13 +67,21 @@ final class ControllerPresence {
         String report = devices + "|" + keyboards + "|" + mice;
         if (!report.equals(reported)) {
             reported = report;
-            String line = "touch controls: " + (found != 0 ? "hidden" : "shown") + "; gamepad devices: " +
+            String line = "input devices: " + (found != 0 ? "hide the touch controls" : "leave the touch controls") + "; gamepad devices: " +
                 (devices.length() == 0 ? "none" : devices) + "; keyboards: " +
                 (keyboards.length() == 0 ? "none" : keyboards) + "; mice: " + (mice.length() == 0 ? "none" : mice);
             android.util.Log.i("halo", line);
             StartDiagnostics.append(context, line);
         }
         return found;
+    }
+
+    /** A keyboard or a mouse that hides the touch controls as soon as it is there: a connected one
+     *  (Bluetooth, USB; Android 10 and later). Built-in ones hide them only when used (HaloPort.deskUsed):
+     *  some phones list a built-in device as a physical keyboard with letters (a Galaxy A36, 1.1.1: no
+     *  touch controls, no keyboard), and a Chromebook's own keyboard and touchpad are built in too. */
+    static boolean connected(InputDevice device) {
+        return android.os.Build.VERSION.SDK_INT >= 29 && device.isExternal();
     }
 
     /** A physical keyboard with letters and no stick (CubeEvil4-Android's keyboardDevice): some

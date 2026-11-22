@@ -212,6 +212,10 @@ public class HaloActivity extends SDLActivity {
 
     @Override
     public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+        if (haloPort != null && event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+            if (event.isFromSource(android.view.InputDevice.SOURCE_MOUSE)) haloPort.deskUsed(true);
+            else if (event.isFromSource(android.view.InputDevice.SOURCE_TOUCHSCREEN)) haloPort.fingerUsed();
+        }
         if (settings != null && settings.isOpen()) return super.dispatchTouchEvent(event);
         if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN)
             movieTouch = nativeMovieSkip();
@@ -227,6 +231,13 @@ public class HaloActivity extends SDLActivity {
     public boolean dispatchKeyEvent(android.view.KeyEvent event) {
         int key = event.getKeyCode();
         boolean down = event.getAction() == android.view.KeyEvent.ACTION_DOWN;
+        // a key of a keyboard with letters hides the touch controls (a finger brings them back)
+        if (haloPort != null && down && event.getRepeatCount() == 0 && event.getDevice() != null &&
+                ControllerPresence.isKeyboard(event.getDevice()) && !android.view.KeyEvent.isGamepadButton(key) &&
+                key != android.view.KeyEvent.KEYCODE_VOLUME_UP && key != android.view.KeyEvent.KEYCODE_VOLUME_DOWN &&
+                key != android.view.KeyEvent.KEYCODE_VOLUME_MUTE && key != android.view.KeyEvent.KEYCODE_BACK &&
+                key != android.view.KeyEvent.KEYCODE_POWER)
+            haloPort.deskUsed(false);
         if (overlayKeys.contains(key)) {
             if (!down) overlayKeys.remove(key);
             if (settings != null && settings.isOpen()) settings.key(event);
@@ -276,6 +287,10 @@ public class HaloActivity extends SDLActivity {
 
     @Override
     public boolean dispatchGenericMotionEvent(android.view.MotionEvent event) {
+        // a mouse's pointer or wheel hides the touch controls (a finger brings them back)
+        if (haloPort != null && event.isFromSource(android.view.InputDevice.SOURCE_MOUSE) &&
+                !event.isFromSource(android.view.InputDevice.SOURCE_TOUCHSCREEN))
+            haloPort.deskUsed(true);
         if (settings != null && settings.isOpen()) {
             settings.motion(event);
             // Update SDL's physical axes even while the guest input is blocked.

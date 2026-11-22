@@ -89,6 +89,9 @@ stubs = {
     "android/content/Context": '''public class Context {
         public SharedPreferences getSharedPreferences(String name,int mode){return (key,value)->value;}
     }''',
+    "android/util/Log": '''public class Log {
+        public static int i(String tag,String text){return 0;}
+    }''',
     "android/os/Looper": '''public class Looper {
         public static Looper getMainLooper(){return new Looper();}
     }''',
@@ -326,11 +329,21 @@ class TouchSelectTest {
         check(HaloPort.mice.isEmpty(),"a keyboard alone is no mouse");
         ControllerPresence.keyboardMouse=ControllerPresence.MOUSE;Handler.advance(100);
         check(v.visibility==View.GONE && HaloPort.mice.equals(java.util.List.of(true)),"a mouse hides them and is told");
+        // a finger on the screen brings them back while the mouse is still there; using it hides them again
+        p.fingerUsed();
+        check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true,false)),"a finger: touch again");
+        p.deskUsed(true);
+        check(v.visibility==View.GONE && HaloPort.mice.equals(java.util.List.of(true,false,true)),"the mouse used: hidden");
         ControllerPresence.keyboardMouse=0;Handler.advance(100);
-        check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true,false)),
+        check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true,false,true,false)),
             "both gone: the touch controls again, no mouse");
+        // a built-in keyboard (a Galaxy A36's listed one, a Chromebook's): nothing hides until a key is used
+        HaloPort.mice.clear();p.deskUsed(false);
+        check(v.visibility==View.GONE && HaloPort.mice.isEmpty(),"a built-in keyboard's key hides the touch controls");
+        p.fingerUsed();Handler.advance(100);
+        check(v.visibility==View.VISIBLE,"and a finger brings them back");
         p.suspend();
-        System.out.println("Production SELECT adapter: both layouts/editor, 500 ms, reentrant release, cancel, focus, lifecycle, editor, controller, keyboard and mouse, mode, physical SELECT, F1 and gamepad Back passed.");
+        System.out.println("Production SELECT adapter: both layouts/editor, 500 ms, reentrant release, cancel, focus, lifecycle, editor, controller, keyboard and mouse (connected or used, a finger brings touch back), mode, physical SELECT, F1 and gamepad Back passed.");
     }
 }
 '''

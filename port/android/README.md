@@ -389,6 +389,15 @@ repository. If you installed a build that has a different signature, remove
 that build before you install a new build. Removing the app deletes its data
 folder: first make a copy of `maps/` and `save/`.
 
+### Changes in 1.1.2
+
+- Touch controls missing on some phones (a Galaxy A36 with 1.1.1): the
+  phone lists a built-in device as a keyboard with letters, which hid the
+  touch controls. Now only a connected keyboard or mouse (Bluetooth, USB;
+  Android 10 and later) hides them at once; a built-in one (a Chromebook's
+  keyboard and touchpad too) hides them when it is used. A finger on the
+  screen always brings them back, until a key or the mouse is used again.
+
 ### Changes in 1.1.1
 
 - Keyboard and mouse, in the game and in its menus (see Controls); a

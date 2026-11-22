@@ -23,6 +23,11 @@ final class HaloPort {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean active, controllerConnected, overlay;
     private int mousePresent = -1;
+    // a keyboard or a mouse in use (desk): set by a connected one and by any one's keys or pointer, cleared by
+    // a finger on the screen, which brings the touch controls back (a Galaxy A36 listed a built-in keyboard,
+    // 1.1.1: no touch controls); deskPresent: a connected one is there, mouseSeen: a mouse is there or was
+    // used since (the game captures it only then)
+    private boolean desk, deskPresent, mouseSeen;
     private int mode = -1;
     private static final String[] IDS = {"jump", "melee", "use", "weapon", "flashlight", "grenade_type",
         "grenade", "fire", "pause", "back", "crouch", "zoom", "nav_up", "nav_down", "nav_left", "nav_right", "select"};
@@ -123,8 +128,11 @@ final class HaloPort {
     private void updateControllerPresence() {
         // a controller, a keyboard or a mouse hides the touch controls (ControllerPresence.inputs)
         int inputs = ControllerPresence.inputs(activity);
-        boolean connected = inputs != 0;
-        int mouse = (inputs & ControllerPresence.MOUSE) != 0 ? 1 : 0;
+        boolean present = (inputs & (ControllerPresence.KEYBOARD | ControllerPresence.MOUSE)) != 0;
+        if (present != deskPresent) { deskPresent = present; desk = present; mouseSeen = false; }
+        if ((inputs & ControllerPresence.MOUSE) != 0) mouseSeen = true;
+        boolean connected = (inputs & ControllerPresence.CONTROLLER) != 0 || desk;
+        int mouse = desk && mouseSeen ? 1 : 0;
         if (mouse != mousePresent) { mousePresent = mouse; nativeMouse(mouse != 0); }
         if (connected != controllerConnected) {
             activity.cancelTouchSelect();
@@ -138,6 +146,22 @@ final class HaloPort {
     }
     void overlay(boolean visible) { overlay=visible;activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset();mode=-1;updateControllerPresence(); }
     void controllerInput() { updateControllerPresence(); }
+    /** A keyboard's key or a mouse's pointer (HaloActivity): the touch controls hide. */
+    void deskUsed(boolean mouse) {
+        if (mouse) mouseSeen = true;
+        if (desk && (!mouse || mousePresent == 1)) return;
+        android.util.Log.i("halo", "touch controls: hidden (" + (mouse ? "a mouse" : "a keyboard") + " in use)");
+        desk = true;
+        updateControllerPresence();
+    }
+    /** A finger on the screen (HaloActivity): the touch controls come back, if a keyboard or mouse hid them. */
+    void fingerUsed() {
+        if (!desk) return;
+        android.util.Log.i("halo", "touch controls: shown (the screen touched)");
+        desk = false;
+        mouseSeen = false;
+        updateControllerPresence();
+    }
     void focusLost() { activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset(); }
     private void applyVolumes() {
         nativeVolumes(prefs.getInt("master",100), prefs.getInt("effects",100), prefs.getInt("music",100));
