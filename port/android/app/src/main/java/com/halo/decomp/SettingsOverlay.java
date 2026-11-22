@@ -311,9 +311,12 @@ final class SettingsOverlay {
     /** The side label on the left, the option column (rows of cells) on the right; stacked on narrow windows
      *  (CubeEvil4's labelledOptions, its fourth menu round: every sub-page laid out so). */
     private LinearLayout labelled(int label){
+        return labelled(rowLabel(s(label)));
+    }
+    private LinearLayout labelled(TextView caption){
         MenuLayout.Columns outer=new MenuLayout.Columns(activity,170,640,false);
         outer.setGravity(Gravity.TOP);
-        outer.addView(rowLabel(s(label)));
+        outer.addView(caption);
         LinearLayout options=column();
         outer.addView(options);
         body.addView(outer);
@@ -655,7 +658,12 @@ final class SettingsOverlay {
             mouseInvert=on;apply();prefs.edit().putBoolean("mouse_invert",on).apply();
         });
         help(R.string.menu_mouse_help);
-        keyOverview(labelled(R.string.menu_side_keys));
+        // the side label beside the first key line, not centred on a 64 dp cell (wish of the project owner, 23.11.2026)
+        TextView keysLabel=rowLabel(s(R.string.menu_side_keys));
+        keysLabel.setMinHeight(0);keysLabel.setMinimumHeight(0);
+        keysLabel.setGravity(Gravity.START|Gravity.TOP);
+        keysLabel.setPaddingRelative(dp(MenuLayout.GAP),dp(MenuLayout.GAP+6),dp(8),0);
+        keyOverview(labelled(keysLabel));
         help(R.string.menu_keys_help);
     }
     /** The keys as a table in two columns where there is room: what it does (small) and the keys (bold);
