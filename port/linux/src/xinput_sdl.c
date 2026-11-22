@@ -19,6 +19,9 @@ Keyboard and mouse (port 0):
 	escape           start               F1               back
 	F12              release or recapture the mouse
 
+On Android, F1 is SELECT (HaloActivity: short Back, held the in-game menu)
+and the mouse is captured only while one is connected (sdl_platform.c).
+
 In the menus the mouse is free and drives a pointer instead
 (port/linux/include/halo_ui_pointer.h, source/interface/ui_widget.c): its
 motion, buttons and wheel do not reach the controller then.

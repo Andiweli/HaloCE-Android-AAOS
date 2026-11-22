@@ -15,12 +15,14 @@ final class HaloPort {
     static native void nativeLook(float x, float y);
     static native void nativeReset();
     static native int nativeMode();
+    static native void nativeMouse(boolean present);
     static native void nativeVolumes(int master, int effects, int music);
     private final HaloActivity activity;
     private final RetroTouchView touch;
     private final SharedPreferences prefs;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean active, controllerConnected, overlay;
+    private int mousePresent = -1;
     private int mode = -1;
     private static final String[] IDS = {"jump", "melee", "use", "weapon", "flashlight", "grenade_type",
         "grenade", "fire", "pause", "back", "crouch", "zoom", "nav_up", "nav_down", "nav_left", "nav_right", "select"};
@@ -119,7 +121,11 @@ final class HaloPort {
     void resume() { if(active)return; active=true;updateControllerPresence();handler.post(poll); }
     void suspend() { active=false;handler.removeCallbacks(poll);activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset(); }
     private void updateControllerPresence() {
-        boolean connected = ControllerPresence.isControllerConnected(activity);
+        // a controller, a keyboard or a mouse hides the touch controls (ControllerPresence.inputs)
+        int inputs = ControllerPresence.inputs(activity);
+        boolean connected = inputs != 0;
+        int mouse = (inputs & ControllerPresence.MOUSE) != 0 ? 1 : 0;
+        if (mouse != mousePresent) { mousePresent = mouse; nativeMouse(mouse != 0); }
         if (connected != controllerConnected) {
             activity.cancelTouchSelect();
             controllerConnected = connected;

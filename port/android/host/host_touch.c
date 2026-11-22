@@ -49,6 +49,15 @@ JNIEXPORT void JNICALL Java_com_halo_decomp_HaloPort_nativeLook(JNIEnv *e,jclass
     if(mode==2 && isfinite(x) && isfinite(y)) { look_x+=x;look_y+=y; }
     pthread_mutex_unlock(&lock);
 }
+/* a physical mouse connected (ControllerPresence, HaloPort): the game captures it while it plays
+(sdl_platform.c) and drives its menus' pointer with it */
+static int mouse_present;
+JNIEXPORT void JNICALL Java_com_halo_decomp_HaloPort_nativeMouse(JNIEnv *e,jclass c,jboolean present) {
+    pthread_mutex_lock(&lock); mouse_present=present!=0; pthread_mutex_unlock(&lock);
+}
+int host_settings_mouse(void) {
+    pthread_mutex_lock(&lock); int present=mouse_present; pthread_mutex_unlock(&lock); return present;
+}
 JNIEXPORT jint JNICALL Java_com_halo_decomp_HaloPort_nativeMode(JNIEnv *e,jclass c) {
     pthread_mutex_lock(&lock); int result=host_bink_active()?0:mode; pthread_mutex_unlock(&lock);return result;
 }

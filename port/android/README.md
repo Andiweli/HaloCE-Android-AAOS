@@ -152,7 +152,21 @@ quits the app; the back button does not, so a press of SELECT too short to
 open the settings never quits (`source/interface/ui_widget.c`).
 
 The controller gets the rumble. The back gesture of Android is the B
-button. A Bluetooth or USB keyboard operates as on Linux.
+button.
+
+A Bluetooth or USB keyboard and mouse play as on Linux (the keys of
+`port/linux/src/xinput_sdl.c`: W A S D move, the mouse aims, the left
+button fires, the right button throws a grenade, Escape pauses). While
+the game plays, the mouse is captured (Android's pointer capture, Android
+8 and later), so the aim never stops at the screen's edge; F12 frees it
+and captures it again. In the game's menus the mouse moves a pointer
+instead: a click chooses, the right button goes back, the wheel scrolls
+(`halo_ui_pointer_update` in `port/linux/src/d3d8_gl.c`). The in-game
+menu takes the mouse as any app does. F1 is SELECT: a short press Halo's
+Back, held the in-game menu, again its close. A physical keyboard with
+letters or a mouse hides the touch controls, as a controller does
+(`ControllerPresence.java`); the screen's keyboard and a handheld's own
+buttons do not.
 
 Without a controller, the screen shows touch controls (RetroTouch
 1.0.0-beta.13). The buttons show symbols for what they do, as the RE

@@ -227,12 +227,13 @@ public class HaloActivity extends SDLActivity {
         // Back action. A Back that did not open the overlay closes it.
         boolean gamepadBack = key == android.view.KeyEvent.KEYCODE_BACK &&
             event.isFromSource(android.view.InputDevice.SOURCE_GAMEPAD);
-        if (settings != null && (key == android.view.KeyEvent.KEYCODE_BUTTON_SELECT ||
-                gamepadBack && (selectHeld || !settings.isOpen()))) {
+        // a keyboard's F1 is SELECT, as in CubeEvil4-Android: a short press Halo's Back (F1 on Linux
+        // too), held the in-game menu, again its close
+        boolean select = key == android.view.KeyEvent.KEYCODE_BUTTON_SELECT || key == android.view.KeyEvent.KEYCODE_F1;
+        if (settings != null && (select || gamepadBack && (selectHeld || !settings.isOpen()))) {
             if (down && event.getRepeatCount() == 0 && !settings.isOpen()) {
                 beginSelect(false,event.getDeviceId());
-            } else if (down && event.getRepeatCount() == 0 && !selectHeld &&
-                    key == android.view.KeyEvent.KEYCODE_BUTTON_SELECT) {
+            } else if (down && event.getRepeatCount() == 0 && !selectHeld && select) {
                 // SELECT again closes the menu it opened (as CubeEvil4's does)
                 settings.close();
             } else if (!down) {

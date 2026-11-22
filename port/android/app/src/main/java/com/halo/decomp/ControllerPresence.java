@@ -11,6 +11,12 @@ import android.view.InputDevice;
  * uinput-goodix) and some key devices say they are gamepads, and the touch
  * controls never showed. A controller here is a physical device that also
  * has a stick or a D-pad on axes (a hat), which those have not.
+ *
+ * A keyboard or a mouse hides them as well (wish of the project owner, 22.11.2026): a physical keyboard
+ * with letters (KEYBOARD_TYPE_ALPHABETIC) and no stick, not the screen's virtual keyboard nor a
+ * handheld's built-in buttons (keys without letters), and a physical mouse (SOURCE_MOUSE), not a
+ * touch screen. Both play through SDL as on Linux (port/linux/src/xinput_sdl.c); the mouse is told to
+ * the game (nativeMouse), which captures it while it plays (sdl_platform.c).
  */
 final class ControllerPresence {
     private static String reported = "";
@@ -18,31 +24,70 @@ final class ControllerPresence {
     private ControllerPresence() {
     }
 
+    /** What inputs() finds: a controller, a keyboard, a mouse. */
+    static final int CONTROLLER = 1, KEYBOARD = 2, MOUSE = 4;
+
+    /** Whether a controller is connected (inputs). */
     static boolean isControllerConnected(Context context) {
-        boolean connected = false;
-        StringBuilder devices = new StringBuilder();
+        return (inputs(context) & CONTROLLER) != 0;
+    }
+
+    /** The controllers, keyboards and mice connected (CONTROLLER | KEYBOARD | MOUSE); the touch
+     *  controls hide with any of them. */
+    static int inputs(Context context) {
+        int found = 0;
+        StringBuilder devices = new StringBuilder(), keyboards = new StringBuilder(), mice = new StringBuilder();
 
         for (int id : InputDevice.getDeviceIds()) {
             InputDevice device = InputDevice.getDevice(id);
 
-            if (device == null || !claimsController(device.getSources()))
+            if (device == null)
+                continue;
+            if (isKeyboard(device)) {
+                found |= KEYBOARD;
+                keyboards.append(keyboards.length() == 0 ? "" : "; ").append(device.getName());
+            }
+            if (isMouse(device)) {
+                found |= MOUSE;
+                mice.append(mice.length() == 0 ? "" : "; ").append(device.getName());
+            }
+            if (!claimsController(device.getSources()) || isKeyboard(device))
                 continue;
             boolean controller = isController(device);
-            connected |= controller;
+            if (controller)
+                found |= CONTROLLER;
             devices.append(devices.length() == 0 ? "" : "; ").append(device.getName())
                 .append(controller ? " (controller)" : device.isVirtual() ? " (virtual, ignored)" :
                     " (no stick or D-pad axes, ignored)");
         }
         // each change once in Logcat and the diagnostic file
-        String report = devices.toString();
+        String report = devices + "|" + keyboards + "|" + mice;
         if (!report.equals(reported)) {
             reported = report;
-            String line = "touch controls: " + (connected ? "hidden" : "shown") + "; gamepad devices: " +
-                (report.isEmpty() ? "none" : report);
+            String line = "touch controls: " + (found != 0 ? "hidden" : "shown") + "; gamepad devices: " +
+                (devices.length() == 0 ? "none" : devices) + "; keyboards: " +
+                (keyboards.length() == 0 ? "none" : keyboards) + "; mice: " + (mice.length() == 0 ? "none" : mice);
             android.util.Log.i("halo", line);
             StartDiagnostics.append(context, line);
         }
-        return connected;
+        return found;
+    }
+
+    /** A physical keyboard with letters and no stick (CubeEvil4-Android's keyboardDevice): some
+     *  Bluetooth keyboards also declare a few gamepad buttons; a handheld's buttons have no letters. */
+    static boolean isKeyboard(InputDevice device) {
+        if (device.isVirtual())
+            return false;
+        int sources = device.getSources();
+        if ((sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK)
+            return false;
+        return (sources & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD &&
+            device.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC;
+    }
+
+    /** A physical mouse (or a trackpad that moves a pointer), not a touch screen or a stylus. */
+    static boolean isMouse(InputDevice device) {
+        return !device.isVirtual() && (device.getSources() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE;
     }
 
     static boolean claimsController(int sources) {

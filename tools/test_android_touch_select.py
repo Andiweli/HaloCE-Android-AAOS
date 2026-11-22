@@ -64,6 +64,8 @@ replacements = {
     "static native void nativeLook(float x, float y);": "static void nativeLook(float x,float y){}",
     "static native void nativeReset();": "static void nativeReset(){}",
     "static native int nativeMode();": "static int nativeMode(){return engineMode;}",
+    "static native void nativeMouse(boolean present);":
+        "static void nativeMouse(boolean present){mice.add(present);}",
     "static native void nativeVolumes(int master, int effects, int music);":
         "static void nativeVolumes(int master,int effects,int music){}",
 }
@@ -72,7 +74,8 @@ for old, new in replacements.items():
     port = port.replace(old, new)
 port = port.replace("final class HaloPort {", """final class HaloPort {
     static int engineMode=2;
-    static final java.util.List<String> actions=new java.util.ArrayList<>();""")
+    static final java.util.List<String> actions=new java.util.ArrayList<>();
+    static final java.util.List<Boolean> mice=new java.util.ArrayList<>();""")
 
 stubs = {
     "org/json/JSONException": '''public class JSONException extends Exception {
@@ -137,7 +140,7 @@ stubs = {
         public static InputDevice getDevice(int id){return present && id==1?new InputDevice():null;}
     }''',
     "android/view/KeyEvent": '''public class KeyEvent {
-        public static final int ACTION_DOWN=0,KEYCODE_BACK=4,KEYCODE_BUTTON_SELECT=109;
+        public static final int ACTION_DOWN=0,KEYCODE_BACK=4,KEYCODE_BUTTON_SELECT=109,KEYCODE_F1=131;
         private final int action,key,source;private final boolean canceled;private final int repeat;
         public KeyEvent(int action,boolean canceled,int repeat){this(KEYCODE_BUTTON_SELECT,0x401,action,canceled,repeat);}
         public KeyEvent(int key,int source,int action,boolean canceled,int repeat){
@@ -148,8 +151,10 @@ stubs = {
         public boolean isCanceled(){return canceled;}
     }''',
     "com/halo/decomp/ControllerPresence": '''public class ControllerPresence {
-        public static boolean connected;
+        public static final int CONTROLLER=1,KEYBOARD=2,MOUSE=4;
+        public static boolean connected;public static int keyboardMouse;
         public static boolean isControllerConnected(android.content.Context context){return connected;}
+        public static int inputs(android.content.Context context){return (connected?CONTROLLER:0)|keyboardMouse;}
     }''',
     # RetroTouch's icons build their paths when the class loads (1.0.0-beta.13)
     "android/graphics/Path": '''public class Path {
@@ -307,8 +312,25 @@ class TouchSelectTest {
         check(!a.physical(back(true,false,0)) && !a.physical(back(false,false,0)) && !a.held(),
             "the phone's Back (no gamepad) is left alone");
         Handler.advance(600);check(a.settings.opens==6 && HaloPort.actions.isEmpty(),"and opens nothing");
+        // a keyboard's F1 is SELECT: short Halo's Back, held the in-game menu
+        HaloPort.actions.clear();a.physical(new KeyEvent(KeyEvent.KEYCODE_F1,0x101,0,false,0));Handler.advance(100);
+        a.physical(new KeyEvent(KeyEvent.KEYCODE_F1,0x101,1,false,0));
+        check(a.settings.opens==6 && HaloPort.actions.equals(java.util.Arrays.asList("9:true","9:false")),
+            "short F1 keeps Back");
+        HaloPort.actions.clear();a.physical(new KeyEvent(KeyEvent.KEYCODE_F1,0x101,0,false,0));Handler.advance(500);
+        check(a.settings.opens==7 && a.settings.open,"held F1 opens the in-game menu");
+        a.physical(new KeyEvent(KeyEvent.KEYCODE_F1,0x101,1,false,0));a.settings.close();Handler.advance(100);
+        // a keyboard or a mouse hides the touch controls; the mouse is told to the game
+        HaloPort.mice.clear();ControllerPresence.keyboardMouse=ControllerPresence.KEYBOARD;Handler.advance(100);
+        check(v.visibility==View.GONE && v.getMode()==RetroTouchMode.OFF,"a keyboard hides the touch controls");
+        check(HaloPort.mice.isEmpty(),"a keyboard alone is no mouse");
+        ControllerPresence.keyboardMouse=ControllerPresence.MOUSE;Handler.advance(100);
+        check(v.visibility==View.GONE && HaloPort.mice.equals(java.util.List.of(true)),"a mouse hides them and is told");
+        ControllerPresence.keyboardMouse=0;Handler.advance(100);
+        check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true,false)),
+            "both gone: the touch controls again, no mouse");
         p.suspend();
-        System.out.println("Production SELECT adapter: both layouts/editor, 500 ms, reentrant release, cancel, focus, lifecycle, editor, controller, mode, physical SELECT and gamepad Back passed.");
+        System.out.println("Production SELECT adapter: both layouts/editor, 500 ms, reentrant release, cancel, focus, lifecycle, editor, controller, keyboard and mouse, mode, physical SELECT, F1 and gamepad Back passed.");
     }
 }
 '''

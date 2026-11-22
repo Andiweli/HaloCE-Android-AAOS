@@ -37,10 +37,12 @@ static struct platform_input_state input_state;
 /* keys pressed since the last read, so a press and release between two
 reads still counts as a press (input injected on Android, or a slow frame) */
 static unsigned char keys_pressed[SDL_SCANCODE_COUNT];
-#ifndef HALO_ANDROID
 /* the menus' pointer (platform_ui_pointer_set_active), under input_lock */
 static struct platform_ui_pointer ui_pointer;
 static float ui_pointer_wheel;
+#ifdef HALO_ANDROID
+/* the window has the focus (SDL says when it loses it); the mouse is captured only then */
+static BOOL android_window_focused = TRUE;
 #endif
 static pthread_mutex_t input_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -454,6 +456,19 @@ void platform_video_swap(void)
 
 void platform_mouse_capture(BOOL capture)
 {
+#ifdef HALO_ANDROID
+	/* only with a mouse connected (HaloPort.nativeMouse) and the in-game menu closed (its views
+	take the mouse's clicks then); asked every frame (platform_pump_events), SDL only on a change */
+	extern int host_settings_mouse(void);
+	extern int host_settings_active(void);
+	static int captured = -1;
+
+	capture = capture && host_settings_mouse() && !host_settings_active();
+	if (!platform_window || (capture ? 1 : 0) == captured)
+		return;
+	captured = capture ? 1 : 0;
+	platform_log("mouse: %s", capture ? "captured (the game's aim)" : "free (the menus' pointer)");
+#endif
 	if (platform_window)
 		SDL_SetWindowRelativeMouseMode(platform_window, capture ? true : false);
 }
@@ -784,7 +799,6 @@ void platform_pump_events(void)
 #endif
 			break;
 		case SDL_EVENT_MOUSE_MOTION:
-#ifndef HALO_ANDROID
 			/* in the menus the mouse moves the pointer, not the view */
 			if (input_state.ui_pointer)
 			{
@@ -793,13 +807,11 @@ void platform_pump_events(void)
 				ui_pointer.moved = TRUE;
 				break;
 			}
-#endif
 			input_state.mouse_dx += event.motion.xrel;
 			input_state.mouse_dy += event.motion.yrel;
 			break;
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 		case SDL_EVENT_MOUSE_BUTTON_UP:
-#ifndef HALO_ANDROID
 			/* clicks in the menus go to the pointer; a button held down
 			when the menu closes stays up until pressed again, so the click
 			that resumes the game does not also fire */
@@ -817,12 +829,10 @@ void platform_pump_events(void)
 				}
 				break;
 			}
-#endif
 			if (event.button.button < PLATFORM_MOUSE_BUTTON_COUNT)
 				input_state.mouse_buttons[event.button.button] = event.button.down;
 			break;
 		case SDL_EVENT_MOUSE_WHEEL:
-#ifndef HALO_ANDROID
 			if (input_state.ui_pointer)
 			{
 				/* whole notches: smooth-scrolling wheels send fractions */
@@ -839,17 +849,22 @@ void platform_pump_events(void)
 				}
 				break;
 			}
-#endif
 			input_state.mouse_wheel += event.wheel.y;
 			break;
 		case SDL_EVENT_WINDOW_FOCUS_LOST:
 			memset(input_state.keys, 0, sizeof(input_state.keys));
 			memset(input_state.mouse_buttons, 0, sizeof(input_state.mouse_buttons));
 			input_state.focused = FALSE;
+#ifdef HALO_ANDROID
+			android_window_focused = FALSE;
+#endif
 			break;
 		case SDL_EVENT_WINDOW_FOCUS_GAINED:
 			input_state.focused = TRUE;
 			look_at_clipboard = TRUE;
+#ifdef HALO_ANDROID
+			android_window_focused = TRUE;
+#endif
 #ifndef HALO_ANDROID
 			if (!input_state.mouse_released && !input_state.ui_pointer)
 				platform_mouse_capture(TRUE);
@@ -863,11 +878,16 @@ void platform_pump_events(void)
 		}
 	}
 	pthread_mutex_unlock(&input_lock);
+#ifdef HALO_ANDROID
+	/* the mouse is the game's while it plays: captured (Android's pointer capture, relative
+	motion for the aim) with the window focused, out of the menus' pointer, not released (F12)
+	and the in-game menu closed (platform_mouse_capture) */
+	platform_mouse_capture(android_window_focused && !input_state.mouse_released && !input_state.ui_pointer);
+#endif
 	looked_at_clipboard = TRUE;
 	platform_invite_clipboard(look_at_clipboard);
 }
 
-#ifndef HALO_ANDROID
 /* ---------- the menus' pointer */
 
 /* While a menu is up the mouse is released, its pointer shows (centered when
@@ -891,8 +911,14 @@ void platform_ui_pointer_set_active(BOOL active)
 	{
 		int width, height;
 
+#ifdef HALO_ANDROID
+		/* (Android moves no pointer for an app: it stays where the mouse left it, and its next
+		motion says where) */
+		SDL_GetWindowSizeInPixels(platform_window, &width, &height);
+#else
 		SDL_GetWindowSize(platform_window, &width, &height);
 		SDL_WarpMouseInWindow(platform_window, width * 0.5f, height * 0.5f);
+#endif
 		pthread_mutex_lock(&input_lock);
 		ui_pointer.x = width * 0.5f;
 		ui_pointer.y = height * 0.5f;
@@ -918,10 +944,14 @@ BOOL platform_ui_pointer_read(struct platform_ui_pointer *pointer)
 
 void platform_video_window_size(int *width, int *height)
 {
+#ifdef HALO_ANDROID
+	/* (SDL's window is in pixels on Android) */
+	SDL_GetWindowSizeInPixels(platform_window, width, height);
+#else
 	SDL_GetWindowSize(platform_window, width, height);
+#endif
 }
 
-#endif
 void platform_input_read(struct platform_input_state *state, BOOL consume_motion)
 {
 	pthread_mutex_lock(&input_lock);

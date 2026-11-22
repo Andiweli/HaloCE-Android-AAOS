@@ -1550,14 +1550,6 @@ HRESULT WINAPI Direct3D_CreateDevice(UINT adapter, D3DDEVTYPE device_type, void 
 
 /* ---------- the menus' pointer */
 
-#ifdef HALO_ANDROID
-int halo_ui_pointer_update(int menus_active, struct halo_ui_pointer *pointer)
-{
-	(void)menus_active;
-	(void)pointer;
-	return 0;
-}
-#else
 /* a point in the window, as SDL reports it, in the menus' coordinates: the
 inverse of the letterboxed display blit at presentation, the screen's
 width and the menus' centering (halo_screen_ui_offset) */
@@ -1574,6 +1566,12 @@ static void ui_point_from_window(float window_x, float window_y, short *x, short
 	platform_video_drawable_size(&pixel_width, &pixel_height);
 	if (window_width <= 0 || window_height <= 0)
 		return;
+#ifdef HALO_ANDROID
+	/* the picture fills the whole surface on Android (Present), with no bars */
+	width = pixel_width;
+	height = pixel_height;
+	left = top = 0;
+#else
 	width = pixel_width;
 	height = (int)((long)pixel_width * back_buffer->target.gl_height / back_buffer->target.gl_width);
 	if (height > pixel_height)
@@ -1583,6 +1581,7 @@ static void ui_point_from_window(float window_x, float window_y, short *x, short
 	}
 	left = (pixel_width - width) / 2;
 	top = (pixel_height - height) / 2;
+#endif
 	screen_x = (window_x * pixel_width / window_width - left) * (float)back_buffer->target.width / (float)width;
 	screen_y = (window_y * pixel_height / window_height - top) * (float)back_buffer->target.height / (float)height;
 	*x = (short)floorf(screen_x - (float)(halo_screen_width() - 640) / 2.0f);
@@ -1605,7 +1604,6 @@ int halo_ui_pointer_update(int menus_active, struct halo_ui_pointer *pointer)
 	pointer->wheel_steps = (signed char)(state.wheel_steps < -8 ? -8 : state.wheel_steps > 8 ? 8 : state.wheel_steps);
 	return 1;
 }
-#endif
 
 /* takes up the display's shape and resolution, or the window's, if they
 have changed; between frames, since the game's layout and the targets must

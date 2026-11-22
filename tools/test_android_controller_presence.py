@@ -27,7 +27,11 @@ stubs = {
     }''',
     "android/view/InputDevice": '''public class InputDevice {
         public static final int SOURCE_KEYBOARD=0x101,SOURCE_DPAD=0x201,SOURCE_GAMEPAD=0x401,
-            SOURCE_TOUCHSCREEN=0x1002,SOURCE_JOYSTICK=0x1000010;
+            SOURCE_TOUCHSCREEN=0x1002,SOURCE_MOUSE=0x2002,SOURCE_JOYSTICK=0x1000010;
+        public static final int KEYBOARD_TYPE_NONE=0,KEYBOARD_TYPE_NON_ALPHABETIC=1,KEYBOARD_TYPE_ALPHABETIC=2;
+        public int keyboardType=KEYBOARD_TYPE_NON_ALPHABETIC;
+        public InputDevice typed(int type){keyboardType=type;return this;}
+        public int getKeyboardType(){return keyboardType;}
         public static final java.util.List<InputDevice> devices=new java.util.ArrayList<>();
         final String name;final int sources;final boolean virtual;final java.util.Set<Integer> axes=new java.util.HashSet<>();
         public InputDevice(String name,int sources,boolean virtual,int... axes){
@@ -79,8 +83,32 @@ public class PresenceTest {
         check(ControllerPresence.isControllerConnected(c),"a stick controller hides touch");
         line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
         check(line.startsWith("touch controls: hidden") && line.contains("Xbox Wireless Controller (controller)"),line);
+        InputDevice.devices.remove(InputDevice.devices.size()-1);
+        check(ControllerPresence.inputs(c)==0,"the controller gone: nothing hides touch");
+        /* the screen's virtual keyboard and a handheld's built-in buttons (keys, no letters) are no keyboards */
+        InputDevice.devices.add(new InputDevice("Virtual QWERTY",InputDevice.SOURCE_KEYBOARD,true).typed(InputDevice.KEYBOARD_TYPE_ALPHABETIC));
+        InputDevice.devices.add(new InputDevice("gpio-keys",InputDevice.SOURCE_KEYBOARD,false));
+        check(ControllerPresence.inputs(c)==0,"virtual and letterless keyboards keep touch");
+        /* a Bluetooth keyboard with letters (and a few gamepad buttons in its HID description) */
+        InputDevice.devices.add(new InputDevice("BT Keyboard",InputDevice.SOURCE_KEYBOARD|InputDevice.SOURCE_GAMEPAD,false)
+            .typed(InputDevice.KEYBOARD_TYPE_ALPHABETIC));
+        check(ControllerPresence.inputs(c)==ControllerPresence.KEYBOARD && !ControllerPresence.isControllerConnected(c),
+            "a keyboard hides touch, and is no controller");
+        line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
+        check(line.startsWith("touch controls: hidden") && line.contains("keyboards: BT Keyboard") && line.contains("mice: none"),line);
+        /* a mouse; a touch screen is none */
+        InputDevice.devices.add(new InputDevice("Logitech Mouse",InputDevice.SOURCE_MOUSE,false));
+        check(ControllerPresence.inputs(c)==(ControllerPresence.KEYBOARD|ControllerPresence.MOUSE),"a mouse too");
+        InputDevice.devices.remove(InputDevice.devices.size()-2);
+        check(ControllerPresence.inputs(c)==ControllerPresence.MOUSE,"the mouse alone hides touch");
+        line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
+        check(line.contains("keyboards: none") && line.contains("mice: Logitech Mouse"),line);
+        /* a controller whose device also says keyboard with letters is still a controller (it has a stick) */
+        InputDevice.devices.add(new InputDevice("Retroid Pocket Controller",InputDevice.SOURCE_KEYBOARD|InputDevice.SOURCE_GAMEPAD|
+            InputDevice.SOURCE_JOYSTICK,false,MotionEvent.AXIS_X,MotionEvent.AXIS_Y).typed(InputDevice.KEYBOARD_TYPE_ALPHABETIC));
+        check(ControllerPresence.inputs(c)==(ControllerPresence.CONTROLLER|ControllerPresence.MOUSE),"a stick pad stays a controller");
         check(android.util.Log.lines.equals(StartDiagnostics.lines),"Logcat gets the same lines");
-        System.out.println("Controller presence: fingerprint sensors, button-only, one-axis and virtual gamepad devices keep the touch controls; stick and hat D-pad controllers hide them; each change logged once.");
+        System.out.println("Controller presence: fingerprint sensors, button-only, one-axis and virtual gamepad devices keep the touch controls; stick and hat D-pad controllers, physical keyboards with letters and mice hide them; each change logged once.");
     }
 }
 '''
