@@ -229,11 +229,13 @@ are in English, German, French and Italian (`res/values*/strings_menu.xml`).
 Its look follows CubeEvil4-Android's 1.1.0 menu, in Halo's blues: every
 sub-page has side labels on the left and the settings on the right, in
 pairs where they fit; every cell is 64 dp high; headings carry a faint
-line. Choices of more than two values (resolution, upscaling, MSAA, texture filtering) are arrow
+line. Choices of more than two values (resolution, upscaling, MSAA) are arrow
 cells (`ArrowSelector.java`: ‹ › on the sides, the value big, a dot per
 step, lit while not off); sliders are cells too (`SliderCell.java`: name,
-value, bar; ‹ › step, the bar still drags). Narrow windows stack the label
-above its settings and fold the pairs.
+value, bar; ‹ › step, the bar still drags); the gyroscope's sensitivity, the
+master volume and the texture filtering span both columns. With a mouse,
+the cell under the pointer lights up and a pressed cell more. Narrow
+windows stack the label above its settings and fold the pairs.
 
 **Keyboard & mouse** (Controls): the mouse's sensitivity (25 to 300 %,
 100 % by default, in per cent of `input.mouse_sensitivity`) and **Invert
@@ -287,7 +289,7 @@ processor. Brightness and gamma are applied after the upscaler. Offered
 only while the picture is smaller than the screen; it needs GLSL ES 3.10
 (`textureGather`), else, or when a shader fails, the plain stretch stays.
 
-**Texture filtering** (Off, 2x, 4x, 8x) replaces `display.anisotropic_filtering`
+**Texture filtering** (a slider: Off, 2x, 4x, 8x, 16x) replaces `display.anisotropic_filtering`
 at once (`anisotropic_filtering` in `port/linux/src/d3d8_gl.c`, asked once a
 frame), at most the GPU's maximum. 4x is the default.
 
@@ -392,8 +394,8 @@ folder: first make a copy of `maps/` and `save/`.
 - Keyboard and mouse, in the game and in its menus (see Controls); a
   keyboard or a mouse hides the touch controls, F1 opens the in-game menu.
 - The in-game menu takes CubeEvil4's 1.1.0 look: side labels, settings in
-  pairs, 64 dp cells, arrow cells for MSAA and texture filtering, slider
-  cells; L1 / R1 change a value. New in Controls: **Keyboard & mouse** with
+  pairs, 64 dp cells, arrow cells for MSAA, slider cells (texture
+  filtering now up to 16x); L1 / R1 change a value. New in Controls: **Keyboard & mouse** with
   the mouse's sensitivity, its Y axis and an overview of the keys.
 - Display: **Resolution** (Original 480p, 720p, 1080p, Native; 1080p by
   default) and **Upscaling** (Linear, SGSR, FSR) as CubeEvil4's 1.1.0;
@@ -406,6 +408,12 @@ folder: first make a copy of `maps/` and `save/`.
   press or a release). The in-game menu lets the mouse go when it opens, so
   its pointer shows and clicks work, and the game takes it back when the
   menu closes (`org.libsdl.app.HaloPointer`).
+- The in-game menu and the mouse: the cells light up under the pointer and
+  when pressed; the mouse no longer moves the controller's focus (its axes
+  are the pointer's place, `SettingsOverlay.motion` now takes only a
+  controller's).
+- The FPS display keeps clear of the system's caption bar (ChromeOS), a
+  camera cutout and bars that show.
 
 ### Changes in 1.1.0
 

@@ -124,9 +124,9 @@ public class MenuCheck {
         check(bits==(CHEAT_HEALTH|CHEAT_ONE_HIT),"switches add");
         check(toggled(bits,CHEAT_HEALTH,false)==CHEAT_ONE_HIT,"and come off one at a time");
         check(toggled(0xff,CHEAT_AMMO,true)==CHEAT_SWITCHES,"never more than the four");
-        check(filter(1)==1 && filter(2)==2 && filter(8)==8 && filter(16)==DEFAULT_FILTER && filter(0)==DEFAULT_FILTER,
-              "texture filtering: off, 2, 4, 8, else the configuration's 4");
-        check(FILTERS.length==4 && FILTERS[0]==1,"the choices off, 2x, 4x, 8x");
+        check(filter(1)==1 && filter(2)==2 && filter(8)==8 && filter(16)==16 && filter(32)==DEFAULT_FILTER &&
+              filter(0)==DEFAULT_FILTER,"texture filtering: off, 2, 4, 8, 16, else the configuration's 4");
+        check(FILTERS.length==5 && FILTERS[0]==1 && FILTERS[4]==16,"the choices off, 2x, 4x, 8x, 16x");
         check(msaa(0)==0 && msaa(2)==2 && msaa(4)==4 && msaa(8)==0 && msaa(-1)==0,"MSAA: off, 2x, 4x, else off");
         check(msaaOffered(0,0) && !msaaOffered(2,0) && !msaaOffered(4,0),"no MSAA on the GPU: only off");
         check(msaaOffered(2,2) && !msaaOffered(4,2) && msaaOffered(4,4),"the GPU's most samples and fewer");
@@ -154,16 +154,24 @@ public class MenuCheck {
 '''
 
 # ---------- 2b. the CubeEvil4 1.1.0 look and the keyboard & mouse section (source level)
-assert overlay.count('selector(') >= 3, 'MSAA and texture filtering are arrow cells'
-for choice in ('R.string.menu_msaa,', 'R.string.menu_texture_filter,'):
+assert overlay.count('selector(') >= 3, 'MSAA, the resolution and the upscaler are arrow cells'
+for choice in ('R.string.menu_msaa,',):
     assert 'selector(' + overlay[overlay.index(choice) - 40:overlay.index(choice)].split('selector(')[-1] + choice in overlay, choice
 assert 'setAllowed(i,msaaOffered(MSAA[i],limit))' in overlay, "MSAA steps the GPU can't do are passed over"
 for page in ('private void display(', 'private void controls(', 'private void audio(', 'private void cheats('):
     assert 'labelled(R.string.menu_side_' in method(page), page + ' has side labels'
 for slider in ('BRIGHTNESS', 'GAMMA', 'GYRO', 'LEFT_STICK', 'RIGHT_STICK', 'MASTER', 'EFFECTS', 'MUSIC'):
-    assert re.search(r'percentCell\(\w+,R\.string\.\w+,%s\)' % slider, overlay), slider + ' is a slider cell'
+    assert re.search(r'percentCell\([\w()]+,R\.string\.\w+,%s\)' % slider, overlay), slider + ' is a slider cell'
 assert 'setMinHeight(dp(64))' in method('private Button cellAction('), 'cells 64 dp high'
 assert 'SeekBar' not in overlay, 'no bare slider rows left'
+# across both columns (the project owner, 22.11.2026): the gyro's sensitivity, the master volume, the texture filtering
+assert 'percentCell(single(gyroGroup),R.string.menu_gyro_sensitivity,GYRO)' in overlay
+assert 'percentCell(single(sound),R.string.menu_master,MASTER)' in overlay
+assert 'single(labelled(R.string.menu_side_textures))' in overlay and 'sliderCell(textures,s(R.string.menu_texture_filter)' in overlay
+# the mouse: a hover and a pressed look on every cell; its axes never move the focus
+assert overlay.count('android.R.attr.state_hovered') >= 3 and 'state_pressed},shape(PRESSED' in overlay
+assert "!e.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK))return;" in method('void motion(')
+assert 'onInterceptHoverEvent' in (ROOT / 'port/android/app/src/main/java/com/halo/decomp/SliderCell.java').read_text()
 # the resolution and the upscaler (Display): kept, sent at the start and on each change, the upscaler only offered
 # while it has something to do
 display_page = method('private void display(')

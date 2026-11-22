@@ -63,6 +63,27 @@ final class FpsCounter {
         frame.addView(view, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
             FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.LEFT));
         frame.setVisibility(View.GONE);
+        // clear of what the system lays over the top left: ChromeOS's window caption, a camera's cutout, bars
+        // that show (it lay under the caption on ChromeOS, 22.11.2026)
+        frame.setOnApplyWindowInsetsListener((v, insets) -> {
+            int left, top;
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets clear = insets.getInsets(android.view.WindowInsets.Type.systemBars()
+                    | android.view.WindowInsets.Type.displayCutout());
+                left = clear.left;
+                top = clear.top;
+            } else {
+                left = insets.getSystemWindowInsetLeft();
+                top = insets.getSystemWindowInsetTop();
+                android.view.DisplayCutout cutout = insets.getDisplayCutout();
+                if (cutout != null) {
+                    left = Math.max(left, cutout.getSafeInsetLeft());
+                    top = Math.max(top, cutout.getSafeInsetTop());
+                }
+            }
+            v.setPadding(left, top, 0, 0);
+            return insets;
+        });
         parent.addView(frame, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT));
     }
@@ -87,6 +108,7 @@ final class FpsCounter {
         if (!shown) return;
         view.setText(activity.getString(R.string.menu_fps_none) + hz(rate()) + size(counters[2], counters[3]));
         frame.bringToFront();
+        frame.requestApplyInsets();
         main.post(tick);
     }
 

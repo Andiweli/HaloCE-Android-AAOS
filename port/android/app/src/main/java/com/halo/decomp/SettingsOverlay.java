@@ -56,6 +56,8 @@ final class SettingsOverlay {
     // Halo's blues instead of CubeEvil4's greens and gold; the update button keeps green and red
     static final int PANEL=0xff0e1a24, SURFACE=0xff16273a, BORDER=0xff2f4a63, INK=0xffe6f0f5,
         MUTED=0xff8fa9bd, ACCENT=0xff6ec6ff, ACTIVE=0xff1f3d57, DISABLED=0xff5a6b7a, DIM=0xb8000000;
+    // the mouse: a cell under the pointer (hovered) and a cell pressed (wish of the project owner, 22.11.2026)
+    static final int HOVER=0xff1d3550, PRESSED=0xff2b587c;
     static final int UPDATE_GREEN=0xff2d5233, UPDATE_GREEN_EDGE=0xff4f8a57,
         UPDATE_RED=0xff7a2a26, UPDATE_RED_EDGE=0xffb2463f;
     private static final int LEFT_LOOK=1, RIGHT_LOOK=2;
@@ -82,8 +84,9 @@ final class SettingsOverlay {
         {R.string.menu_key_pause,R.string.menu_keys_pause},{R.string.menu_key_menu,R.string.menu_keys_menu},
         {R.string.menu_key_pointer,R.string.menu_keys_pointer},{R.string.menu_key_dpad,R.string.menu_keys_dpad},
     };
-    // the texture filtering's choices (texels along a pixel's footprint; 1 off); 4 as the configuration's
-    static final int[] FILTERS={1,2,4,8};
+    // the texture filtering's choices (texels along a pixel's footprint; 1 off); 4 as the configuration's;
+    // 16× too (wish of the project owner, 22.11.2026; d3d8_gl.c keeps it within the GPU's most)
+    static final int[] FILTERS={1,2,4,8,16};
     static final int DEFAULT_FILTER=4;
     // MSAA's choices (samples; 0 off), off by default
     static final int[] MSAA={0,2,4};
@@ -252,10 +255,13 @@ final class SettingsOverlay {
     }
     private void style(Button b){
         StateListDrawable state=new StateListDrawable();
+        // pressed first: a click lights the cell whatever else it is
+        state.addState(new int[]{android.R.attr.state_pressed},shape(PRESSED,INK,6));
         state.addState(new int[]{android.R.attr.state_focused,android.R.attr.state_selected},focused(ACTIVE));
         state.addState(new int[]{android.R.attr.state_focused},focused(SURFACE));
-        state.addState(new int[]{android.R.attr.state_pressed},shape(ACTIVE,ACCENT,6));
+        state.addState(new int[]{android.R.attr.state_hovered,android.R.attr.state_selected},shape(HOVER,INK,6));
         state.addState(new int[]{android.R.attr.state_selected},shape(ACTIVE,ACCENT,6));
+        state.addState(new int[]{android.R.attr.state_hovered},shape(HOVER,ACCENT,6));
         state.addState(new int[0],shape(SURFACE,BORDER,6));
         b.setBackground(state);b.setAllCaps(false);b.setTextSize(16);b.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         b.setTextColor(new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},
@@ -320,6 +326,11 @@ final class SettingsOverlay {
         MenuLayout.Buttons buttons=new MenuLayout.Buttons(activity,2);
         group.addView(buttons,new LinearLayout.LayoutParams(-1,-2));return buttons;
     }
+    /** A row of one cell across the option column (a slider over both columns). */
+    private MenuLayout.Buttons single(LinearLayout group){
+        MenuLayout.Buttons buttons=new MenuLayout.Buttons(activity,1);
+        group.addView(buttons,new LinearLayout.LayoutParams(-1,-2));return buttons;
+    }
     private MenuLayout.Buttons buttonsRow(int columns){
         MenuLayout.Buttons buttons=new MenuLayout.Buttons(activity,columns);
         body.addView(buttons,new LinearLayout.LayoutParams(-1,-2));return buttons;
@@ -361,6 +372,7 @@ final class SettingsOverlay {
     private StateListDrawable cellLook(){
         StateListDrawable state=new StateListDrawable();
         state.addState(new int[]{android.R.attr.state_focused},focused(SURFACE));
+        state.addState(new int[]{android.R.attr.state_hovered},shape(HOVER,ACCENT,6));
         state.addState(new int[0],shape(SURFACE,BORDER,6));
         return state;
     }
@@ -478,8 +490,9 @@ final class SettingsOverlay {
         boolean older=state==AppUpdate.OLDER;
         int fill=older?UPDATE_RED:UPDATE_GREEN,stroke=older?UPDATE_RED_EDGE:UPDATE_GREEN_EDGE;
         StateListDrawable look=new StateListDrawable();
+        look.addState(new int[]{android.R.attr.state_pressed},shape(stroke,INK,6));
         look.addState(new int[]{android.R.attr.state_focused},focused(fill));
-        look.addState(new int[]{android.R.attr.state_pressed},shape(fill,INK,6));
+        look.addState(new int[]{android.R.attr.state_hovered},shape(fill,INK,6));
         look.addState(new int[0],shape(fill,stroke,6));
         update.setBackground(look);
         update.setTextColor(INK);
@@ -576,11 +589,15 @@ final class SettingsOverlay {
         });
         help(limit==0?R.string.menu_msaa_none:R.string.menu_msaa_help);
         help(R.string.menu_fxaa_help);
-        MenuLayout.Buttons textures=pair(labelled(R.string.menu_side_textures));
-        selector(textures,R.string.menu_texture_filter,new String[]{s(R.string.menu_off),"2×","4×","8×"},FILTERS,textureFilter,level->{
-            textureFilter=level;nativeTextureFilter(level);prefs.edit().putInt("texture_filter",level).apply();
-        });
-        textures.addGap();
+        // a slider across both columns, off to 16× (wish of the project owner, 22.11.2026)
+        MenuLayout.Buttons textures=single(labelled(R.string.menu_side_textures));
+        int filterStep=0;
+        for(int i=0;i<FILTERS.length;i++)if(FILTERS[i]==textureFilter)filterStep=i;
+        sliderCell(textures,s(R.string.menu_texture_filter),FILTERS.length-1,filterStep,
+            p->p==0?s(R.string.menu_off):FILTERS[p]+"×",p->{
+                textureFilter=FILTERS[p];nativeTextureFilter(textureFilter);
+                prefs.edit().putInt("texture_filter",textureFilter).apply();
+            });
         help(R.string.menu_texture_filter_help);
         // the switch and its strength side by side (wish of the project owner, 02.11.2026)
         MenuLayout.Buttons focus=pair(labelled(R.string.menu_side_focus));
@@ -624,9 +641,8 @@ final class SettingsOverlay {
             gyroInvertPitch=on;apply();prefs.edit().putBoolean("gyro_invert_pitch",on).apply();
         });
         invert[0].setEnabled(gyroEnabled);
-        MenuLayout.Buttons gyroSpeed=pair(gyroGroup);
-        percentCell(gyroSpeed,R.string.menu_gyro_sensitivity,GYRO);
-        gyroSpeed.addGap();
+        // the sensitivity across both columns (wish of the project owner, 22.11.2026)
+        percentCell(single(gyroGroup),R.string.menu_gyro_sensitivity,GYRO);
         heading(R.string.menu_sticks);
         MenuLayout.Buttons look=pair(labelled(R.string.menu_side_look));
         percentCell(look,R.string.menu_left_stick,LEFT_STICK);
@@ -668,11 +684,11 @@ final class SettingsOverlay {
     private void audio(){
         heading(R.string.menu_volumes);
         LinearLayout sound=labelled(R.string.menu_side_sound);
-        MenuLayout.Buttons first=pair(sound),second=pair(sound);
-        percentCell(first,R.string.menu_master,MASTER);
-        percentCell(first,R.string.menu_effects,EFFECTS);
-        percentCell(second,R.string.menu_music,MUSIC);
-        second.addGap();
+        // the master volume across both columns, effects and music under it (wish of the project owner, 22.11.2026)
+        percentCell(single(sound),R.string.menu_master,MASTER);
+        MenuLayout.Buttons parts=pair(sound);
+        percentCell(parts,R.string.menu_effects,EFFECTS);
+        percentCell(parts,R.string.menu_music,MUSIC);
     }
     private void cheats(){
         heading(R.string.menu_cheat_switches);
@@ -769,8 +785,10 @@ final class SettingsOverlay {
         }
         return true;
     }
+    /** A controller's stick or D-pad moves the focus; the mouse does not (its axes are the pointer's place on
+     *  the screen: they moved the focus away from the pointer, 22.11.2026), Android hovers and clicks with it. */
     void motion(MotionEvent e){
-        if(!isOpen())return;
+        if(!isOpen() || !e.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK))return;
         float x=e.getAxisValue(MotionEvent.AXIS_HAT_X),y=e.getAxisValue(MotionEvent.AXIS_HAT_Y);
         if(Math.abs(x)<.5f && Math.abs(y)<.5f){x=e.getAxisValue(MotionEvent.AXIS_X);y=e.getAxisValue(MotionEvent.AXIS_Y);}
         if(Math.abs(x)<.55f && Math.abs(y)<.55f){lastMotion=0;lastDirection=0;return;}
