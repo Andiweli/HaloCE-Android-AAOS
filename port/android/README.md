@@ -412,8 +412,9 @@ folder: first make a copy of `maps/` and `save/`.
   as CubeEvil4's); the mouse no longer moves the controller's focus (its axes
   are the pointer's place, `SettingsOverlay.motion` now takes only a
   controller's).
-- The FPS display keeps clear of the system's caption bar (ChromeOS), a
-  camera cutout and bars that show.
+- The FPS display shows again: since it moved into a frame of its own
+  (02.11.2026) its line stayed hidden. It keeps clear of the system's
+  caption bar (ChromeOS), a camera cutout and bars that show.
 
 ### Changes in 1.1.0
 

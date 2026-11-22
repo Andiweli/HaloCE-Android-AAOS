@@ -53,7 +53,6 @@ final class FpsCounter {
         view.setClickable(false);
         view.setFocusable(false);
         view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        view.setVisibility(View.GONE);
         // at the top left (decision of the project owner, 02.11.2026), in a frame of its own over the whole
         // screen, which takes no touch (SDL's layout is a RelativeLayout)
         frame = new FrameLayout(activity);
@@ -62,6 +61,8 @@ final class FpsCounter {
         frame.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         frame.addView(view, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,
             FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.LEFT));
+        // shown and hidden with its frame alone: the line itself stays visible (hidden too, it never showed
+        // since the frame came, 02.11.2026 - 22.11.2026)
         frame.setVisibility(View.GONE);
         // clear of what the system lays over the top left: ChromeOS's window caption, a camera's cutout, bars
         // that show (it lay under the caption on ChromeOS, 22.11.2026)
