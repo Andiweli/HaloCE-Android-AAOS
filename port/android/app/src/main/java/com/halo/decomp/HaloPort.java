@@ -21,7 +21,17 @@ final class HaloPort {
     private final RetroTouchView touch;
     private final SharedPreferences prefs;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private boolean active, controllerConnected, overlay;
+    // touchHidden: the touch controls are hidden by the input devices or by the menu's choice (touchSetting)
+    private boolean active, touchHidden, overlay;
+    /** The menu's choice for the touch controls (wish of the project owner, 23.11.2026, as CubeEvil4's): Auto hides
+     *  them for a controller, a keyboard or a mouse (ControllerPresence, deskUsed), Always shows them whatever is
+     *  connected, Never hides them for good (a Chromebook's own keyboard and touchpad, say). */
+    static final int TOUCH_AUTO = 0, TOUCH_ALWAYS = 1, TOUCH_NEVER = 2;
+    static final String TOUCH_KEY = "touch_controls";
+    private static final String[] TOUCH_NAMES = {"auto", "always", "never"};
+    private int touchSetting;
+    /** A stored choice that is one of the three, else Auto. */
+    static int touchSetting(int stored) { return stored == TOUCH_ALWAYS || stored == TOUCH_NEVER ? stored : TOUCH_AUTO; }
     private int mousePresent = -1;
     // a keyboard or a mouse in use (desk): set by a connected one and by any one's keys or pointer, cleared by
     // a finger on the screen, which brings the touch controls back (a Galaxy A36 listed a built-in keyboard,
@@ -41,6 +51,8 @@ final class HaloPort {
     HaloPort(HaloActivity activity, ViewGroup parent) {
         this.activity = activity;
         prefs = activity.getSharedPreferences("halo_android_controls", 0);
+        touchSetting = touchSetting(prefs.getInt(TOUCH_KEY, TOUCH_AUTO));
+        android.util.Log.i("halo", "touch controls: setting " + TOUCH_NAMES[touchSetting]);
         applyVolumes();
         touch = new RetroTouchView(activity);
         touch.setOnTouchListener((view,event) -> {
@@ -88,13 +100,13 @@ final class HaloPort {
         touch.setListener(new RetroTouchAdapter() {
             @Override public void onAction(String id, boolean down) {
                 if ("select".equals(id) && !down) { activity.touchSelect(false);return; }
-                if (!active || overlay || controllerConnected || touch.isEditing()) return;
+                if (!active || overlay || touchHidden || touch.isEditing()) return;
                 if ("select".equals(id)) { activity.touchSelect(true);return; }
                 for (int i=0;i<MENU_IDS.length;i++) if(MENU_IDS[i].equals(id)) { id=MENU_ACTIONS[i];break; }
                 for (int i=0;i<IDS.length;i++) if(IDS[i].equals(id)) { nativeAction(i,down);return; }
             }
-            @Override public void onMove(float x,float y) { if(active && !overlay && !controllerConnected) nativeMove(x,y); }
-            @Override public void onLook(float x,float y) { if(active && !overlay && !controllerConnected) nativeLook(x,y); }
+            @Override public void onMove(float x,float y) { if(active && !overlay && !touchHidden) nativeMove(x,y); }
+            @Override public void onLook(float x,float y) { if(active && !overlay && !touchHidden) nativeLook(x,y); }
             @Override public void onEditorStateChanged(boolean editing) {
                 activity.cancelTouchSelect();
                 nativeReset();
@@ -114,7 +126,7 @@ final class HaloPort {
         @Override public void run() {
             if(!active) return;
             updateControllerPresence();
-            int next=(controllerConnected || overlay)?0:nativeMode();
+            int next=(touchHidden || overlay)?0:nativeMode();
             if(!touch.isEditing() && next!=mode) {
                 activity.cancelTouchSelect();
                 mode=next;
@@ -134,15 +146,24 @@ final class HaloPort {
         boolean connected = (inputs & ControllerPresence.CONTROLLER) != 0 || desk;
         int mouse = desk && mouseSeen ? 1 : 0;
         if (mouse != mousePresent) { mousePresent = mouse; nativeMouse(mouse != 0); }
-        if (connected != controllerConnected) {
+        boolean hidden = touchSetting == TOUCH_NEVER || (touchSetting == TOUCH_AUTO && connected);
+        if (hidden != touchHidden) {
             activity.cancelTouchSelect();
-            controllerConnected = connected;
+            touchHidden = hidden;
             touch.releaseAllInputs();nativeReset();
-            if (connected && touch.isEditing()) touch.setEditing(false);
+            if (hidden && touch.isEditing()) touch.setEditing(false);
             touch.setMode(RetroTouchMode.OFF);
             mode = -1;
         }
-        touch.setVisibility((connected || overlay) ? View.GONE : View.VISIBLE);
+        touch.setVisibility((hidden || overlay) ? View.GONE : View.VISIBLE);
+    }
+    /** The menu's choice (SettingsOverlay): Auto, Always or Never; it applies at once and is kept. */
+    void touchControls(int setting) {
+        setting = touchSetting(setting);
+        if (setting == touchSetting) return;
+        touchSetting = setting;
+        android.util.Log.i("halo", "touch controls: setting " + TOUCH_NAMES[setting]);
+        updateControllerPresence();
     }
     void overlay(boolean visible) { overlay=visible;activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset();mode=-1;updateControllerPresence(); }
     void controllerInput() { updateControllerPresence(); }
@@ -150,14 +171,15 @@ final class HaloPort {
     void deskUsed(boolean mouse) {
         if (mouse) mouseSeen = true;
         if (desk && (!mouse || mousePresent == 1)) return;
-        android.util.Log.i("halo", "touch controls: hidden (" + (mouse ? "a mouse" : "a keyboard") + " in use)");
+        if (touchSetting == TOUCH_AUTO)
+            android.util.Log.i("halo", "touch controls: hidden (" + (mouse ? "a mouse" : "a keyboard") + " in use)");
         desk = true;
         updateControllerPresence();
     }
     /** A finger on the screen (HaloActivity): the touch controls come back, if a keyboard or mouse hid them. */
     void fingerUsed() {
         if (!desk) return;
-        android.util.Log.i("halo", "touch controls: shown (the screen touched)");
+        if (touchSetting == TOUCH_AUTO) android.util.Log.i("halo", "touch controls: shown (the screen touched)");
         desk = false;
         mouseSeen = false;
         updateControllerPresence();

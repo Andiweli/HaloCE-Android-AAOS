@@ -81,6 +81,13 @@
     <string name="menu_keyboard_mouse">Tastatur &amp; Maus</string>
     <string name="menu_side_mouse">Maus</string>
     <string name="menu_side_keys">Tasten</string>
+    <string name="menu_touch">Touch-Steuerung</string>
+    <string name="menu_side_touch">Touch</string>
+    <string name="menu_touch_controls">Touch-Buttons</string>
+    <string name="menu_touch_auto">Auto</string>
+    <string name="menu_touch_always">Erzwingen</string>
+    <string name="menu_touch_never">Unterdrücken</string>
+    <string name="menu_touch_help">Auto: Die Touch-Buttons verschwinden, solange ein Controller, eine angeschlossene Tastatur oder eine Maus da ist, oder sobald eine eingebaute Tastatur oder ein Touchpad benutzt wird; ein Fingertipp auf den Bildschirm bringt sie zurück. Fingerabdrucksensoren und ähnliche Geräte zählen nicht. Erzwingen: immer sichtbar. Unterdrücken: immer ausgeblendet (z. B. auf einem Chromebook).</string>
     <string name="menu_mouse_sensitivity">Mausempfindlichkeit</string>
     <string name="menu_mouse_invert">Maus vertikal umkehren</string>
     <string name="menu_mouse_help">Gilt, solange eine Maus angeschlossen ist; die Touch-Steuerung wird dann ausgeblendet. F12 gibt den Mauszeiger frei und fängt ihn wieder ein.</string>

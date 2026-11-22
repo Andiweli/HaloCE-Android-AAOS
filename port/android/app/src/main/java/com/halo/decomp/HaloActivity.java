@@ -58,6 +58,10 @@ public class HaloActivity extends SDLActivity {
             org.libsdl.app.HaloPointer.reclaim();
         }
     }
+    /** The in-game menu's choice for the touch controls: HaloPort.TOUCH_AUTO, TOUCH_ALWAYS or TOUCH_NEVER. */
+    void touchControls(int setting) {
+        if (haloPort != null) haloPort.touchControls(setting);
+    }
     boolean motionAvailable() { return motionAim != null && motionAim.available(); }
     void motionSettings(boolean enabled, int sensitivity, boolean invertPitch) {
         if (motionAim != null) motionAim.configure(enabled, sensitivity, invertPitch);

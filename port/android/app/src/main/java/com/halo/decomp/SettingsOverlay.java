@@ -179,7 +179,7 @@ final class SettingsOverlay {
     private boolean sixtyFps;
     private int textureFilter, cheatBits, msaaSamples, resolutionLines, upscalerChoice;
     private boolean depthOfField, fxaa, fpsDisplay, mouseInvert;
-    private int dofStrength, mouseSensitivity;
+    private int dofStrength, mouseSensitivity, touchSetting;
     private final FpsCounter fps;
     private FrameLayout root;
     private LinearLayout body;
@@ -220,6 +220,7 @@ final class SettingsOverlay {
         mouseInvert=prefs.getBoolean("mouse_invert",false);
         resolutionLines=resolution(prefs.getInt("resolution",DEFAULT_RESOLUTION));
         upscalerChoice=upscaler(prefs.getInt("upscaler",0));
+        touchSetting=HaloPort.touchSetting(prefs.getInt(HaloPort.TOUCH_KEY,HaloPort.TOUCH_AUTO));
         fps=new FpsCounter(activity,parent);
         fps.configure(fpsDisplay,sixtyFps);
         apply();
@@ -626,6 +627,14 @@ final class SettingsOverlay {
         upscaler.setEnabled(enabled);upscaler.setFocusable(enabled);
     }
     private void controls(){
+        // the touch controls Auto, Always or Never, as CubeEvil4's (wish of the project owner, 23.11.2026)
+        heading(R.string.menu_touch);
+        MenuLayout.Buttons touch=single(labelled(R.string.menu_side_touch));
+        selector(touch,R.string.menu_touch_controls,new String[]{s(R.string.menu_touch_auto),s(R.string.menu_touch_always),
+            s(R.string.menu_touch_never)},new int[]{HaloPort.TOUCH_AUTO,HaloPort.TOUCH_ALWAYS,HaloPort.TOUCH_NEVER},touchSetting,setting->{
+            touchSetting=setting;activity.touchControls(setting);prefs.edit().putInt(HaloPort.TOUCH_KEY,setting).apply();
+        });
+        help(R.string.menu_touch_help);
         heading(R.string.menu_motion);
         boolean available=activity.motionAvailable();
         LinearLayout gyroGroup=labelled(R.string.menu_side_gyro);

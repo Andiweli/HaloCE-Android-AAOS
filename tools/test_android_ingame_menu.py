@@ -168,6 +168,12 @@ assert 'SeekBar' not in overlay, 'no bare slider rows left'
 assert 'percentCell(single(gyroGroup),R.string.menu_gyro_sensitivity,GYRO)' in overlay
 assert 'percentCell(single(sound),R.string.menu_master,MASTER)' in overlay
 assert 'single(labelled(R.string.menu_side_textures))' in overlay and 'sliderCell(textures,s(R.string.menu_texture_filter)' in overlay
+# the touch controls Auto / Force / Suppress first under Controls, kept and handed to HaloPort (23.11.2026)
+controls_page = method('private void controls(')
+assert controls_page.index('R.string.menu_touch') < controls_page.index('R.string.menu_motion'), 'touch first'
+assert 'selector(touch,R.string.menu_touch_controls' in controls_page and 'activity.touchControls(setting)' in controls_page
+assert 'prefs.edit().putInt(HaloPort.TOUCH_KEY,setting)' in controls_page
+assert strings('values-de')['menu_touch_always'] == 'Erzwingen' and strings('values-de')['menu_touch_never'] == 'Unterdrücken'
 # the FPS display: its frame shows and hides it, the line itself never hidden (it never showed so)
 fps_source = (ROOT / 'port/android/app/src/main/java/com/halo/decomp/FpsCounter.java').read_text()
 assert 'view.setVisibility(' not in fps_source and 'frame.setVisibility(shown ? View.VISIBLE : View.GONE)' in fps_source

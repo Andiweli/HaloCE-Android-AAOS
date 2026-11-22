@@ -81,6 +81,13 @@
     <string name="menu_keyboard_mouse">Tastiera e mouse</string>
     <string name="menu_side_mouse">Mouse</string>
     <string name="menu_side_keys">Tasti</string>
+    <string name="menu_touch">Controlli touch</string>
+    <string name="menu_side_touch">Touch</string>
+    <string name="menu_touch_controls">Pulsanti touch</string>
+    <string name="menu_touch_auto">Auto</string>
+    <string name="menu_touch_always">Forza</string>
+    <string name="menu_touch_never">Nascondi</string>
+    <string name="menu_touch_help">Auto: i controlli touch si nascondono finché c\'è un controller, una tastiera collegata o un mouse, o appena si usa una tastiera o un touchpad integrato; un dito sullo schermo li fa tornare. I sensori di impronte e dispositivi simili non contano. Forza: sempre visibili. Nascondi: sempre nascosti (su un Chromebook, ad esempio).</string>
     <string name="menu_mouse_sensitivity">Sensibilità del mouse</string>
     <string name="menu_mouse_invert">Inverti asse Y del mouse</string>
     <string name="menu_mouse_help">Vale finché è collegato un mouse; i comandi touch vengono allora nascosti. F12 libera il puntatore del mouse e lo cattura di nuovo.</string>

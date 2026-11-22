@@ -166,7 +166,9 @@ menu takes the mouse as any app does. F1 is SELECT: a short press Halo's
 Back, held the in-game menu, again its close. A physical keyboard with
 letters or a mouse hides the touch controls, as a controller does
 (`ControllerPresence.java`); the screen's keyboard and a handheld's own
-buttons do not.
+buttons do not. In the in-game menu, **Controls → Touch buttons** chooses
+**Auto** (as above, the default), **Force** (always shown, whatever is
+connected) or **Suppress** (always hidden, for a Chromebook, say).
 
 Without a controller, the screen shows touch controls (RetroTouch
 1.0.0-beta.13). The buttons show symbols for what they do, as the RE
@@ -219,7 +221,7 @@ These settings are only for Android:
 The in-game menu (`SettingsOverlay.java`, laid out like CubeEvil4's in
 Halo's colours) shows the version, an update button and **Back to the
 game**, four pages: **Display** (brightness, gamma, 60 FPS, FPS display, resolution,
-upscaling, MSAA, texture filtering, FXAA, depth of field), **Controls** (gyroscope, stick sensitivity,
+upscaling, MSAA, texture filtering, FXAA, depth of field), **Controls** (touch buttons, gyroscope, stick sensitivity,
 keyboard & mouse), **Volume** and **Cheats**, and at the bottom a button to this port's page on
 GitHub. Every change applies and is saved at once. The D-pad or the
 left stick moves, A presses, L1 / R1 (Q / E, Page up / Page down) change the
@@ -397,6 +399,10 @@ folder: first make a copy of `maps/` and `save/`.
   Android 10 and later) hides them at once; a built-in one (a Chromebook's
   keyboard and touchpad too) hides them when it is used. A finger on the
   screen always brings them back, until a key or the mouse is used again.
+- In-game menu, Controls: **Touch buttons** Auto / Force / Suppress, as
+  CubeEvil4's. Auto hides them as above; Force always shows them (with a
+  controller, a keyboard or a mouse there too); Suppress always hides them.
+- In-game menu: the side label "Keys" stands beside the first key line.
 
 ### Changes in 1.1.1
 
