@@ -1896,8 +1896,10 @@ HRESULT WINAPI D3DDevice_EndVisibilityTest(DWORD index)
 	return S_OK;
 }
 
-#ifndef HALO_ANDROID
-/* a count of pixels in the game's pixels */
+/* a count of pixels in the game's pixels (Android too: its sample counter
+counts the target's pixels, at 1080p some five for a game pixel, so a lens
+flare whose test a pillar covered all but a fifth shone in full through it;
+device report of 22.11.2026) */
 static GLuint visibility_unscaled(GLuint samples, DWORD index)
 {
 	float area = device.query_area[index];
@@ -1905,7 +1907,6 @@ static GLuint visibility_unscaled(GLuint samples, DWORD index)
 	return area > 1.0f ? (GLuint)(samples / area + 0.5f) : samples;
 }
 
-#endif
 HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULONGLONG *time_stamp)
 {
 	GLuint available = 0, samples = 0;
@@ -1939,6 +1940,13 @@ HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULON
 			samples = 0;
 		else if (!samples)
 			samples = VISIBILITY_ALL_SAMPLES;
+		else
+		{
+			samples = visibility_unscaled(samples, index);
+			/* a pixel or two that a scaled count rounds away stay visible */
+			if (!samples)
+				samples = 1;
+		}
 		if (result)
 			*result = samples;
 		return S_OK;

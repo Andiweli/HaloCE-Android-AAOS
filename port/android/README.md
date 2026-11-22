@@ -412,6 +412,10 @@ folder: first make a copy of `maps/` and `save/`.
   as CubeEvil4's); the mouse no longer moves the controller's focus (its axes
   are the pointer's place, `SettingsOverlay.motion` now takes only a
   controller's).
+- Lens flares behind a pillar or a wall no longer shine through it: the
+  GPU's count of a flare's visible pixels (on GPUs with atomic counters) is
+  now in the game's pixels, as the game reads it; at 1080p it was some five
+  times too high, so a flare all but hidden shone in full.
 - The FPS display shows again: since it moved into a frame of its own
   (02.11.2026) its line stayed hidden. It keeps clear of the system's
   caption bar (ChromeOS), a camera cutout and bars that show.
