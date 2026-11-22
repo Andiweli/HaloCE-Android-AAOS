@@ -104,10 +104,6 @@ final class SliderCell extends LinearLayout {
         invalidate();
     }
 
-    /** The mouse over the cell lights all of it (SettingsOverlay.cellLook's hover), its bar included: the cell
-     *  takes the hover from its children. */
-    @Override public boolean onInterceptHoverEvent(MotionEvent e) { return true; }
-
     /** A finger on ‹ or › is the cell's (a step when it lifts), elsewhere the bar's. */
     @Override public boolean onInterceptTouchEvent(MotionEvent e) {
         if (e.getActionMasked() == MotionEvent.ACTION_DOWN) arrowDown = inArrows(e.getX());

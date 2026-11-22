@@ -56,8 +56,8 @@ final class SettingsOverlay {
     // Halo's blues instead of CubeEvil4's greens and gold; the update button keeps green and red
     static final int PANEL=0xff0e1a24, SURFACE=0xff16273a, BORDER=0xff2f4a63, INK=0xffe6f0f5,
         MUTED=0xff8fa9bd, ACCENT=0xff6ec6ff, ACTIVE=0xff1f3d57, DISABLED=0xff5a6b7a, DIM=0xb8000000;
-    // the mouse: a cell under the pointer (hovered) and a cell pressed (wish of the project owner, 22.11.2026)
-    static final int HOVER=0xff1d3550, PRESSED=0xff2b587c;
+    // a cell pressed (with the mouse too); no hover look, as CubeEvil4's (the project owner, 22.11.2026)
+    static final int PRESSED=0xff2b587c;
     static final int UPDATE_GREEN=0xff2d5233, UPDATE_GREEN_EDGE=0xff4f8a57,
         UPDATE_RED=0xff7a2a26, UPDATE_RED_EDGE=0xffb2463f;
     private static final int LEFT_LOOK=1, RIGHT_LOOK=2;
@@ -259,9 +259,7 @@ final class SettingsOverlay {
         state.addState(new int[]{android.R.attr.state_pressed},shape(PRESSED,INK,6));
         state.addState(new int[]{android.R.attr.state_focused,android.R.attr.state_selected},focused(ACTIVE));
         state.addState(new int[]{android.R.attr.state_focused},focused(SURFACE));
-        state.addState(new int[]{android.R.attr.state_hovered,android.R.attr.state_selected},shape(HOVER,INK,6));
         state.addState(new int[]{android.R.attr.state_selected},shape(ACTIVE,ACCENT,6));
-        state.addState(new int[]{android.R.attr.state_hovered},shape(HOVER,ACCENT,6));
         state.addState(new int[0],shape(SURFACE,BORDER,6));
         b.setBackground(state);b.setAllCaps(false);b.setTextSize(16);b.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         b.setTextColor(new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},
@@ -372,7 +370,6 @@ final class SettingsOverlay {
     private StateListDrawable cellLook(){
         StateListDrawable state=new StateListDrawable();
         state.addState(new int[]{android.R.attr.state_focused},focused(SURFACE));
-        state.addState(new int[]{android.R.attr.state_hovered},shape(HOVER,ACCENT,6));
         state.addState(new int[0],shape(SURFACE,BORDER,6));
         return state;
     }
@@ -492,7 +489,6 @@ final class SettingsOverlay {
         StateListDrawable look=new StateListDrawable();
         look.addState(new int[]{android.R.attr.state_pressed},shape(stroke,INK,6));
         look.addState(new int[]{android.R.attr.state_focused},focused(fill));
-        look.addState(new int[]{android.R.attr.state_hovered},shape(fill,INK,6));
         look.addState(new int[0],shape(fill,stroke,6));
         update.setBackground(look);
         update.setTextColor(INK);

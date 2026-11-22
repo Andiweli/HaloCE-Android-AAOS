@@ -168,10 +168,9 @@ assert 'SeekBar' not in overlay, 'no bare slider rows left'
 assert 'percentCell(single(gyroGroup),R.string.menu_gyro_sensitivity,GYRO)' in overlay
 assert 'percentCell(single(sound),R.string.menu_master,MASTER)' in overlay
 assert 'single(labelled(R.string.menu_side_textures))' in overlay and 'sliderCell(textures,s(R.string.menu_texture_filter)' in overlay
-# the mouse: a hover and a pressed look on every cell; its axes never move the focus
-assert overlay.count('android.R.attr.state_hovered') >= 3 and 'state_pressed},shape(PRESSED' in overlay
+# the mouse: no hover look (as CubeEvil4's), a pressed look; its axes never move the focus
+assert 'state_hovered' not in overlay and 'state_pressed},shape(PRESSED' in overlay
 assert "!e.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK))return;" in method('void motion(')
-assert 'onInterceptHoverEvent' in (ROOT / 'port/android/app/src/main/java/com/halo/decomp/SliderCell.java').read_text()
 # the resolution and the upscaler (Display): kept, sent at the start and on each change, the upscaler only offered
 # while it has something to do
 display_page = method('private void display(')

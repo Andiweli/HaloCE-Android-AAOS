@@ -234,7 +234,7 @@ cells (`ArrowSelector.java`: ‹ › on the sides, the value big, a dot per
 step, lit while not off); sliders are cells too (`SliderCell.java`: name,
 value, bar; ‹ › step, the bar still drags); the gyroscope's sensitivity, the
 master volume and the texture filtering span both columns. With a mouse,
-the cell under the pointer lights up and a pressed cell more. Narrow
+a pressed cell lights up (no hover look, as CubeEvil4's). Narrow
 windows stack the label above its settings and fold the pairs.
 
 **Keyboard & mouse** (Controls): the mouse's sensitivity (25 to 300 %,
@@ -408,8 +408,8 @@ folder: first make a copy of `maps/` and `save/`.
   press or a release). The in-game menu lets the mouse go when it opens, so
   its pointer shows and clicks work, and the game takes it back when the
   menu closes (`org.libsdl.app.HaloPointer`).
-- The in-game menu and the mouse: the cells light up under the pointer and
-  when pressed; the mouse no longer moves the controller's focus (its axes
+- The in-game menu and the mouse: a pressed cell lights up (no hover look,
+  as CubeEvil4's); the mouse no longer moves the controller's focus (its axes
   are the pointer's place, `SettingsOverlay.motion` now takes only a
   controller's).
 - The FPS display keeps clear of the system's caption bar (ChromeOS), a
