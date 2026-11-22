@@ -92,7 +92,8 @@ public class MenuCheck {
 ''' + constants + '\n' + '\n'.join(method(m) for m in (
     'static int action(', 'static int stepped(', 'static int toggled(', 'static int filter(',
     'static int msaa(', 'static boolean msaaOffered(', 'static int dofStrength(',
-    'static int mouseSensitivity(')) + '\n' + fps_methods + r'''
+    'static int mouseSensitivity(', 'static int resolution(', 'static int upscaler(', 'static int pictureLines(',
+    'static boolean upscales(')) + '\n' + fps_methods + r'''
     static void check(boolean condition,String what){if(!condition)throw new AssertionError(what);}
     public static void main(String[] args){
         check(action(KeyEvent.KEYCODE_VOLUME_UP)==PASS && action(KeyEvent.KEYCODE_VOLUME_MUTE)==PASS,"volume keys stay Android's");
@@ -138,6 +139,15 @@ public class MenuCheck {
         check(dofStrength(50)==50 && dofStrength(200)==200 && dofStrength(10)==10,"the depth of field's strengths");
         check(dofStrength(0)==DOF_DEFAULT && dofStrength(210)==DOF_DEFAULT && dofStrength(55)==DOF_DEFAULT && DOF_DEFAULT==50,
               "else the default 50 %");
+        check(RESOLUTIONS.length==4 && RESOLUTIONS[0]==480 && RESOLUTIONS[1]==720 && RESOLUTIONS[2]==1080 && RESOLUTIONS[3]==0,
+              "the resolutions: original 480p, 720p, 1080p, native");
+        check(resolution(480)==480 && resolution(0)==0 && resolution(1080)==1080 && resolution(999)==DEFAULT_RESOLUTION &&
+              DEFAULT_RESOLUTION==1080,"a stored resolution, else 1080p");
+        check(upscaler(0)==0 && upscaler(1)==1 && upscaler(2)==2 && upscaler(3)==0 && upscaler(-1)==0,"linear, SGSR, FSR, else linear");
+        check(pictureLines(1080,720)==720 && pictureLines(0,1440)==1440 && pictureLines(720,1440)==720 && pictureLines(1080,400)==480,
+              "never more lines than the screen's, never fewer than 480");
+        check(!upscales(0,1080) && !upscales(1080,1080) && !upscales(1080,720) && upscales(720,1080) && upscales(480,1080) &&
+              upscales(1080,1440) && !upscales(1080,0),"the upscaler only while the picture is smaller than the screen");
         System.out.println("menu java ok");
     }
 }
@@ -154,6 +164,15 @@ for slider in ('BRIGHTNESS', 'GAMMA', 'GYRO', 'LEFT_STICK', 'RIGHT_STICK', 'MAST
     assert re.search(r'percentCell\(\w+,R\.string\.\w+,%s\)' % slider, overlay), slider + ' is a slider cell'
 assert 'setMinHeight(dp(64))' in method('private Button cellAction('), 'cells 64 dp high'
 assert 'SeekBar' not in overlay, 'no bare slider rows left'
+# the resolution and the upscaler (Display): kept, sent at the start and on each change, the upscaler only offered
+# while it has something to do
+display_page = method('private void display(')
+assert 'R.string.menu_resolution,' in display_page and 'R.string.menu_upscaler,' in display_page
+assert 'enableUpscaler(upscaling[0],upscales(lines,screenLines))' in display_page
+assert 'enableUpscaler(upscaling[0],upscales(resolutionLines,screenLines))' in display_page
+assert 'nativeResolution(resolutionLines);' in overlay and 'nativeUpscaler(upscalerChoice);' in overlay
+for key in ('"resolution"', '"upscaler"'):
+    assert overlay.count(key) >= 2, key + ' read and kept'
 for key in ('"texture_filter"', '"cheats"', '"msaa"', '"depth_of_field"', '"depth_of_field_strength"', '"fxaa"',
             '"fps_display"', '"sixty_fps"', '"gyro_aim"', '"gyro_invert_pitch"', '"mouse_sensitivity"', '"mouse_invert"'):
     assert overlay.count(key) >= 2, key + ' read and kept'
@@ -182,6 +201,37 @@ assert 'pthread_mutex_lock(&lock)' in look and 'pthread_mutex_unlock(&lock)' in 
 assert 'Java_com_halo_decomp_SettingsOverlay_nativeMouseLook' in touch_source
 mouse_look = braced(xinput, 'int halo_linux_mouse_look(')
 assert mouse_look.index('host_settings_mouse_look(') < mouse_look.index('host_touch_look('), 'the touch look keeps its speed'
+
+# the host's side: under the lock, a host import for the game, the JNI names the menu calls
+touch_text = (ROOT / 'port/android/host/host_touch.c').read_text()
+for name in ('host_settings_resolution', 'host_settings_upscaler'):
+    body = braced(touch_text, 'int %s(' % name)
+    assert 'pthread_mutex_lock(&lock)' in body and 'pthread_mutex_unlock(&lock)' in body, name
+for name in ('nativeResolution', 'nativeUpscaler'):
+    assert 'Java_com_halo_decomp_SettingsOverlay_' + name in touch_text, name
+assert 'host_settings_resolution' in imports, 'the game asks the menu for the resolution'
+assert 'static int settings_resolution=1080;' in touch_text, 'the host starts at the menu\'s default'
+
+# the game's scale (d3d8_gl.c screen_lines_scale), compiled: lines / 480, within the screen and 480
+gl_source = (ROOT / 'port/linux/src/d3d8_gl.c').read_text()
+scale_c = '#include <assert.h>\n#include <stdio.h>\n#define SCREEN_HEIGHT 480\n' + braced(
+    gl_source, 'static float screen_lines_scale(') + r'''
+int main(void)
+{
+	assert(screen_lines_scale(1080, 0) == 1.0f);       /* the screen not known yet: the original */
+	assert(screen_lines_scale(480, 1080) == 1.0f);     /* original */
+	assert(screen_lines_scale(720, 1080) == 1.5f);
+	assert(screen_lines_scale(1080, 1080) == 2.25f);
+	assert(screen_lines_scale(1080, 720) == 1.5f);     /* never more than the screen */
+	assert(screen_lines_scale(0, 1440) == 3.0f);       /* native */
+	assert(screen_lines_scale(0, 400) == 1.0f);        /* never fewer than 480 */
+	assert(screen_lines_scale(720, 600) == 1.25f);
+	puts("resolution scale ok");
+	return 0;
+}
+'''
+assert 'host_settings_present(back_buffer->target.texture,(int)back_buffer->target.gl_width,' in gl_source, \
+    'the present passes the picture\'s size for the upscaler'
 
 # ---------- 3. the cheats, host and game together
 controls = (ROOT / 'port/linux/include/halo_android_controls.h').read_text()
@@ -284,5 +334,8 @@ with tempfile.TemporaryDirectory(prefix='halo-menu-') as name:
     subprocess.run(['cc', '-std=gnu11', '-O1', '-Wall', '-Wno-unused-function', '-Wno-unused-parameter',
                     str(folder / 'cheats.c'), '-o', str(folder / 'cheats'), '-lpthread'], check=True)
     subprocess.run([str(folder / 'cheats')], check=True)
+    (folder / 'scale.c').write_text(scale_c)
+    subprocess.run(['cc', '-std=gnu11', '-O1', '-Wall', str(folder / 'scale.c'), '-o', str(folder / 'scale')], check=True)
+    subprocess.run([str(folder / 'scale')], check=True)
 print(f'In-game menu: {len(base)} texts in English, German, French and Italian; keys, sliders, switches and '
-      'texture filtering; the cheats from the menu to the game and back.')
+      'texture filtering, resolution and upscaling; the cheats from the menu to the game and back.')

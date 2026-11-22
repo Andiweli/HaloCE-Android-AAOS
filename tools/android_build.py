@@ -512,6 +512,19 @@ def generate_android_build(n: Writer, sln: Any) -> None:
         f"-I{PORT_DIR}/include", f"-I{PORT_DIR}/host", f"-I{SDL_DIR}/include", f"-I{LINUX_DIR}/src",
         f"-I{TOML_DIR}", f"-I{bink_root}/include",
     ])
+    # the upscalers' shader files (port/third_party, unchanged) as C string literals for
+    # host_upscale.c (tools/android_embed.py)
+    host_gen_dir = BUILD / "host" / "gen"
+    n.rule(name="android_embed", command=f"{python} tools/android_embed.py $in $out",
+           description="ANDROID EMBED $out")
+    host_embeds = []
+    for name, source in (("ffx_a", "port/third_party/fidelityfx-fsr/ffx_a.h"),
+                         ("ffx_fsr1", "port/third_party/fidelityfx-fsr/ffx_fsr1.h"),
+                         ("sgsr1", "port/third_party/snapdragon-gsr/sgsr1_shader_mobile.frag")):
+        embed = host_gen_dir / (name + ".inc")
+        n.build(outputs=embed, rule="android_embed", inputs=source, implicit=["tools/android_embed.py"])
+        host_embeds.append(embed)
+    host_cflags += f" -I{host_gen_dir} -Iport/third_party"
     host_sources = sorted((PORT_DIR / "host").glob("*.c")) + [
         LINUX_DIR / "src" / "posix_files.c", LINUX_DIR / "src" / "posix_net.c",
         # the app reads debug.sample_seconds from config.toml (host_main.c)
@@ -519,7 +532,8 @@ def generate_android_build(n: Writer, sln: Any) -> None:
     ]
     for source in host_sources:
         obj = host_obj_dir / (source.name + ".o")
-        n.build(outputs=obj, rule="android_host_cc", inputs=source, implicit=bink_libs, variables={"cflags": host_cflags})
+        n.build(outputs=obj, rule="android_host_cc", inputs=source, implicit=bink_libs + host_embeds,
+                variables={"cflags": host_cflags})
         host_objects.append(obj)
     # internet play's UPnP (posix_upnp.c, with port/third_party/miniupnpc),
     # as the other posix_*.c in the host

@@ -304,6 +304,27 @@ JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeFxaa(JNIEnv *e
 int host_settings_fxaa(void) {
     pthread_mutex_lock(&lock); int on=settings_fxaa; pthread_mutex_unlock(&lock); return on;
 }
+/* the menu's resolution (Display): the lines the game draws its picture in,
+0 the screen's own (native); 1080 until the menu said, as its default.
+d3d8_gl.c screen_mode_choose asks while it chooses the screen's mode, the
+present (halo_screen_commit) once a frame. */
+static int settings_resolution=1080;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeResolution(JNIEnv *e,jclass c,jint lines) {
+    lines=lines<=0?0:lines<480?480:lines>4320?4320:lines;
+    pthread_mutex_lock(&lock); settings_resolution=lines; pthread_mutex_unlock(&lock);
+}
+int host_settings_resolution(void) {
+    pthread_mutex_lock(&lock); int lines=settings_resolution; pthread_mutex_unlock(&lock); return lines;
+}
+/* the menu's upscaling (Display): 0 the plain linear stretch, 1 SGSR, 2 FSR
+(host_upscale.c); host_settings_present asks once a frame */
+static int settings_upscaler;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeUpscaler(JNIEnv *e,jclass c,jint upscaler) {
+    pthread_mutex_lock(&lock); settings_upscaler=upscaler<0||upscaler>2?0:upscaler; pthread_mutex_unlock(&lock);
+}
+int host_settings_upscaler(void) {
+    pthread_mutex_lock(&lock); int upscaler=settings_upscaler; pthread_mutex_unlock(&lock); return upscaler;
+}
 /* the menu's mouse look (Controls, Keyboard & mouse): the sensitivity in per
 cent of the configuration's and the Y axis upside down; 0 until the menu sent
 them, then the configuration's values stand */

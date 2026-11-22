@@ -49,6 +49,8 @@ final class SettingsOverlay {
     static native void nativeCounters(int[] out);
     /** The mouse's look (host_settings_mouse_look): per cent of the configuration's speed, Y upside down. */
     static native void nativeMouseLook(int percent, boolean invert);
+    static native void nativeResolution(int lines);
+    static native void nativeUpscaler(int upscaler);
 
     static final int HOME=0, DISPLAY=1, CONTROLS=2, AUDIO=3, CHEATS=4;
     // Halo's blues instead of CubeEvil4's greens and gold; the update button keeps green and red
@@ -136,6 +138,31 @@ final class SettingsOverlay {
         for(int choice:MSAA) if(choice==stored) return stored;
         return 0;
     }
+    /** The resolution's choices (Display): the picture's lines, 0 the screen's own (d3d8_gl.c screen_mode_choose). */
+    static final int[] RESOLUTIONS={480,720,1080,0};
+    static final int DEFAULT_RESOLUTION=1080;
+    /** The upscaler's choices (host_upscale.c): 0 the plain linear stretch, 1 SGSR, 2 FSR. */
+    static final int[] UPSCALERS={0,1,2};
+    /** A stored resolution that is one of the choices, else the default (1080p). */
+    static int resolution(int stored) {
+        for(int choice:RESOLUTIONS) if(choice==stored) return stored;
+        return DEFAULT_RESOLUTION;
+    }
+    /** A stored upscaler that is one of the choices, else the plain stretch. */
+    static int upscaler(int stored) {
+        for(int choice:UPSCALERS) if(choice==stored) return stored;
+        return 0;
+    }
+    /** The picture's lines at a resolution on a screen of `screenLines` (as screen_mode_choose: never more than the
+     *  screen, never fewer than 480; native the screen's own). */
+    static int pictureLines(int resolution,int screenLines) {
+        int lines=resolution<=0||resolution>screenLines?screenLines:resolution;
+        return Math.max(480,lines);
+    }
+    /** Whether the upscaler has anything to do: the picture smaller than the screen (as host_upscale.c, 2 % room). */
+    static boolean upscales(int resolution,int screenLines) {
+        return screenLines>0 && pictureLines(resolution,screenLines)*1.02f<screenLines;
+    }
     /** Whether a choice of samples is offered: off always; more while the GPU's limit is unknown (-1) or allows it. */
     static boolean msaaOffered(int samples,int limit) { return samples==0 || limit<0 || samples<=limit; }
 
@@ -147,7 +174,7 @@ final class SettingsOverlay {
     private boolean gyroEnabled, gyroInvertPitch;
     // 60 FPS with interpolation; off, the original 30 (sdl_platform.c)
     private boolean sixtyFps;
-    private int textureFilter, cheatBits, msaaSamples;
+    private int textureFilter, cheatBits, msaaSamples, resolutionLines, upscalerChoice;
     private boolean depthOfField, fxaa, fpsDisplay, mouseInvert;
     private int dofStrength, mouseSensitivity;
     private final FpsCounter fps;
@@ -188,6 +215,8 @@ final class SettingsOverlay {
         fpsDisplay=prefs.getBoolean("fps_display",false);
         mouseSensitivity=mouseSensitivity(prefs.getInt("mouse_sensitivity",MOUSE_DEFAULT));
         mouseInvert=prefs.getBoolean("mouse_invert",false);
+        resolutionLines=resolution(prefs.getInt("resolution",DEFAULT_RESOLUTION));
+        upscalerChoice=upscaler(prefs.getInt("upscaler",0));
         fps=new FpsCounter(activity,parent);
         fps.configure(fpsDisplay,sixtyFps);
         apply();
@@ -197,6 +226,8 @@ final class SettingsOverlay {
         nativeDepthOfField(depthOfField);
         nativeDepthOfFieldStrength(dofStrength);
         nativeFxaa(fxaa);
+        nativeResolution(resolutionLines);
+        nativeUpscaler(upscalerChoice);
     }
     boolean isOpen(){return root!=null;}
     int page(){return page;}
@@ -516,6 +547,22 @@ final class SettingsOverlay {
             fpsDisplay=on;prefs.edit().putBoolean("fps_display",on).apply();fps.configure(fpsDisplay,sixtyFps);
         });
         help(R.string.menu_sixty_fps_help);
+        // the resolution and the upscaler as CubeEvil4's (1.1.0; wish of the project owner, 22.11.2026)
+        MenuLayout.Buttons size=pair(labelled(R.string.menu_side_resolution));
+        final int screenLines=screenLines();
+        ArrowSelector[] upscaling=new ArrowSelector[1];
+        selector(size,R.string.menu_resolution,new String[]{s(R.string.menu_resolution_original),"720p","1080p",
+            s(R.string.menu_resolution_native)},RESOLUTIONS,resolutionLines,lines->{
+            resolutionLines=lines;nativeResolution(lines);prefs.edit().putInt("resolution",lines).apply();
+            enableUpscaler(upscaling[0],upscales(lines,screenLines));
+        });
+        upscaling[0]=selector(size,R.string.menu_upscaler,new String[]{s(R.string.menu_upscaler_linear),
+            s(R.string.menu_upscaler_sgsr),s(R.string.menu_upscaler_fsr)},UPSCALERS,upscalerChoice,choice->{
+            upscalerChoice=choice;nativeUpscaler(choice);prefs.edit().putInt("upscaler",choice).apply();
+        });
+        enableUpscaler(upscaling[0],upscales(resolutionLines,screenLines));
+        help(R.string.menu_resolution_help);
+        help(R.string.menu_upscaler_help);
         heading(R.string.menu_graphics);
         final int limit=nativeMsaaLimit();
         MenuLayout.Buttons edges=pair(labelled(R.string.menu_side_edges));
@@ -549,6 +596,18 @@ final class SettingsOverlay {
             });
         strength[0].setEnabled(depthOfField);strength[0].setFocusable(depthOfField);
         help(R.string.menu_dof_help);
+    }
+    /** The game's screen's lines: the surface the menu lies over (the display's while it is not laid out yet). */
+    private int screenLines(){
+        int h=parent.getHeight();
+        if(h<=0){
+            android.util.DisplayMetrics m=activity.getResources().getDisplayMetrics();
+            h=Math.min(m.heightPixels,m.widthPixels);
+        }
+        return h;
+    }
+    private static void enableUpscaler(ArrowSelector upscaler,boolean enabled){
+        upscaler.setEnabled(enabled);upscaler.setFocusable(enabled);
     }
     private void controls(){
         heading(R.string.menu_motion);

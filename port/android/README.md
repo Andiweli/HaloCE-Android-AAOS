@@ -218,8 +218,8 @@ These settings are only for Android:
 
 The in-game menu (`SettingsOverlay.java`, laid out like CubeEvil4's in
 Halo's colours) shows the version, an update button and **Back to the
-game**, four pages: **Display** (brightness, gamma, 60 FPS, FPS display, MSAA, texture
-filtering, FXAA, depth of field), **Controls** (gyroscope, stick sensitivity,
+game**, four pages: **Display** (brightness, gamma, 60 FPS, FPS display, resolution,
+upscaling, MSAA, texture filtering, FXAA, depth of field), **Controls** (gyroscope, stick sensitivity,
 keyboard & mouse), **Volume** and **Cheats**, and at the bottom a button to this port's page on
 GitHub. Every change applies and is saved at once. The D-pad or the
 left stick moves, A presses, L1 / R1 (Q / E, Page up / Page down) change the
@@ -229,7 +229,7 @@ are in English, German, French and Italian (`res/values*/strings_menu.xml`).
 Its look follows CubeEvil4-Android's 1.1.0 menu, in Halo's blues: every
 sub-page has side labels on the left and the settings on the right, in
 pairs where they fit; every cell is 64 dp high; headings carry a faint
-line. Choices of more than two values (MSAA, texture filtering) are arrow
+line. Choices of more than two values (resolution, upscaling, MSAA, texture filtering) are arrow
 cells (`ArrowSelector.java`: ‹ › on the sides, the value big, a dot per
 step, lit while not off); sliders are cells too (`SliderCell.java`: name,
 value, bar; ‹ › step, the bar still drags). Narrow windows stack the label
@@ -256,6 +256,36 @@ highest version (its tag `1.0.16`; drafts, pre-releases and the CI's
 with a newer release (one with an `.apk` without `aaos` in its name). It
 opens the releases page in the browser; the app downloads and installs
 nothing itself. Android Automotive builds have no button.
+
+**Resolution** (Original 480p, 720p, 1080p, Native; 1080p by default,
+prefs `resolution`): the lines the game draws its picture in. The game
+still works in its 480 lines; the screen's render targets get lines / 480
+pixels per unit (`screen_scale`, as fullscreen on the desktop), and
+viewports, clears, scissors and visibility counts follow (`target_scale`),
+so the HUD, the menus, MSAA's renderbuffers, the depth of field's copy,
+FXAA, the screenshot and the FPS display's size all take the new size.
+Never more lines than the screen has, never fewer than 480; Native is the
+screen's own, and no target wider than the GPU's largest texture. It
+applies at once, between two frames (`halo_screen_commit`, logged as
+`screen: ...`). The targets of an earlier size are kept, not freed
+(`render_target_get` never frees), ready for a change back: at most one set
+per choice. The screen's height is taken when the choice changes, so a
+surface that changes its size while it stays (AAOS split screen) does not
+make a new set at every size (`screen_mode_choose` in
+`port/linux/src/d3d8_gl.c`, `host_settings_resolution` in
+`host/host_touch.c`).
+
+**Upscaling** (Linear, SGSR, FSR; Linear by default, prefs `upscaler`): how
+a picture smaller than the screen is brought to it at Present
+(`host_settings_present` in `host/host_settings.c`, `host/host_upscale.c`),
+as CubeEvil4's 1.1.0. Linear is the plain stretch; SGSR is Qualcomm's
+Snapdragon Game Super Resolution 1 (one pass); FSR is AMD's FidelityFX
+Super Resolution 1 (EASU, then RCAS's sharpening at 0.2 stops). The
+third-party files stay unchanged in `port/third_party/` and are embedded
+at build time (`tools/android_embed.py`); FSR's constants are made on the
+processor. Brightness and gamma are applied after the upscaler. Offered
+only while the picture is smaller than the screen; it needs GLSL ES 3.10
+(`textureGather`), else, or when a shader fails, the plain stretch stays.
 
 **Texture filtering** (Off, 2x, 4x, 8x) replaces `display.anisotropic_filtering`
 at once (`anisotropic_filtering` in `port/linux/src/d3d8_gl.c`, asked once a
@@ -357,6 +387,14 @@ repository. If you installed a build that has a different signature, remove
 that build before you install a new build. Removing the app deletes its data
 folder: first make a copy of `maps/` and `save/`.
 
+### Changes after 1.1.0
+
+- Display: **Resolution** (Original 480p, 720p, 1080p, Native; 1080p by
+  default) and **Upscaling** (Linear, SGSR, FSR) as CubeEvil4's 1.1.0;
+  both apply at once.
+- Licences of AMD FidelityFX FSR 1 (MIT) and Qualcomm Snapdragon GSR 1
+  (BSD-3-Clause) in `assets/licenses`.
+
 ### Changes in 1.1.0
 
 - RetroTouch 1.0.0-beta.13: the touch buttons show symbols (as CubeEvil4's
@@ -394,7 +432,7 @@ folder: first make a copy of `maps/` and `save/`.
 ## Widescreen
 
 The game shows 480 lines in the shape of the display, not the 640x480 of
-the Xbox:
+the Xbox (drawn at the menu's resolution, see **Resolution** above):
 
 - The 3D view is wider. The camera keeps the vertical field of view.
 - The HUD stays at the edges of the screen.

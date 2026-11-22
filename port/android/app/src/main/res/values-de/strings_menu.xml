@@ -117,4 +117,15 @@
     <string name="menu_keys_pointer">F12</string>
     <string name="menu_key_dpad">Steuerkreuz</string>
     <string name="menu_keys_dpad">Pfeiltasten</string>
+    <!-- resolution & upscaling (CubeEvil4 1.1.0, 22.11.2026) -->
+    <string name="menu_side_resolution">Auflösung</string>
+    <string name="menu_resolution">Auflösung</string>
+    <string name="menu_resolution_original">Original (480p)</string>
+    <string name="menu_resolution_native">Nativ</string>
+    <string name="menu_upscaler">Hochskalierung</string>
+    <string name="menu_upscaler_linear">Linear</string>
+    <string name="menu_upscaler_sgsr">SGSR</string>
+    <string name="menu_upscaler_fsr">FSR</string>
+    <string name="menu_resolution_help">Auflösung: in wie vielen Zeilen das Spiel sein Bild zeichnet. Original sind die 480 Zeilen des Spiels, 720p und 1080p sind schärfer, Nativ nutzt jede Zeile des Bildschirms. Nie mehr, als der Bildschirm hat. Höhere Auflösungen kosten mehr Leistung, vor allem mit MSAA. Gilt sofort.</string>
+    <string name="menu_upscaler_help">Hochskalierung: wie das Bild vergrößert wird, wenn die Auflösung unter der des Bildschirms liegt. Linear: das einfache, weiche Strecken. SGSR (Qualcomm Snapdragon Game Super Resolution): schärfere Kanten, wenig Arbeit für die GPU. FSR (AMD FidelityFX Super Resolution 1): am schärfsten, etwa doppelt so viel Arbeit wie SGSR. Nicht wählbar, solange das Bild so groß ist wie der Bildschirm.</string>
 </resources>

@@ -117,4 +117,15 @@
     <string name="menu_keys_pointer">F12</string>
     <string name="menu_key_dpad">Croix directionnelle</string>
     <string name="menu_keys_dpad">Touches fléchées</string>
+    <!-- resolution & upscaling (CubeEvil4 1.1.0, 22.11.2026) -->
+    <string name="menu_side_resolution">Résolution</string>
+    <string name="menu_resolution">Résolution</string>
+    <string name="menu_resolution_original">Originale (480p)</string>
+    <string name="menu_resolution_native">Native</string>
+    <string name="menu_upscaler">Mise à l\'échelle</string>
+    <string name="menu_upscaler_linear">Linéaire</string>
+    <string name="menu_upscaler_sgsr">SGSR</string>
+    <string name="menu_upscaler_fsr">FSR</string>
+    <string name="menu_resolution_help">Résolution\u00A0: le nombre de lignes de l\'image du jeu. Originale correspond aux 480 lignes du jeu\u00A0; 720p et 1080p sont plus nettes, Native utilise toutes les lignes de l\'écran. Jamais plus que l\'écran n\'en a. Les résolutions élevées coûtent plus de performances, surtout avec le MSAA. S\'applique aussitôt.</string>
+    <string name="menu_upscaler_help">Mise à l\'échelle\u00A0: comment l\'image est agrandie quand la résolution est inférieure à celle de l\'écran. Linéaire\u00A0: l\'étirement simple et doux. SGSR (Qualcomm Snapdragon Game Super Resolution)\u00A0: bords plus nets, peu de travail pour le GPU. FSR (AMD FidelityFX Super Resolution 1)\u00A0: le plus net, environ deux fois le travail de SGSR. Indisponible tant que l\'image est aussi grande que l\'écran.</string>
 </resources>

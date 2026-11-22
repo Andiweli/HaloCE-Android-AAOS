@@ -24,6 +24,8 @@ build that respects the vehicle's available screen area. AAOS audio buffering
 and Android memory-layout fallbacks are included. The game uses the original
 **30 FPS mode**, with a corrected geometry-upload path tested on Retroid;
 **60 FPS** can be switched on in the in-game settings (experimental).
+The picture can be drawn at 480p, 720p, 1080p or the screen's native
+resolution, enlarged with SGSR or FSR where it is smaller than the screen.
 Use the AAOS build while parked.
 
 <p align=center>
@@ -101,5 +103,8 @@ full text is in [LICENSE](LICENSE). It takes fixes from
 [CC0 1.0](LICENSES/CC0-1.0.txt) and stay that way. Third-party
 components retain their own licenses, including
 [SDL](port/android/native/SDL-LICENSE.txt) and
-[musl](port/android/native/MUSL-COPYRIGHT.txt). These notices do not grant rights
+[musl](port/android/native/MUSL-COPYRIGHT.txt), AMD
+[FidelityFX Super Resolution 1](port/third_party/fidelityfx-fsr/license.txt) (MIT) and
+Qualcomm [Snapdragon Game Super Resolution 1](port/third_party/snapdragon-gsr/LICENSE)
+(BSD-3-Clause), also in the app's `assets/licenses`. These notices do not grant rights
 to the original game's commercial assets. You must supply your own game data.

@@ -1,8 +1,11 @@
-/* Final game-image correction. Runs only on the rendering thread. */
+/* Final game-image correction and the menu's upscaling. Runs only on the rendering thread. */
 #include "host.h"
 #include <GLES3/gl3.h>
 #include <EGL/egl.h>
 extern void host_settings_display(float *brightness,float *gamma);
+extern int host_settings_upscaler(void);
+extern int host_upscale(unsigned int texture,int src_w,int src_h,int dst_w,int dst_h,int upscaler,
+    unsigned int *result,unsigned int *result_framebuffer);
 
 static GLuint program, vao;
 static EGLContext context;
@@ -12,9 +15,39 @@ static GLuint shader(GLenum kind,const char *source) {
     glShaderSource(s,1,&source,NULL); glCompileShader(s); glGetShaderiv(s,GL_COMPILE_STATUS,&ok);
     if(!ok) {glDeleteShader(s);return 0;} return s;
 }
-int host_settings_present(unsigned int texture,int width,int height) {
+/* The picture (texture, src_w x src_h, row 0 its top) onto the screen's
+framebuffer (bound as the draw framebuffer, width x height): enlarged by the
+menu's upscaler (host_upscale.c) where it is smaller than the screen, then
+corrected by the menu's brightness and gamma. 0 when neither applies: the
+caller's plain linear blit. */
+static int correct(unsigned int texture,int width,int height,float brightness,float gamma);
+int host_settings_present(unsigned int texture,int src_w,int src_h,int width,int height) {
     float brightness,gamma; host_settings_display(&brightness,&gamma);
-    if(brightness==0.0f && gamma==1.0f) return 0; /* original path at defaults */
+    int corrected=!(brightness==0.0f && gamma==1.0f);
+    int upscaler=host_settings_upscaler();
+    GLuint upscaled=0,upscaled_framebuffer=0;
+    GLint read_framebuffer,draw_framebuffer,viewport[4],old_program,old_vao,active,tex,sampler;
+    if(!corrected && !upscaler) return 0; /* original path at defaults */
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING,&read_framebuffer);glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&draw_framebuffer);
+    glGetIntegerv(GL_VIEWPORT,viewport);glGetIntegerv(GL_CURRENT_PROGRAM,&old_program);glGetIntegerv(GL_VERTEX_ARRAY_BINDING,&old_vao);
+    glGetIntegerv(GL_ACTIVE_TEXTURE,&active);glActiveTexture(GL_TEXTURE0);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D,&tex);glGetIntegerv(GL_SAMPLER_BINDING,&sampler);
+    if(upscaler && !host_upscale(texture,src_w,src_h,width,height,upscaler,&upscaled,&upscaled_framebuffer)) upscaled=0;
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER,(GLuint)draw_framebuffer);
+    int shown=0;
+    if(corrected) shown=correct(upscaled?upscaled:texture,width,height,brightness,gamma);
+    if(!shown && upscaled) {
+        /* the enlarged picture as it is: of the screen's size, only turned upright */
+        glBindFramebuffer(GL_READ_FRAMEBUFFER,upscaled_framebuffer);
+        glBlitFramebuffer(0,0,width,height,0,height,width,0,GL_COLOR_BUFFER_BIT,GL_NEAREST);
+        shown=1;
+    }
+    glBindFramebuffer(GL_READ_FRAMEBUFFER,(GLuint)read_framebuffer);glBindFramebuffer(GL_DRAW_FRAMEBUFFER,(GLuint)draw_framebuffer);
+    glBindTexture(GL_TEXTURE_2D,(GLuint)tex);glBindSampler(0,(GLuint)sampler);glActiveTexture((GLenum)active);
+    glUseProgram((GLuint)old_program);glBindVertexArray((GLuint)old_vao);glViewport(viewport[0],viewport[1],viewport[2],viewport[3]);
+    return shown;
+}
+static int correct(unsigned int texture,int width,int height,float brightness,float gamma) {
     if(context!=eglGetCurrentContext()) {context=eglGetCurrentContext();program=vao=0;failed=0;}
     if(failed) return 0;
     if(!program) {

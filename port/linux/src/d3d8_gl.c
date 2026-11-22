@@ -123,9 +123,44 @@ static float screen_scale[2] = { 1.0f, 1.0f };
 static long ui_offset;
 #define UI_OFFSET ((GLint)ui_offset)
 
+#ifdef HALO_ANDROID
+/* The in-game menu's resolution (Display: Original 480p, 720p, 1080p or
+Native; port/android/host/host_touch.c host_settings_resolution): the lines
+the game's picture has, 0 for the screen's own. Never more than the screen
+has, never fewer than the game's 480; the game still works in 480 lines, and
+the screen's targets get lines / 480 pixels per unit of them (screen_scale),
+as fullscreen on the desktop. The present stretches the picture to the screen
+(the menu's upscaler where it is smaller: host_settings_present). A screen
+whose size is not known yet keeps the original 480 lines. */
+extern int host_settings_resolution(void);
+
+static float screen_lines_scale(long setting, int screen_lines)
+{
+	long lines;
+
+	if (screen_lines <= 0)
+		return 1.0f;
+	lines = setting <= 0 ? screen_lines : setting;
+	if (lines > screen_lines)
+		lines = screen_lines;
+	if (lines < SCREEN_HEIGHT)
+		lines = SCREEN_HEIGHT;
+	return (float)lines / (float)SCREEN_HEIGHT;
+}
+#endif
+
 static void screen_mode_choose(long *width, float scale[2])
 {
 #ifdef HALO_ANDROID
+	/* the screen's lines as they were when the setting last changed: a
+	surface that changes its size while it stays (AAOS's split screen, a
+	window dragged) would otherwise make a new set of targets at each size,
+	and those are kept (render_target_get) */
+	static long chosen_setting = -1;
+	static int chosen_lines;
+	long setting = host_settings_resolution();
+	int drawable_width = 0, drawable_height = 0;
+
 	/* display.screen_width, or 0 for the display's shape, which the app
 	passes (port/android/host/host_main.c) */
 	const char *display = getenv("HALO_DISPLAY_WIDTH");
@@ -138,7 +173,32 @@ static void screen_mode_choose(long *width, float scale[2])
 	if (*width > 1600)
 		*width = 1600;
 	*width &= ~1L;
-	scale[0] = scale[1] = 1.0f;
+	if (setting != chosen_setting || chosen_lines <= 0)
+	{
+		platform_video_drawable_size(&drawable_width, &drawable_height);
+		if (drawable_height > 0)
+		{
+			chosen_setting = setting;
+			chosen_lines = drawable_height;
+		}
+	}
+	scale[0] = scale[1] = screen_lines_scale(setting, chosen_lines);
+	/* no target wider than the GPU's textures may be (OpenGL ES 3.0 asks
+	only for 2048) */
+	{
+		static GLint largest;
+
+		if (largest <= 0 && chosen_lines > 0)
+		{
+			GLint texture_size = 0, renderbuffer_size = 0;
+
+			glGetIntegerv(GL_MAX_TEXTURE_SIZE, &texture_size);
+			glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &renderbuffer_size);
+			largest = texture_size < renderbuffer_size ? texture_size : renderbuffer_size;
+		}
+		if (largest > 0 && *width * scale[0] > (float)largest)
+			scale[0] = scale[1] = (float)largest / (float)*width;
+	}
 #else
 	long display_width, display_height;
 
@@ -1620,6 +1680,13 @@ long halo_screen_commit(void)
 	{
 		platform_log("screen: %ldx%d drawn at %.0fx%.0f", width, SCREEN_HEIGHT,
 			width * scale[0], SCREEN_HEIGHT * scale[1]);
+#ifdef HALO_ANDROID
+		/* the menu's resolution: the screen's targets are made anew at the
+		new size as the game next draws into them; those of the size before
+		stay (render_target_get), ready for a change back */
+		platform_log("screen: the menu's resolution %d (0 native): %.0f lines", host_settings_resolution(),
+			SCREEN_HEIGHT * scale[1]);
+#endif
 		screen_width = width;
 		screen_scale[0] = scale[0];
 		screen_scale[1] = scale[1];
@@ -4727,8 +4794,9 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		/* row 0 of the render target is the top of the picture */
 #ifdef HALO_ANDROID
-        { extern int host_settings_present(unsigned int texture,int width,int height);
-          if (!host_settings_present(back_buffer->target.texture,width,height))
+        { extern int host_settings_present(unsigned int texture,int src_w,int src_h,int width,int height);
+          if (!host_settings_present(back_buffer->target.texture,(int)back_buffer->target.gl_width,
+                (int)back_buffer->target.gl_height,width,height))
 #endif
 		glBlitFramebuffer(0, 0, (GLint)back_buffer->target.gl_width, (GLint)back_buffer->target.gl_height,
 			x, y + height, x + width, y, GL_COLOR_BUFFER_BIT, GL_LINEAR);
