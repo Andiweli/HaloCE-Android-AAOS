@@ -48,10 +48,14 @@ public class HaloActivity extends SDLActivity {
     void settingsVisibility(boolean visible) {
         if (haloPort != null) haloPort.overlay(visible);
         if (motionAim != null) motionAim.overlay(visible);
+        // the mouse: free for the menu's pointer at once (the game's thread may not run to let it go),
+        // the game's again when the menu closes, if SDL still wants it
+        if (visible) org.libsdl.app.HaloPointer.release();
         if (!visible) {
             restoreFullscreen();
             // the game's keys go to SDL's surface again (SDLSurface.onKey)
             if (mSurface != null) { noFocusHighlight(); mSurface.requestFocus(); }
+            org.libsdl.app.HaloPointer.reclaim();
         }
     }
     boolean motionAvailable() { return motionAim != null && motionAim.available(); }
@@ -82,6 +86,12 @@ public class HaloActivity extends SDLActivity {
     }
     void cancelTouchSelect() {
         if (selectHeld && selectTouch) cancelSelect();
+    }
+
+    /** SDL's surface, with the captured mouse passed on whole (HaloSurface). */
+    @Override
+    protected org.libsdl.app.SDLSurface createSDLSurface(Context context) {
+        return new HaloSurface(context);
     }
 
     @Override

@@ -394,6 +394,12 @@ folder: first make a copy of `maps/` and `save/`.
   both apply at once.
 - Licences of AMD FidelityFX FSR 1 (MIT) and Qualcomm Snapdragon GSR 1
   (BSD-3-Clause) in `assets/licenses`.
+- The mouse in the game: Android sends the captured mouse's moves and
+  buttons in events that SDL 3.4 does not pass on, so the aim did not move.
+  `HaloSurface` passes them on (moves as relative motion, each button as a
+  press or a release). The in-game menu lets the mouse go when it opens, so
+  its pointer shows and clicks work, and the game takes it back when the
+  menu closes (`org.libsdl.app.HaloPointer`).
 
 ### Changes in 1.1.0
 
