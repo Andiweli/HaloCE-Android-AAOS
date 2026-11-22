@@ -242,6 +242,11 @@ public class HaloActivity extends SDLActivity {
                 key != android.view.KeyEvent.KEYCODE_VOLUME_MUTE && key != android.view.KeyEvent.KEYCODE_BACK &&
                 key != android.view.KeyEvent.KEYCODE_POWER)
             haloPort.deskUsed(false);
+        // a controller's button hides them too, in the game and in the in-game menu (not a fingerprint sensor's
+        // keys: ControllerPresence.isController wants a stick or a D-pad)
+        if (haloPort != null && down && event.getRepeatCount() == 0 && event.getDevice() != null &&
+                ControllerPresence.isController(event.getDevice()))
+            haloPort.controllerInput();
         if (overlayKeys.contains(key)) {
             if (!down) overlayKeys.remove(key);
             if (settings != null && settings.isOpen()) settings.key(event);
@@ -280,11 +285,6 @@ public class HaloActivity extends SDLActivity {
              android.view.KeyEvent.isGamepadButton(key)) && nativeMovieSkip()) {
             movieKey = key; return true;
         }
-        if (haloPort != null && event.getAction() == android.view.KeyEvent.ACTION_DOWN &&
-                (event.isFromSource(android.view.InputDevice.SOURCE_GAMEPAD) ||
-                 event.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK))) {
-            haloPort.controllerInput();
-        }
         if (down) gameKeys.put(key,new android.view.KeyEvent(event)); else gameKeys.remove(key);
         return super.dispatchKeyEvent(event);
     }
@@ -295,13 +295,9 @@ public class HaloActivity extends SDLActivity {
         if (haloPort != null && event.isFromSource(android.view.InputDevice.SOURCE_MOUSE) &&
                 !event.isFromSource(android.view.InputDevice.SOURCE_TOUCHSCREEN))
             haloPort.deskUsed(true);
-        if (settings != null && settings.isOpen()) {
-            settings.motion(event);
-            // Update SDL's physical axes even while the guest input is blocked.
-            super.dispatchGenericMotionEvent(event);
-            return true;
-        }
-        if (haloPort != null && event.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK)) {
+        // a controller's stick, D-pad or trigger moved hides them as well, in the game and in the in-game menu
+        if (haloPort != null && event.isFromSource(android.view.InputDevice.SOURCE_JOYSTICK) &&
+                event.getDevice() != null && ControllerPresence.isController(event.getDevice())) {
             int[] axes = {android.view.MotionEvent.AXIS_X, android.view.MotionEvent.AXIS_Y,
                 android.view.MotionEvent.AXIS_Z, android.view.MotionEvent.AXIS_RZ,
                 android.view.MotionEvent.AXIS_HAT_X, android.view.MotionEvent.AXIS_HAT_Y,
@@ -309,6 +305,12 @@ public class HaloActivity extends SDLActivity {
             for (int axis : axes) {
                 if (Math.abs(event.getAxisValue(axis)) > 0.2f) { haloPort.controllerInput(); break; }
             }
+        }
+        if (settings != null && settings.isOpen()) {
+            settings.motion(event);
+            // Update SDL's physical axes even while the guest input is blocked.
+            super.dispatchGenericMotionEvent(event);
+            return true;
         }
         return super.dispatchGenericMotionEvent(event);
     }

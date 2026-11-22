@@ -167,8 +167,11 @@ Back, held the in-game menu, again its close. A physical keyboard with
 letters or a mouse hides the touch controls, as a controller does
 (`ControllerPresence.java`); the screen's keyboard and a handheld's own
 buttons do not. In the in-game menu, **Controls → Touch buttons** chooses
-**Auto** (as above, the default), **Force** (always shown, whatever is
-connected) or **Suppress** (always hidden, for a Chromebook, say).
+**Auto** (the default: the input used last decides; a finger on the screen
+shows them, a controller's button or stick, a key or the mouse hides them,
+and connecting one hides them too; a fingerprint sensor that says it is a
+gamepad does not count), **Force** (always shown, whatever is connected) or
+**Suppress** (always hidden, for a Chromebook, say).
 
 Without a controller, the screen shows touch controls (RetroTouch
 1.0.0-beta.13). The buttons show symbols for what they do, as the RE
@@ -400,8 +403,10 @@ folder: first make a copy of `maps/` and `save/`.
   keyboard and touchpad too) hides them when it is used. A finger on the
   screen always brings them back, until a key or the mouse is used again.
 - In-game menu, Controls: **Touch buttons** Auto / Force / Suppress, as
-  CubeEvil4's. Auto hides them as above; Force always shows them (with a
-  controller, a keyboard or a mouse there too); Suppress always hides them.
+  CubeEvil4's. Auto follows the input used last: a finger shows them (with
+  a controller there too), a controller's button or stick, a key or the
+  mouse hides them; Force always shows them (with a controller, a keyboard
+  or a mouse there too); Suppress always hides them.
 - In-game menu: the side label "Keys" stands beside the first key line.
 
 ### Changes in 1.1.1

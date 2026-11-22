@@ -87,7 +87,7 @@
     <string name="menu_touch_auto">Auto</string>
     <string name="menu_touch_always">Force</string>
     <string name="menu_touch_never">Suppress</string>
-    <string name="menu_touch_help">Auto: the touch controls hide while a controller, a connected keyboard or a mouse is there, or once a built-in keyboard or touchpad is used; a finger on the screen brings them back. Fingerprint sensors and similar devices do not count. Force: always shown. Suppress: always hidden (for a Chromebook, say).</string>
+    <string name="menu_touch_help">Auto: the touch controls show as soon as you touch the screen and hide as soon as you use a controller, a keyboard or a mouse (connecting one hides them too). Fingerprint sensors and similar devices do not count. Force: always shown. Suppress: always hidden (for a Chromebook, say).</string>
     <string name="menu_mouse_sensitivity">Mouse sensitivity</string>
     <string name="menu_mouse_invert">Invert mouse Y</string>
     <string name="menu_mouse_help">Applies while a mouse is connected; the touch controls are hidden then. F12 frees the mouse pointer and captures it again.</string>

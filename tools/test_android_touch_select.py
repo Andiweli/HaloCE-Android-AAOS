@@ -342,6 +342,16 @@ class TouchSelectTest {
         check(v.visibility==View.GONE && HaloPort.mice.isEmpty(),"a built-in keyboard's key hides the touch controls");
         p.fingerUsed();Handler.advance(100);
         check(v.visibility==View.VISIBLE,"and a finger brings them back");
+        // Auto follows the input used last (23.11.2026): a finger shows them beside a controller, its use hides them
+        ControllerPresence.connected=true;Handler.advance(100);check(v.visibility==View.GONE,"auto: a controller connected hides them");
+        p.fingerUsed();Handler.advance(100);
+        check(v.visibility==View.VISIBLE && v.getMode()!=RetroTouchMode.OFF,"auto: a finger shows them beside a controller");
+        HaloPort.actions.clear();v.press("fire",true);v.press("fire",false);
+        check(HaloPort.actions.equals(java.util.Arrays.asList("7:true","7:false")),"auto: and they play");
+        p.controllerInput();Handler.advance(100);check(v.visibility==View.GONE,"auto: the controller used hides them");
+        Handler.advance(500);check(v.visibility==View.GONE,"and they stay hidden while it is there");
+        p.fingerUsed();Handler.advance(100);check(v.visibility==View.VISIBLE,"auto: a finger again shows them");
+        ControllerPresence.connected=false;Handler.advance(100);check(v.visibility==View.VISIBLE,"the controller gone: shown");
         // the menu's choice (23.11.2026): Force shows them with a controller there, Suppress hides them with nothing there
         check(HaloPort.touchSetting(7)==HaloPort.TOUCH_AUTO && HaloPort.touchSetting(2)==HaloPort.TOUCH_NEVER,
             "a stored choice: one of the three, else Auto");
@@ -360,7 +370,7 @@ class TouchSelectTest {
         press(v,true);Handler.advance(600);check(a.settings.opens==7,"suppress: no touch SELECT");press(v,false);
         p.touchControls(HaloPort.TOUCH_AUTO);Handler.advance(100);check(v.visibility==View.VISIBLE,"auto again: shown");
         p.suspend();
-        System.out.println("Production SELECT adapter: both layouts/editor, 500 ms, reentrant release, cancel, focus, lifecycle, editor, controller, keyboard and mouse (connected or used, a finger brings touch back), the menu's Auto/Force/Suppress, mode, physical SELECT, F1 and gamepad Back passed.");
+        System.out.println("Production SELECT adapter: both layouts/editor, 500 ms, reentrant release, cancel, focus, lifecycle, editor, controller, keyboard and mouse (connected or used, a finger brings touch back), the menu's Auto (the input used last)/Force/Suppress, mode, physical SELECT, F1 and gamepad Back passed.");
     }
 }
 '''

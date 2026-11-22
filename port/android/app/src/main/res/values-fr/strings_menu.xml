@@ -87,7 +87,7 @@
     <string name="menu_touch_auto">Auto</string>
     <string name="menu_touch_always">Forcer</string>
     <string name="menu_touch_never">Masquer</string>
-    <string name="menu_touch_help">Auto : les commandes tactiles se masquent tant qu\'une manette, un clavier connecté ou une souris est là, ou dès qu\'un clavier ou un pavé tactile intégré est utilisé ; un doigt sur l\'écran les fait revenir. Les capteurs d\'empreintes et appareils semblables ne comptent pas. Forcer : toujours affichées. Masquer : toujours masquées (sur un Chromebook, par exemple).</string>
+    <string name="menu_touch_help">Auto : les commandes tactiles s\'affichent dès que vous touchez l\'écran et se masquent dès que vous utilisez une manette, un clavier ou une souris (aussi en en connectant un). Les capteurs d\'empreintes et appareils semblables ne comptent pas. Forcer : toujours affichées. Masquer : toujours masquées (sur un Chromebook, par exemple).</string>
     <string name="menu_mouse_sensitivity">Sensibilité de la souris</string>
     <string name="menu_mouse_invert">Inverser l\'axe Y de la souris</string>
     <string name="menu_mouse_help">S\'applique tant qu\'une souris est branchée ; les commandes tactiles sont alors masquées. F12 libère le pointeur de la souris et le capture à nouveau.</string>

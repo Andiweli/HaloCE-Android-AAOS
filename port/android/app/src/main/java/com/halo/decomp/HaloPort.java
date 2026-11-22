@@ -23,9 +23,10 @@ final class HaloPort {
     private final Handler handler = new Handler(Looper.getMainLooper());
     // touchHidden: the touch controls are hidden by the input devices or by the menu's choice (touchSetting)
     private boolean active, touchHidden, overlay;
-    /** The menu's choice for the touch controls (wish of the project owner, 23.11.2026, as CubeEvil4's): Auto hides
-     *  them for a controller, a keyboard or a mouse (ControllerPresence, deskUsed), Always shows them whatever is
-     *  connected, Never hides them for good (a Chromebook's own keyboard and touchpad, say). */
+    /** The menu's choice for the touch controls (wish of the project owner, 23.11.2026, as CubeEvil4's): Auto follows
+     *  the input used last, a finger shows them, a controller's button or stick, a key or the mouse hides them
+     *  (one connected hides them too, until a finger); Always shows them whatever is connected, Never hides them
+     *  for good (a Chromebook's own keyboard and touchpad, say). */
     static final int TOUCH_AUTO = 0, TOUCH_ALWAYS = 1, TOUCH_NEVER = 2;
     static final String TOUCH_KEY = "touch_controls";
     private static final String[] TOUCH_NAMES = {"auto", "always", "never"};
@@ -33,10 +34,10 @@ final class HaloPort {
     /** A stored choice that is one of the three, else Auto. */
     static int touchSetting(int stored) { return stored == TOUCH_ALWAYS || stored == TOUCH_NEVER ? stored : TOUCH_AUTO; }
     private int mousePresent = -1;
-    // a keyboard or a mouse in use (desk): set by a connected one and by any one's keys or pointer, cleared by
-    // a finger on the screen, which brings the touch controls back (a Galaxy A36 listed a built-in keyboard,
-    // 1.1.1: no touch controls); deskPresent: a connected one is there, mouseSeen: a mouse is there or was
-    // used since (the game captures it only then)
+    // a controller, a keyboard or a mouse in use (desk): set by a connected one and by any one's buttons, stick,
+    // keys or pointer, cleared by a finger on the screen, which brings the touch controls back (a Galaxy A36
+    // listed a built-in keyboard, 1.1.1: no touch controls; 23.11.2026: a controller's too); deskPresent: a
+    // connected one is there, mouseSeen: a mouse is there or was used since (the game captures it only then)
     private boolean desk, deskPresent, mouseSeen;
     private int mode = -1;
     private static final String[] IDS = {"jump", "melee", "use", "weapon", "flashlight", "grenade_type",
@@ -138,15 +139,15 @@ final class HaloPort {
     void resume() { if(active)return; active=true;updateControllerPresence();handler.post(poll); }
     void suspend() { active=false;handler.removeCallbacks(poll);activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset(); }
     private void updateControllerPresence() {
-        // a controller, a keyboard or a mouse hides the touch controls (ControllerPresence.inputs)
+        // a controller, a keyboard or a mouse connected hides the touch controls (ControllerPresence.inputs),
+        // a finger brings them back, using one of them hides them again (desk)
         int inputs = ControllerPresence.inputs(activity);
-        boolean present = (inputs & (ControllerPresence.KEYBOARD | ControllerPresence.MOUSE)) != 0;
+        boolean present = inputs != 0;
         if (present != deskPresent) { deskPresent = present; desk = present; mouseSeen = false; }
         if ((inputs & ControllerPresence.MOUSE) != 0) mouseSeen = true;
-        boolean connected = (inputs & ControllerPresence.CONTROLLER) != 0 || desk;
         int mouse = desk && mouseSeen ? 1 : 0;
         if (mouse != mousePresent) { mousePresent = mouse; nativeMouse(mouse != 0); }
-        boolean hidden = touchSetting == TOUCH_NEVER || (touchSetting == TOUCH_AUTO && connected);
+        boolean hidden = touchSetting == TOUCH_NEVER || (touchSetting == TOUCH_AUTO && desk);
         if (hidden != touchHidden) {
             activity.cancelTouchSelect();
             touchHidden = hidden;
@@ -166,7 +167,14 @@ final class HaloPort {
         updateControllerPresence();
     }
     void overlay(boolean visible) { overlay=visible;activity.cancelTouchSelect();touch.releaseAllInputs();nativeReset();mode=-1;updateControllerPresence(); }
-    void controllerInput() { updateControllerPresence(); }
+    /** A controller's button or stick (HaloActivity, a controller as ControllerPresence.isController says, not a
+     *  fingerprint sensor): the touch controls hide. */
+    void controllerInput() {
+        if (!desk && touchSetting == TOUCH_AUTO)
+            android.util.Log.i("halo", "touch controls: hidden (a controller in use)");
+        desk = true;
+        updateControllerPresence();
+    }
     /** A keyboard's key or a mouse's pointer (HaloActivity): the touch controls hide. */
     void deskUsed(boolean mouse) {
         if (mouse) mouseSeen = true;
@@ -176,7 +184,8 @@ final class HaloPort {
         desk = true;
         updateControllerPresence();
     }
-    /** A finger on the screen (HaloActivity): the touch controls come back, if a keyboard or mouse hid them. */
+    /** A finger on the screen (HaloActivity): the touch controls come back, if a controller, a keyboard or a
+     *  mouse hid them. */
     void fingerUsed() {
         if (!desk) return;
         if (touchSetting == TOUCH_AUTO) android.util.Log.i("halo", "touch controls: shown (the screen touched)");
