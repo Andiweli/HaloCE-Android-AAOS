@@ -37,7 +37,8 @@ final class HaloPort {
     // a controller, a keyboard or a mouse in use (desk): set by a connected one and by any one's buttons, stick,
     // keys or pointer, cleared by a finger on the screen, which brings the touch controls back (a Galaxy A36
     // listed a built-in keyboard, 1.1.1: no touch controls; 23.11.2026: a controller's too); deskPresent: a
-    // connected one is there, mouseSeen: a mouse is there or was used since (the game captures it only then)
+    // connected one is there, mouseSeen: a mouse was used since the last finger (the game also takes a mouse
+    // that is listed: ControllerPresence.POINTER)
     private boolean desk, deskPresent, mouseSeen;
     private int mode = -1;
     private static final String[] IDS = {"jump", "melee", "use", "weapon", "flashlight", "grenade_type",
@@ -142,10 +143,11 @@ final class HaloPort {
         // a controller, a keyboard or a mouse connected hides the touch controls (ControllerPresence.inputs),
         // a finger brings them back, using one of them hides them again (desk)
         int inputs = ControllerPresence.inputs(activity);
-        boolean present = inputs != 0;
+        boolean present = (inputs & ControllerPresence.HIDING) != 0;
         if (present != deskPresent) { deskPresent = present; desk = present; mouseSeen = false; }
-        if ((inputs & ControllerPresence.MOUSE) != 0) mouseSeen = true;
-        int mouse = desk && mouseSeen ? 1 : 0;
+        // the game takes any mouse listed, a Chromebook's own touchpad too, whatever a finger did (as in 1.1.1),
+        // and one that was used (a device that lists none)
+        int mouse = (inputs & ControllerPresence.POINTER) != 0 || mouseSeen ? 1 : 0;
         if (mouse != mousePresent) { mousePresent = mouse; nativeMouse(mouse != 0); }
         boolean hidden = touchSetting == TOUCH_NEVER || (touchSetting == TOUCH_AUTO && desk);
         if (hidden != touchHidden) {

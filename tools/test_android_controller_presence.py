@@ -100,7 +100,8 @@ public class PresenceTest {
            listed, but it hides the touch controls only when used (HaloPort.deskUsed) */
         InputDevice.devices.add(new InputDevice("sec_builtin",InputDevice.SOURCE_KEYBOARD,false).typed(InputDevice.KEYBOARD_TYPE_ALPHABETIC));
         InputDevice.devices.add(new InputDevice("builtin-touchpad",InputDevice.SOURCE_MOUSE,false));
-        check(ControllerPresence.inputs(c)==0,"built-in keyboards and touchpads keep touch until used");
+        check(ControllerPresence.inputs(c)==ControllerPresence.POINTER,"built-in keyboards and touchpads keep touch until used, the game has the touchpad");
+        check(StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1).startsWith("input devices: leave the touch controls"),"a touchpad alone leaves them");
         line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
         check(line.contains("sec_builtin (built in: when used)") && line.contains("builtin-touchpad (built in: when used)"),line);
         InputDevice.devices.remove(InputDevice.devices.size()-1);
@@ -117,15 +118,15 @@ public class PresenceTest {
         check(line.startsWith("input devices: hide the touch controls") && line.contains("keyboards: BT Keyboard") && line.contains("mice: none"),line);
         /* a mouse; a touch screen is none */
         InputDevice.devices.add(new InputDevice("Logitech Mouse",InputDevice.SOURCE_MOUSE,false).plugged());
-        check(ControllerPresence.inputs(c)==(ControllerPresence.KEYBOARD|ControllerPresence.MOUSE),"a mouse too");
+        check(ControllerPresence.inputs(c)==(ControllerPresence.KEYBOARD|ControllerPresence.MOUSE|ControllerPresence.POINTER),"a mouse too");
         InputDevice.devices.remove(InputDevice.devices.size()-2);
-        check(ControllerPresence.inputs(c)==ControllerPresence.MOUSE,"the mouse alone hides touch");
+        check(ControllerPresence.inputs(c)==(ControllerPresence.MOUSE|ControllerPresence.POINTER),"the mouse alone hides touch");
         line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
         check(line.contains("keyboards: none") && line.contains("mice: Logitech Mouse"),line);
         /* a controller whose device also says keyboard with letters is still a controller (it has a stick) */
         InputDevice.devices.add(new InputDevice("Retroid Pocket Controller",InputDevice.SOURCE_KEYBOARD|InputDevice.SOURCE_GAMEPAD|
             InputDevice.SOURCE_JOYSTICK,false,MotionEvent.AXIS_X,MotionEvent.AXIS_Y).typed(InputDevice.KEYBOARD_TYPE_ALPHABETIC));
-        check(ControllerPresence.inputs(c)==(ControllerPresence.CONTROLLER|ControllerPresence.MOUSE),"a stick pad stays a controller");
+        check(ControllerPresence.inputs(c)==(ControllerPresence.CONTROLLER|ControllerPresence.MOUSE|ControllerPresence.POINTER),"a stick pad stays a controller");
         check(android.util.Log.lines.equals(StartDiagnostics.lines),"Logcat gets the same lines");
         System.out.println("Controller presence: fingerprint sensors, button-only, one-axis and virtual gamepad devices keep the touch controls; stick and hat D-pad controllers, connected keyboards with letters and mice hide them, built-in ones only when used; each change logged once.");
     }

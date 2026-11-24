@@ -24,8 +24,13 @@ final class ControllerPresence {
     private ControllerPresence() {
     }
 
-    /** What inputs() finds: a controller, a keyboard, a mouse. */
-    static final int CONTROLLER = 1, KEYBOARD = 2, MOUSE = 4;
+    /** What inputs() finds: a controller, a keyboard, a mouse connected (these hide the touch controls), and
+     *  POINTER: any physical mouse, built in too (a Chromebook's touchpad), which the game takes as in 1.1.1
+     *  (HaloPort.nativeMouse); 1.1.2 told the game only of a connected one or one used since the last finger,
+     *  and a Chromebook's mouse showed only its pointer, in the menus and in the game (24.11.2026). */
+    static final int CONTROLLER = 1, KEYBOARD = 2, MOUSE = 4, POINTER = 8;
+    /** The inputs that hide the touch controls (not POINTER). */
+    static final int HIDING = CONTROLLER | KEYBOARD | MOUSE;
 
     /** Whether a controller is connected (inputs). */
     static boolean isControllerConnected(Context context) {
@@ -50,6 +55,7 @@ final class ControllerPresence {
                     .append(connected ? "" : " (built in: when used)");
             }
             if (isMouse(device)) {
+                found |= POINTER;
                 if (connected) found |= MOUSE;
                 mice.append(mice.length() == 0 ? "" : "; ").append(device.getName())
                     .append(connected ? "" : " (built in: when used)");
@@ -67,7 +73,7 @@ final class ControllerPresence {
         String report = devices + "|" + keyboards + "|" + mice;
         if (!report.equals(reported)) {
             reported = report;
-            String line = "input devices: " + (found != 0 ? "hide the touch controls" : "leave the touch controls") + "; gamepad devices: " +
+            String line = "input devices: " + ((found & HIDING) != 0 ? "hide the touch controls" : "leave the touch controls") + "; gamepad devices: " +
                 (devices.length() == 0 ? "none" : devices) + "; keyboards: " +
                 (keyboards.length() == 0 ? "none" : keyboards) + "; mice: " + (mice.length() == 0 ? "none" : mice);
             android.util.Log.i("halo", line);

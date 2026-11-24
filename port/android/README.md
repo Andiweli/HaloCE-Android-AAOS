@@ -166,7 +166,8 @@ menu takes the mouse as any app does. F1 is SELECT: a short press Halo's
 Back, held the in-game menu, again its close. A physical keyboard with
 letters or a mouse hides the touch controls, as a controller does
 (`ControllerPresence.java`); the screen's keyboard and a handheld's own
-buttons do not. In the in-game menu, **Controls → Touch buttons** chooses
+buttons do not. The game takes every mouse the device lists, a
+Chromebook's own touchpad too, whether the touch controls show or not. In the in-game menu, **Controls → Touch buttons** chooses
 **Auto** (the default: the input used last decides; a finger on the screen
 shows them, a controller's button or stick, a key or the mouse hides them,
 and connecting one hides them too; a fingerprint sensor that says it is a
@@ -393,6 +394,14 @@ signature. GitHub Actions signs each build with the key in the
 repository. If you installed a build that has a different signature, remove
 that build before you install a new build. Removing the app deletes its data
 folder: first make a copy of `maps/` and `save/`.
+
+### Changes in 1.1.3
+
+- ChromeOS: the mouse and the touchpad play again. 1.1.2 gave the game
+  only a connected mouse or one used since the last touch, so on a
+  Chromebook the menus and the game showed only the pointer, also with the
+  touch controls suppressed. The game now takes every mouse the device
+  lists (as in 1.1.1); the touch controls still follow the input used last.
 
 ### Changes in 1.1.2
 

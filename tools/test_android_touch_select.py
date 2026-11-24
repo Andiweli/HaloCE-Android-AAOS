@@ -154,7 +154,7 @@ stubs = {
         public boolean isCanceled(){return canceled;}
     }''',
     "com/halo/decomp/ControllerPresence": '''public class ControllerPresence {
-        public static final int CONTROLLER=1,KEYBOARD=2,MOUSE=4;
+        public static final int CONTROLLER=1,KEYBOARD=2,MOUSE=4,POINTER=8,HIDING=7;
         public static boolean connected;public static int keyboardMouse;
         public static boolean isControllerConnected(android.content.Context context){return connected;}
         public static int inputs(android.content.Context context){return (connected?CONTROLLER:0)|keyboardMouse;}
@@ -327,16 +327,31 @@ class TouchSelectTest {
         HaloPort.mice.clear();ControllerPresence.keyboardMouse=ControllerPresence.KEYBOARD;Handler.advance(100);
         check(v.visibility==View.GONE && v.getMode()==RetroTouchMode.OFF,"a keyboard hides the touch controls");
         check(HaloPort.mice.isEmpty(),"a keyboard alone is no mouse");
-        ControllerPresence.keyboardMouse=ControllerPresence.MOUSE;Handler.advance(100);
+        ControllerPresence.keyboardMouse=ControllerPresence.MOUSE|ControllerPresence.POINTER;Handler.advance(100);
         check(v.visibility==View.GONE && HaloPort.mice.equals(java.util.List.of(true)),"a mouse hides them and is told");
-        // a finger on the screen brings them back while the mouse is still there; using it hides them again
+        // a finger on the screen brings them back while the mouse is still there, and the game keeps the mouse;
+        // using it hides them again
         p.fingerUsed();
-        check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true,false)),"a finger: touch again");
+        check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true)),"a finger: touch again, mouse kept");
         p.deskUsed(true);
-        check(v.visibility==View.GONE && HaloPort.mice.equals(java.util.List.of(true,false,true)),"the mouse used: hidden");
+        check(v.visibility==View.GONE && HaloPort.mice.equals(java.util.List.of(true)),"the mouse used: hidden");
         ControllerPresence.keyboardMouse=0;Handler.advance(100);
-        check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true,false,true,false)),
+        check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true,false)),
             "both gone: the touch controls again, no mouse");
+        // a Chromebook's own touchpad (built in, 24.11.2026): the touch controls stay until it is used, but the game
+        // has the mouse at once, also after a finger and with the touch controls suppressed
+        HaloPort.mice.clear();ControllerPresence.keyboardMouse=ControllerPresence.POINTER;Handler.advance(100);
+        check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true)),"a built-in touchpad: the game has the mouse");
+        p.deskUsed(true);check(v.visibility==View.GONE && HaloPort.mice.equals(java.util.List.of(true)),"the touchpad used: hidden");
+        p.fingerUsed();check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true)),"a finger keeps the mouse");
+        p.touchControls(HaloPort.TOUCH_NEVER);check(v.visibility==View.GONE && HaloPort.mice.equals(java.util.List.of(true)),
+            "suppressed: still the mouse");
+        p.touchControls(HaloPort.TOUCH_AUTO);ControllerPresence.keyboardMouse=0;Handler.advance(100);
+        check(HaloPort.mice.equals(java.util.List.of(true,false)),"the touchpad gone: no mouse");
+        // a device that lists no mouse but sends a mouse's pointer: the game takes it, until a finger
+        HaloPort.mice.clear();p.deskUsed(true);check(HaloPort.mice.equals(java.util.List.of(true)),"an unlisted mouse used: told");
+        p.fingerUsed();Handler.advance(100);check(v.visibility==View.VISIBLE && HaloPort.mice.equals(java.util.List.of(true,false)),
+            "a finger: no mouse again");
         // a built-in keyboard (a Galaxy A36's listed one, a Chromebook's): nothing hides until a key is used
         HaloPort.mice.clear();p.deskUsed(false);
         check(v.visibility==View.GONE && HaloPort.mice.isEmpty(),"a built-in keyboard's key hides the touch controls");
