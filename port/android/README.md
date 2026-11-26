@@ -412,6 +412,9 @@ folder: first make a copy of `maps/` and `save/`.
 - **Unlock campaigns** (General): all ten levels in the CAMPAIGN menu.
   Turned off, the list is as before; levels played only because they were
   unlocked do not count as completed.
+- The mouse is no longer let go and taken again every 100 ms (1.1.3): while
+  the game captures it, Android lists it as a relative mouse, which now
+  counts as a mouse too (seen with a Retroid Pocket Flip 2's virtual mouse).
 
 ### Changes in 1.1.3
 

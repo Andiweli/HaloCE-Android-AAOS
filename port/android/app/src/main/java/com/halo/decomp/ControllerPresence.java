@@ -102,9 +102,13 @@ final class ControllerPresence {
             device.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC;
     }
 
-    /** A physical mouse (or a trackpad that moves a pointer), not a touch screen or a stylus. */
+    /** A physical mouse (or a trackpad that moves a pointer), not a touch screen or a stylus. While the game
+     *  captures it, Android lists it as a relative mouse (SOURCE_MOUSE_RELATIVE) instead: still a mouse, or the
+     *  game let it go and took it again every 100 ms (a Retroid Pocket Flip 2's virtual mouse, 26.11.2026). */
     static boolean isMouse(InputDevice device) {
-        return !device.isVirtual() && (device.getSources() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE;
+        int sources = device.getSources();
+        return !device.isVirtual() && ((sources & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE ||
+            (sources & InputDevice.SOURCE_MOUSE_RELATIVE) == InputDevice.SOURCE_MOUSE_RELATIVE);
     }
 
     static boolean claimsController(int sources) {

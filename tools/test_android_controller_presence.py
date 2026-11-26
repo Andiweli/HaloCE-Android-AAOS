@@ -30,7 +30,7 @@ stubs = {
     }''',
     "android/view/InputDevice": '''public class InputDevice {
         public static final int SOURCE_KEYBOARD=0x101,SOURCE_DPAD=0x201,SOURCE_GAMEPAD=0x401,
-            SOURCE_TOUCHSCREEN=0x1002,SOURCE_MOUSE=0x2002,SOURCE_JOYSTICK=0x1000010;
+            SOURCE_TOUCHSCREEN=0x1002,SOURCE_MOUSE=0x2002,SOURCE_MOUSE_RELATIVE=0x20004,SOURCE_JOYSTICK=0x1000010;
         public static final int KEYBOARD_TYPE_NONE=0,KEYBOARD_TYPE_NON_ALPHABETIC=1,KEYBOARD_TYPE_ALPHABETIC=2;
         public int keyboardType=KEYBOARD_TYPE_NON_ALPHABETIC;
         public InputDevice typed(int type){keyboardType=type;return this;}
@@ -121,6 +121,13 @@ public class PresenceTest {
         check(ControllerPresence.inputs(c)==(ControllerPresence.KEYBOARD|ControllerPresence.MOUSE|ControllerPresence.POINTER),"a mouse too");
         InputDevice.devices.remove(InputDevice.devices.size()-2);
         check(ControllerPresence.inputs(c)==(ControllerPresence.MOUSE|ControllerPresence.POINTER),"the mouse alone hides touch");
+        /* captured by the game, Android lists the mouse as a relative one: still a mouse (no 100 ms flapping) */
+        InputDevice.devices.add(new InputDevice("Retro Station Virtual Mouse",InputDevice.SOURCE_MOUSE_RELATIVE,false).plugged());
+        InputDevice.devices.remove(InputDevice.devices.size()-2);
+        check(ControllerPresence.inputs(c)==(ControllerPresence.MOUSE|ControllerPresence.POINTER),"a captured mouse is still a mouse");
+        InputDevice.devices.remove(InputDevice.devices.size()-1);
+        InputDevice.devices.add(new InputDevice("Logitech Mouse",InputDevice.SOURCE_MOUSE,false).plugged());
+        ControllerPresence.inputs(c);
         line=StartDiagnostics.lines.get(StartDiagnostics.lines.size()-1);
         check(line.contains("keyboards: none") && line.contains("mice: Logitech Mouse"),line);
         /* a controller whose device also says keyboard with letters is still a controller (it has a stick) */
