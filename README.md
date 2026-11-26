@@ -29,8 +29,8 @@ resolution, enlarged with SGSR or FSR where it is smaller than the screen.
 Use the AAOS build while parked.
 
 <p align=center>
-<img width="854" height="480" alt="image" src="https://github.com/user-attachments/assets/b8a476e3-f6a5-40bf-98e1-138493be4c47" />
-<img width="854" height="480" alt="image" src="https://github.com/user-attachments/assets/b37c8a66-ca90-4fef-b5cd-b602711c57a3" />
+<img width="854" height="480" alt="ingame-touch" src="https://github.com/user-attachments/assets/1757f953-6374-4472-8cd0-d0f0d8cb3038" />
+<img width="854" height="480" alt="ingamemenu" src="https://github.com/user-attachments/assets/56484956-ad80-49ea-ad66-ab9504cb0967" />
 </p>
 
 Requires **ARM64**, Android **9+** for mobile or **10+** for AAOS, and a compatible
