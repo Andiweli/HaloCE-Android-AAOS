@@ -39,6 +39,7 @@ final class SettingsOverlay {
     static native void nativeFrameRate(boolean sixty);
     static native void nativeTextureFilter(int level);
     static native void nativeCheats(int bits);
+    static native void nativeCampaignUnlocked(boolean on);
     static native void nativeCheatAction(int action);
     static native int nativeCheatResult(int action);
     static native void nativeMsaa(int samples);
@@ -101,7 +102,18 @@ final class SettingsOverlay {
     static final String SOURCE_URL="https://github.com/Andiweli/HaloCE-Android-AAOS";
     // the cheats: the switches' bits and the buttons as halo_android_controls.h numbers them
     static final int CHEAT_HEALTH=1, CHEAT_AMMO=2, CHEAT_RELOAD=4, CHEAT_ONE_HIT=8, CHEAT_SWITCHES=15;
-    static final int ACTION_WEAPONS=0, ACTION_WARTHOG=1;
+    static final int ACTION_WEAPONS=0, ACTION_WARTHOG=1, ACTION_SCORPION=2, ACTION_GHOST=3, ACTION_BANSHEE=4;
+    // each button's label, its answer when done and when the level has none of it (the weapons: always there)
+    private static final int[] ACTION_LABELS={R.string.menu_cheat_weapons,R.string.menu_cheat_warthog,
+        R.string.menu_cheat_scorpion,R.string.menu_cheat_ghost,R.string.menu_cheat_banshee};
+    private static final int[] ACTION_DONE={R.string.menu_cheat_weapons_done,R.string.menu_cheat_warthog_done,
+        R.string.menu_cheat_scorpion_done,R.string.menu_cheat_ghost_done,R.string.menu_cheat_banshee_done};
+    private static final int[] ACTION_MISSING={R.string.menu_cheat_none,R.string.menu_cheat_none,
+        R.string.menu_cheat_no_scorpion,R.string.menu_cheat_no_ghost,R.string.menu_cheat_no_banshee};
+    /** The answer the menu shows for a button's result. */
+    static int cheatAnswer(int what,int result) {
+        return result==RESULT_DONE?ACTION_DONE[what]:result==RESULT_MISSING?ACTION_MISSING[what]:R.string.menu_cheat_no_game;
+    }
     static final int RESULT_NONE=0, RESULT_PENDING=1, RESULT_DONE=2, RESULT_MISSING=3, RESULT_NO_GAME=4;
     private static final long CHEAT_FLASH_MS=1500, CHEAT_WAIT_MS=3000;
 
@@ -178,7 +190,7 @@ final class SettingsOverlay {
     // 60 FPS with interpolation; off, the original 30 (sdl_platform.c)
     private boolean sixtyFps;
     private int textureFilter, cheatBits, msaaSamples, resolutionLines, upscalerChoice;
-    private boolean depthOfField, fxaa, fpsDisplay, mouseInvert;
+    private boolean depthOfField, fxaa, fpsDisplay, mouseInvert, campaignUnlocked;
     private int dofStrength, mouseSensitivity, touchSetting;
     private final FpsCounter fps;
     private FrameLayout root;
@@ -211,6 +223,7 @@ final class SettingsOverlay {
         sixtyFps=prefs.getBoolean("sixty_fps",false);
         textureFilter=filter(prefs.getInt("texture_filter",DEFAULT_FILTER));
         cheatBits=prefs.getInt("cheats",0)&CHEAT_SWITCHES;
+        campaignUnlocked=prefs.getBoolean("campaign_unlocked",false);
         msaaSamples=msaa(prefs.getInt("msaa",0));
         depthOfField=prefs.getBoolean("depth_of_field",false);
         dofStrength=dofStrength(prefs.getInt("depth_of_field_strength",DOF_DEFAULT));
@@ -226,6 +239,7 @@ final class SettingsOverlay {
         apply();
         nativeTextureFilter(textureFilter);
         nativeCheats(cheatBits);
+        nativeCampaignUnlocked(campaignUnlocked);
         nativeMsaa(msaaSamples);
         nativeDepthOfField(depthOfField);
         nativeDepthOfFieldStrength(dofStrength);
@@ -707,7 +721,7 @@ final class SettingsOverlay {
         heading(R.string.menu_cheat_switches);
         int[] labels={R.string.menu_cheat_health,R.string.menu_cheat_ammo,R.string.menu_cheat_reload,R.string.menu_cheat_onehit};
         int[] bits={CHEAT_HEALTH,CHEAT_AMMO,CHEAT_RELOAD,CHEAT_ONE_HIT};
-        LinearLayout player=labelled(R.string.menu_side_player);
+        LinearLayout player=labelled(R.string.menu_side_switches);
         MenuLayout.Buttons first=pair(player),second=pair(player);
         for(int i=0;i<labels.length;i++){
             final int bit=bits[i];
@@ -717,13 +731,24 @@ final class SettingsOverlay {
         }
         heading(R.string.menu_cheat_actions);
         LinearLayout objects=labelled(R.string.menu_side_objects);
-        MenuLayout.Buttons spawn=pair(objects);
-        cellAction(spawn,s(R.string.menu_cheat_weapons),v->cheatAction(v,ACTION_WEAPONS));
-        cellAction(spawn,s(R.string.menu_cheat_warthog),v->cheatAction(v,ACTION_WARTHOG));
+        // all weapons across both columns, the vehicles two by two under it (wish of the project owner, 26.11.2026)
+        cellAction(single(objects),s(ACTION_LABELS[ACTION_WEAPONS]),v->cheatAction(v,ACTION_WEAPONS));
+        MenuLayout.Buttons vehicles=null;
+        for(int what=ACTION_WARTHOG;what<=ACTION_BANSHEE;what++){
+            if((what-ACTION_WARTHOG)%2==0)vehicles=pair(objects);
+            final int action=what;
+            cellAction(vehicles,s(ACTION_LABELS[what]),v->cheatAction(v,action));
+        }
         cheatStatus=text("",15,false);cheatStatus.setPadding(dp(MenuLayout.GAP),dp(6),dp(MenuLayout.GAP),dp(2));
         cheatStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);cheatStatus.setVisibility(View.GONE);
         objects.addView(cheatStatus);
         help(R.string.menu_cheats_help);
+        // the campaign's ten levels, the profile's progress kept (ui_widget_event_handler_functions.c, player_profile.c)
+        heading(R.string.menu_general);
+        toggle(single(labelled(R.string.menu_side_campaign)),s(R.string.menu_campaign_unlock),campaignUnlocked,on->{
+            campaignUnlocked=on;nativeCampaignUnlocked(on);prefs.edit().putBoolean("campaign_unlocked",on).apply();
+        });
+        help(R.string.menu_campaign_help);
     }
     /** A button lit for a moment; the game does it in its next frame (cheats.c) and answers. */
     private void cheatAction(View pressed,int what){
@@ -737,9 +762,7 @@ final class SettingsOverlay {
                 if(!isOpen() || serial!=mine || cheatStatus==null)return;
                 int result=nativeCheatResult(what);
                 if(result==RESULT_PENDING && android.os.SystemClock.uptimeMillis()<until){root.postDelayed(this,50);return;}
-                int text=result==RESULT_DONE?(what==ACTION_WEAPONS?R.string.menu_cheat_weapons_done:R.string.menu_cheat_warthog_done)
-                    :result==RESULT_MISSING?R.string.menu_cheat_none:R.string.menu_cheat_no_game;
-                cheatStatus.setText(text);cheatStatus.setVisibility(View.VISIBLE);
+                cheatStatus.setText(cheatAnswer(what,result));cheatStatus.setVisibility(View.VISIBLE);
             }
         });
     }

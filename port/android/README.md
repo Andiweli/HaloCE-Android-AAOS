@@ -335,15 +335,24 @@ where it is full come nearer.
 `tools/test_android_depth_of_field.py` runs its shaders and FXAA's in
 Chromium's WebGL2 (the GLSL ES of the phones) on made-up frames.
 
-**Cheats**: the switches *Infinite health*, *Infinite ammo*, *Never
-reload* and *One-hit kill* set the original game's `cheat_deathless_player`,
-`cheat_infinite_ammo`, `cheat_bottomless_clip` and `cheat_omnipotent`; they
-stay on, also after a restart, until switched off. *All weapons* lays the
-level's weapons around the player (`cheat_all_weapons`), *Spawn Warthog*
-puts the level's Warthog in front of the player, if the level has one (The
-Pillar of Autumn has none). In another player's network game the host's
-rules apply and the cheats are off (`android_cheats_update` in
-`source/game/cheats.c`). `tools/test_android_ingame_menu.py` checks the
+**Cheats**, in three sections. **Player**: the switches *Infinite health*,
+*Infinite ammo*, *Never reload* and *One-hit kill* set the original game's
+`cheat_deathless_player`, `cheat_infinite_ammo`, `cheat_bottomless_clip` and
+`cheat_omnipotent`; they stay on, also after a restart, until switched off.
+**Items and spawning**: *All weapons* (across both columns) lays the level's
+weapons around the player (`cheat_all_weapons`); *Spawn Warthog*, *Spawn
+Scorpion*, *Spawn Ghost* and *Spawn Banshee* put the level's vehicle of
+that kind in front of the player, if the level has one (The Pillar of
+Autumn has no Warthog, most levels no Scorpion). In another player's
+network game the host's rules apply and the cheats are off
+(`android_cheats_update` in `source/game/cheats.c`). **General**: *Unlock
+campaigns* shows and starts all ten levels in the CAMPAIGN menu
+(`ANDROID_CAMPAIGN_UNLOCKED` in
+`source/interface/ui_widget_event_handler_functions.c`). The profile is not
+changed: a level played only because it is unlocked is kept neither as
+completed nor as the last one played (`player_profile.c`), so turned off,
+the list shows the player's own levels and starts where they were. The
+list is made when it opens, so it changes the next time it is opened. `tools/test_android_ingame_menu.py` checks the
 texts, the keys and the cheats from the menu to the game.
 
 The game shows 30 frames each second, as on the Xbox: the host starts it
@@ -394,6 +403,15 @@ signature. GitHub Actions signs each build with the key in the
 repository. If you installed a build that has a different signature, remove
 that build before you install a new build. Removing the app deletes its data
 folder: first make a copy of `maps/` and `save/`.
+
+### Changes in 1.1.4
+
+- In-game menu, Cheats: the sections are now **Player**, **Items and
+  spawning** and **General**. *All weapons* spans both columns; under it
+  *Spawn Warthog*, *Spawn Scorpion*, *Spawn Ghost* and *Spawn Banshee*.
+- **Unlock campaigns** (General): all ten levels in the CAMPAIGN menu.
+  Turned off, the list is as before; levels played only because they were
+  unlocked do not count as completed.
 
 ### Changes in 1.1.3
 

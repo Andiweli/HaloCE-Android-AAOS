@@ -928,6 +928,17 @@ symbols in this file:
 #include "saved games/saved_game_files.h"
 #include "text/unicode.h"
 
+#ifdef HALO_ANDROID
+#include "halo_android_controls.h"
+/* port: the in-game menu's "Unlock campaigns" (SettingsOverlay.java): the
+campaign's list shows and starts all ten levels while it is on; the levels'
+completion marks stay the profile's, and the profile keeps only the levels
+played to (player_profile.c), so turned off, the list is as before */
+#define ANDROID_CAMPAIGN_UNLOCKED (host_settings_campaign_unlocked()!=0)
+#else
+#define ANDROID_CAMPAIGN_UNLOCKED FALSE
+#endif
+
 /* ---------- constants */
 
 /* ---------- macros */
@@ -4062,7 +4073,7 @@ static boolean solo_level_initialize_list_coop(
 		for (level_index = 0; level_index < 10; level_index++)
 		{
 			((struct single_player_level_entry *)single_player_level_data)[level_index].map_name = (&event_handler_functions.map_name)[level_index];
-			if (profile0.single_player_map_flags[level_index] || level_index == highest_levels[0] + 1 || profile1.single_player_map_flags[level_index] || level_index == highest_levels[1] + 1 || level_index == 0)
+			if (ANDROID_CAMPAIGN_UNLOCKED || profile0.single_player_map_flags[level_index] || level_index == highest_levels[0] + 1 || profile1.single_player_map_flags[level_index] || level_index == highest_levels[1] + 1 || level_index == 0)
 			{
 				unsigned long level_flags;
 
@@ -4187,7 +4198,7 @@ static boolean solo_level_set_next_map_name(
 	case 1:
 		player_ui_get_active_player_profile(0, &profile);
 		player_profile_get_highest_completed_solo_level(&profile, &highest_level, &highest_difficulty);
-		if (profile.single_player_map_flags[list_widget->data3C.selected_index] || list_widget->data3C.selected_index == highest_level + 1 || list_widget->data3C.selected_index == 0)
+		if (ANDROID_CAMPAIGN_UNLOCKED || profile.single_player_map_flags[list_widget->data3C.selected_index] || list_widget->data3C.selected_index == highest_level + 1 || list_widget->data3C.selected_index == 0)
 			result = TRUE;
 		player_ui_remember_player1_profile(0);
 	case 2:
@@ -4198,7 +4209,7 @@ static boolean solo_level_set_next_map_name(
 			{
 				player_ui_get_active_player_profile(local_player_index, &profile);
 				player_profile_get_highest_completed_solo_level(&profile, &highest_level, &highest_difficulty);
-				if (profile.single_player_map_flags[list_widget->data3C.selected_index] || list_widget->data3C.selected_index == highest_level + 1 || list_widget->data3C.selected_index == 0)
+				if (ANDROID_CAMPAIGN_UNLOCKED || profile.single_player_map_flags[list_widget->data3C.selected_index] || list_widget->data3C.selected_index == highest_level + 1 || list_widget->data3C.selected_index == 0)
 				{
 					result = TRUE;
 					break;
@@ -5712,7 +5723,7 @@ static boolean solo_level_initialize_list_single_player(
 
 		((struct single_player_level_entry *)single_player_level_data)[level_index].map_name =
 			(&event_handler_functions.map_name)[level_index];
-		if (profile.single_player_map_flags[level_index] || level_index == highest_level + 1 || level_index == 0)
+		if (ANDROID_CAMPAIGN_UNLOCKED || profile.single_player_map_flags[level_index] || level_index == highest_level + 1 || level_index == 0)
 		{
 			level_flags = (char)profile.single_player_map_flags[level_index];
 			((struct single_player_level_entry *)single_player_level_data)[level_index].unknown5 = (level_flags >> 1) & 1;

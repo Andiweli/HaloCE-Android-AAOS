@@ -120,6 +120,9 @@ symbols in this file:
 #include "interface/player_ui.h"
 #include "saved games/saved_game_files.h"
 #include "saved games/player_profile.h"
+#ifdef HALO_ANDROID
+#include "halo_android_controls.h"
+#endif
 
 #include <xtl.h>
 
@@ -550,6 +553,25 @@ void player_profile_save(
 	return;
 }
 
+#ifdef HALO_ANDROID
+/* port: while the in-game menu's "Unlock campaigns" is on, a level the
+player has not played to (not completed, not the next one, not the first)
+is not kept, neither as completed nor as the last one played, so turned
+off, the campaign's list is what the player played to */
+static boolean android_level_unearned(
+	struct player_profile *profile,
+	short level)
+{
+	short highest_level;
+	short highest_difficulty;
+
+	if (!host_settings_campaign_unlocked())
+		return FALSE;
+	player_profile_get_highest_completed_solo_level(profile, &highest_level, &highest_difficulty);
+	return !profile->single_player_map_flags[level] && level != highest_level + 1 && level != 0;
+}
+#endif
+
 void player_profile_save_last_level_played(
 	short local_player_index)
 {
@@ -569,6 +591,13 @@ void player_profile_save_last_level_played(
 		{
 			player_ui_get_active_player_profile(local_player_index, &profile);
 
+#ifdef HALO_ANDROID
+			if (android_level_unearned(&profile, level))
+			{
+				error(_error_silent, "unlocked campaign: level %d not kept as the last played", level);
+				return;
+			}
+#endif
 			if (profile.last_single_player_map_played != level)
 			{
 				profile.last_single_player_map_played = level;
@@ -606,6 +635,13 @@ void player_profile_save_level_completed(
 	{
 		player_ui_get_active_player_profile(local_player_index, &profile);
 
+#ifdef HALO_ANDROID
+		if (android_level_unearned(&profile, level))
+		{
+			error(_error_silent, "unlocked campaign: level %d not kept as completed", level);
+			return;
+		}
+#endif
 		profile.single_player_map_flags[level] |= FLAG(difficulty);
 
 		player_profile_write(player_profile_index, &profile);

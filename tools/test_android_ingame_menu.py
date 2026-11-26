@@ -174,6 +174,31 @@ assert controls_page.index('R.string.menu_touch') < controls_page.index('R.strin
 assert 'selector(touch,R.string.menu_touch_controls' in controls_page and 'activity.touchControls(setting)' in controls_page
 assert 'prefs.edit().putInt(HaloPort.TOUCH_KEY,setting)' in controls_page
 assert strings('values-de')['menu_touch_always'] == 'Erzwingen' and strings('values-de')['menu_touch_never'] == 'Unterdrücken'
+# the cheats page (26.11.2026): Player, Items and spawning with all weapons across both columns and four vehicles
+# two by two, General with the campaign's unlock, kept and sent at the start and on each change
+cheats_page = method('private void cheats(')
+assert cheats_page.index('R.string.menu_cheat_switches') < cheats_page.index('R.string.menu_cheat_actions') < \
+    cheats_page.index('R.string.menu_general'), 'Player, Items and spawning, General'
+assert 'cellAction(single(objects),s(ACTION_LABELS[ACTION_WEAPONS])' in cheats_page, 'all weapons across both columns'
+assert 'for(int what=ACTION_WARTHOG;what<=ACTION_BANSHEE;what++)' in cheats_page and 'vehicles=pair(objects)' in cheats_page
+assert 'toggle(single(labelled(R.string.menu_side_campaign)),s(R.string.menu_campaign_unlock),campaignUnlocked' in cheats_page
+assert 'nativeCampaignUnlocked(on)' in cheats_page and 'putBoolean("campaign_unlocked",on)' in cheats_page
+assert 'nativeCampaignUnlocked(campaignUnlocked);' in overlay
+assert 'host_settings_campaign_unlocked' in (ROOT / 'port/android/host_imports.list').read_text().split(), 'the game asks the menu for the unlock'
+de = strings('values-de')
+assert (de['menu_cheat_switches'], de['menu_cheat_actions'], de['menu_general']) == ('Spieler', 'Items und Spawnen', 'Allgemein')
+assert (de['menu_campaign_unlock'], de['menu_cheat_scorpion'], de['menu_cheat_ghost'], de['menu_cheat_banshee']) == \
+    ('Kampagnen freischalten', 'Scorpion spawnen', 'Ghost spawnen', 'Banshee spawnen')
+# the game: the list shows all ten while it is on, the profile keeps only the levels played to
+handlers = (ROOT / 'source/interface/ui_widget_event_handler_functions.c').read_text()
+assert handlers.count('if (ANDROID_CAMPAIGN_UNLOCKED || ') == 4, 'both lists and both starts'
+assert '#define ANDROID_CAMPAIGN_UNLOCKED FALSE' in handlers, 'the other ports as they were'
+profile_source = (ROOT / 'source/saved games/player_profile.c').read_text()
+assert profile_source.count('if (android_level_unearned(&profile, level))') == 2, 'neither completed nor last played'
+# the vehicles: by their tags' names, each its distance ahead
+cheats_source = (ROOT / 'source/game/cheats.c').read_text()
+for name in ('"warthog", "rwarthog"', '"scorpion"', '"ghost"', '"banshee"'):
+    assert name in cheats_source, name
 # the FPS display: its frame shows and hides it, the line itself never hidden (it never showed so)
 fps_source = (ROOT / 'port/android/app/src/main/java/com/halo/decomp/FpsCounter.java').read_text()
 assert 'view.setVisibility(' not in fps_source and 'frame.setVisibility(shown ? View.VISIBLE : View.GONE)' in fps_source
@@ -189,7 +214,7 @@ assert 'enableUpscaler(upscaling[0],upscales(resolutionLines,screenLines))' in d
 assert 'nativeResolution(resolutionLines);' in overlay and 'nativeUpscaler(upscalerChoice);' in overlay
 for key in ('"resolution"', '"upscaler"'):
     assert overlay.count(key) >= 2, key + ' read and kept'
-for key in ('"texture_filter"', '"cheats"', '"msaa"', '"depth_of_field"', '"depth_of_field_strength"', '"fxaa"',
+for key in ('"texture_filter"', '"cheats"', '"campaign_unlocked"', '"msaa"', '"depth_of_field"', '"depth_of_field_strength"', '"fxaa"',
             '"fps_display"', '"sixty_fps"', '"gyro_aim"', '"gyro_invert_pitch"', '"mouse_sensitivity"', '"mouse_invert"'):
     assert overlay.count(key) >= 2, key + ' read and kept'
 controls_page = method('private void controls(')
@@ -254,13 +279,13 @@ controls = (ROOT / 'port/linux/include/halo_android_controls.h').read_text()
 touch = (ROOT / 'port/android/host/host_touch.c').read_text()
 cheats = (ROOT / 'source/game/cheats.c').read_text()
 mailbox = touch[touch.index('/* the menu\'s cheats: the switches'):]
-mailbox = mailbox[:mailbox.index('\n}\n', mailbox.index('void host_settings_cheat_done(')) + 3]
+mailbox = mailbox[:mailbox.index('\n}\n', mailbox.index('int host_settings_campaign_unlocked(')) + 3]
 c = r'''
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
-typedef int jint; typedef void JNIEnv; typedef void *jclass;
+typedef int jint; typedef unsigned char jboolean; typedef void JNIEnv; typedef void *jclass;
 #define JNIEXPORT
 #define JNICALL
 typedef int boolean;
@@ -272,17 +297,23 @@ static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 struct { boolean deathless_player, infinite_ammo, omnipotent, bottomless_clip; } cheat;
 enum { _error_log };
 static void error(int kind, const char *format, ...) { (void)kind; (void)format; }
-static boolean distributed, warthog_here;
+static boolean distributed, warthog_here, banshee_here;
 static long player = 0;
-static int weapons, warthogs;
+static int weapons, warthogs, banshees;
 static boolean network_game_distributed_client(void) { return distributed; }
 static long cheat_player_index(void) { return player; }
 static void cheat_all_weapons(void) { weapons++; }
-static boolean android_cheat_spawn_warthog(void) { if (!warthog_here) return FALSE; warthogs++; return TRUE; }
+static boolean android_cheat_spawn_vehicle(short action)
+{
+	if (action == HALO_ANDROID_CHEAT_ACTION_WARTHOG && warthog_here) { warthogs++; return TRUE; }
+	if (action == HALO_ANDROID_CHEAT_ACTION_BANSHEE && banshee_here) { banshees++; return TRUE; }
+	return FALSE;
+}
 ''' + mailbox + function(cheats, 'android_cheats_update') + r'''
 #define nativeCheats Java_com_halo_decomp_SettingsOverlay_nativeCheats
 #define nativeAction Java_com_halo_decomp_SettingsOverlay_nativeCheatAction
 #define nativeResult Java_com_halo_decomp_SettingsOverlay_nativeCheatResult
+#define nativeCampaign Java_com_halo_decomp_SettingsOverlay_nativeCampaignUnlocked
 int main(void)
 {
 	android_cheats_update(TRUE);  /* the first frame: all four as the menu has them (off) */
@@ -322,6 +353,22 @@ int main(void)
 	nativeAction(0, 0, HALO_ANDROID_CHEAT_ACTION_WARTHOG);
 	android_cheats_update(TRUE);
 	assert(warthogs == 1 && nativeResult(0, 0, HALO_ANDROID_CHEAT_ACTION_WARTHOG) == HALO_ANDROID_CHEAT_RESULT_DONE);
+	/* the other vehicles (26.11.2026): each one its own answer, where the level has it */
+	banshee_here = TRUE;
+	nativeAction(0, 0, HALO_ANDROID_CHEAT_ACTION_SCORPION);
+	nativeAction(0, 0, HALO_ANDROID_CHEAT_ACTION_GHOST);
+	nativeAction(0, 0, HALO_ANDROID_CHEAT_ACTION_BANSHEE);
+	android_cheats_update(TRUE);
+	assert(banshees == 1 && warthogs == 1);
+	assert(nativeResult(0, 0, HALO_ANDROID_CHEAT_ACTION_SCORPION) == HALO_ANDROID_CHEAT_RESULT_MISSING);
+	assert(nativeResult(0, 0, HALO_ANDROID_CHEAT_ACTION_GHOST) == HALO_ANDROID_CHEAT_RESULT_MISSING);
+	assert(nativeResult(0, 0, HALO_ANDROID_CHEAT_ACTION_BANSHEE) == HALO_ANDROID_CHEAT_RESULT_DONE);
+	/* the campaign's unlock: off at first, as the menu sets it */
+	assert(!host_settings_campaign_unlocked());
+	nativeCampaign(0, 0, 1);
+	assert(host_settings_campaign_unlocked());
+	nativeCampaign(0, 0, 0);
+	assert(!host_settings_campaign_unlocked());
 	/* the main menu (no game, no player) */
 	nativeAction(0, 0, HALO_ANDROID_CHEAT_ACTION_WARTHOG);
 	android_cheats_update(FALSE);

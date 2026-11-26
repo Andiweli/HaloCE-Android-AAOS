@@ -38,7 +38,10 @@ while on; the buttons, each done once in the game's next frame. */
 #define HALO_ANDROID_CHEAT_SWITCHES 15u
 #define HALO_ANDROID_CHEAT_ACTION_WEAPONS 0
 #define HALO_ANDROID_CHEAT_ACTION_WARTHOG 1
-#define HALO_ANDROID_CHEAT_ACTIONS 2
+#define HALO_ANDROID_CHEAT_ACTION_SCORPION 2
+#define HALO_ANDROID_CHEAT_ACTION_GHOST 3
+#define HALO_ANDROID_CHEAT_ACTION_BANSHEE 4
+#define HALO_ANDROID_CHEAT_ACTIONS 5
 #define HALO_ANDROID_CHEAT_RESULT_NONE 0
 #define HALO_ANDROID_CHEAT_RESULT_PENDING 1
 #define HALO_ANDROID_CHEAT_RESULT_DONE 2
@@ -47,6 +50,9 @@ while on; the buttons, each done once in the game's next frame. */
 /* The switches; *actions gets the buttons pressed since the last call (bit = action). */
 unsigned int host_settings_cheats(unsigned int *actions);
 void host_settings_cheat_done(int action, int result);
+/* Nonzero: the menu's "Unlock campaigns" (General): the campaign's list shows
+all ten levels; the profile keeps only what was played to (player_profile.c). */
+int host_settings_campaign_unlocked(void);
 float host_audio_gain(int category);
 void host_audio_profile(const char *key);
 int host_audio_level(int category);

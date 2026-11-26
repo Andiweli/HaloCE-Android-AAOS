@@ -267,6 +267,15 @@ void host_settings_cheat_done(int action,int result) {
     if(action<0||action>=HALO_ANDROID_CHEAT_ACTIONS) return;
     pthread_mutex_lock(&lock); settings_cheat_results[action]=result; pthread_mutex_unlock(&lock);
 }
+/* the menu's "Unlock campaigns" (SettingsOverlay, General): the campaign's
+list asks each time it is built (ui_widget_event_handler_functions.c) */
+static int settings_campaign_unlocked;
+JNIEXPORT void JNICALL Java_com_halo_decomp_SettingsOverlay_nativeCampaignUnlocked(JNIEnv *e,jclass c,jboolean on) {
+    pthread_mutex_lock(&lock); settings_campaign_unlocked=on!=0; pthread_mutex_unlock(&lock);
+}
+int host_settings_campaign_unlocked(void) {
+    pthread_mutex_lock(&lock); int on=settings_campaign_unlocked; pthread_mutex_unlock(&lock); return on;
+}
 /* the menu's anti-aliasing (0 off, 2 or 4 samples) and depth of field;
 d3d8_gl.c asks once a frame and says once what the GPU allows (the menu
 leaves the larger choices off): -1 not yet known, 0 none */

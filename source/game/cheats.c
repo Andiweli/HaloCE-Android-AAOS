@@ -476,14 +476,32 @@ void cheat_all_vehicles(
 #include "units/vehicle_definitions.h"
 #include "tag_files/tag_files.h"
 
-/* port: the in-game menu's Warthog (SettingsOverlay.java): the map's
-Warthog, the plain one before the rocket one, or NONE where the map has
-none (The Pillar of Autumn's) */
-static long android_cheat_warthog(
-	void)
+/* port: the in-game menu's vehicles (SettingsOverlay.java), by the name
+of their tag, and how far ahead of the player each one stands, so that it
+does not land on him (the Scorpion and the Banshee are larger) */
+static struct
+{
+	char const *name;
+	char const *variant; /* taken only where the map has no plain one */
+	real distance;
+} const android_cheat_vehicles[HALO_ANDROID_CHEAT_ACTIONS] =
+{
+	{ NULL, NULL, 0.0f },               /* HALO_ANDROID_CHEAT_ACTION_WEAPONS */
+	{ "warthog", "rwarthog", 4.5f },    /* the plain one before the rocket one */
+	{ "scorpion", NULL, 7.0f },
+	{ "ghost", NULL, 4.0f },
+	{ "banshee", NULL, 6.0f },
+};
+
+/* port: the map's vehicle of that kind, or NONE where the map has none
+(The Pillar of Autumn has no Warthog, most levels no Scorpion) */
+static long android_cheat_vehicle(
+	short action)
 {
 	struct tag_iterator iterator;
 	long tag_index, found = NONE;
+	char const *wanted = android_cheat_vehicles[action].name;
+	char const *variant = android_cheat_vehicles[action].variant;
 
 	tag_iterator_new(&iterator, VEHICLE_DEFINITION_TAG);
 	for (tag_index = tag_iterator_next(&iterator);
@@ -492,9 +510,9 @@ static long android_cheat_warthog(
 	{
 		char const *name = tag_get_name(tag_index);
 
-		if (name && strstr(name, "warthog"))
+		if (name && strstr(name, wanted))
 		{
-			if (!strstr(name, "rwarthog"))
+			if (!variant || !strstr(name, variant))
 				return tag_index;
 			if (found==NONE)
 				found = tag_index;
@@ -504,12 +522,13 @@ static long android_cheat_warthog(
 	return found;
 }
 
-/* port: it a few metres ahead of the player, where it does not land on him */
-static boolean android_cheat_spawn_warthog(
-	void)
+/* port: it a few metres ahead of the player */
+static boolean android_cheat_spawn_vehicle(
+	short action)
 {
 	long player_index = cheat_player_index();
-	long definition_index = android_cheat_warthog();
+	long definition_index = android_cheat_vehicle(action);
+	real distance = android_cheat_vehicles[action].distance;
 	struct object_placement_data data;
 	struct player_datum *player;
 	real_point3d origin;
@@ -532,8 +551,8 @@ static boolean android_cheat_spawn_warthog(
 	forward.j /= length;
 	forward.k = 0.0f;
 	object_placement_data_new(&data, definition_index, NONE);
-	data.position.x = origin.x+forward.i*4.5f;
-	data.position.y = origin.y+forward.j*4.5f;
+	data.position.x = origin.x+forward.i*distance;
+	data.position.y = origin.y+forward.j*distance;
 	data.position.z = origin.z+0.6f;
 	data.forward = forward;
 	data.up.i = 0.0f;
@@ -598,7 +617,7 @@ void android_cheats_update(
 			result = HALO_ANDROID_CHEAT_RESULT_DONE;
 		}
 		else
-			result = android_cheat_spawn_warthog() ? HALO_ANDROID_CHEAT_RESULT_DONE : HALO_ANDROID_CHEAT_RESULT_MISSING;
+			result = android_cheat_spawn_vehicle(action) ? HALO_ANDROID_CHEAT_RESULT_DONE : HALO_ANDROID_CHEAT_RESULT_MISSING;
 		host_settings_cheat_done(action, result);
 	}
 
