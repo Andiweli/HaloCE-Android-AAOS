@@ -20,6 +20,10 @@ import android.view.InputDevice;
  */
 final class ControllerPresence {
     private static String reported = "";
+    // the devices seen as a mouse while they stay connected: captured by the game, Android lists a mouse with
+    // other sources (a relative mouse, or none of a mouse's at all on a Retroid Pocket Flip 2), and the game let
+    // it go and took it again every 100 ms (26.11.2026)
+    private static final java.util.Set<Integer> mice = new java.util.HashSet<>();
 
     private ControllerPresence() {
     }
@@ -41,23 +45,26 @@ final class ControllerPresence {
      *  controls hide with any of them. */
     static int inputs(Context context) {
         int found = 0;
-        StringBuilder devices = new StringBuilder(), keyboards = new StringBuilder(), mice = new StringBuilder();
+        StringBuilder devices = new StringBuilder(), keyboards = new StringBuilder(), mouseNames = new StringBuilder();
+        java.util.Set<Integer> present = new java.util.HashSet<>();
 
         for (int id : InputDevice.getDeviceIds()) {
             InputDevice device = InputDevice.getDevice(id);
 
             if (device == null)
                 continue;
+            present.add(id);
             boolean connected = connected(device);
             if (isKeyboard(device)) {
                 if (connected) found |= KEYBOARD;
                 keyboards.append(keyboards.length() == 0 ? "" : "; ").append(device.getName())
                     .append(connected ? "" : " (built in: when used)");
             }
-            if (isMouse(device)) {
+            if (isMouse(device)) mice.add(id);
+            if (mice.contains(id)) {
                 found |= POINTER;
                 if (connected) found |= MOUSE;
-                mice.append(mice.length() == 0 ? "" : "; ").append(device.getName())
+                mouseNames.append(mouseNames.length() == 0 ? "" : "; ").append(device.getName())
                     .append(connected ? "" : " (built in: when used)");
             }
             if (!claimsController(device.getSources()) || isKeyboard(device))
@@ -69,13 +76,14 @@ final class ControllerPresence {
                 .append(controller ? " (controller)" : device.isVirtual() ? " (virtual, ignored)" :
                     " (no stick or D-pad axes, ignored)");
         }
+        mice.retainAll(present);
         // each change once in Logcat and the diagnostic file
-        String report = devices + "|" + keyboards + "|" + mice;
+        String report = devices + "|" + keyboards + "|" + mouseNames;
         if (!report.equals(reported)) {
             reported = report;
             String line = "input devices: " + ((found & HIDING) != 0 ? "hide the touch controls" : "leave the touch controls") + "; gamepad devices: " +
                 (devices.length() == 0 ? "none" : devices) + "; keyboards: " +
-                (keyboards.length() == 0 ? "none" : keyboards) + "; mice: " + (mice.length() == 0 ? "none" : mice);
+                (keyboards.length() == 0 ? "none" : keyboards) + "; mice: " + (mouseNames.length() == 0 ? "none" : mouseNames);
             android.util.Log.i("halo", line);
             StartDiagnostics.append(context, line);
         }

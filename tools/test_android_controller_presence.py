@@ -39,11 +39,11 @@ stubs = {
         public boolean isExternal(){return external;}
         public int getKeyboardType(){return keyboardType;}
         public static final java.util.List<InputDevice> devices=new java.util.ArrayList<>();
-        final String name;final int sources;final boolean virtual;final java.util.Set<Integer> axes=new java.util.HashSet<>();
+        static int next;final int id=next++;final String name;public int sources;final boolean virtual;final java.util.Set<Integer> axes=new java.util.HashSet<>();
         public InputDevice(String name,int sources,boolean virtual,int... axes){
             this.name=name;this.sources=sources;this.virtual=virtual;for(int a:axes)this.axes.add(a);}
-        public static int[] getDeviceIds(){int[] ids=new int[devices.size()];for(int i=0;i<ids.length;i++)ids[i]=i;return ids;}
-        public static InputDevice getDevice(int id){return id<devices.size()?devices.get(id):null;}
+        public static int[] getDeviceIds(){int[] ids=new int[devices.size()];for(int i=0;i<ids.length;i++)ids[i]=devices.get(i).id;return ids;}
+        public static InputDevice getDevice(int id){for(InputDevice d:devices)if(d.id==id)return d;return null;}
         public int getSources(){return sources;}
         public boolean isVirtual(){return virtual;}
         public String getName(){return name;}
@@ -121,7 +121,12 @@ public class PresenceTest {
         check(ControllerPresence.inputs(c)==(ControllerPresence.KEYBOARD|ControllerPresence.MOUSE|ControllerPresence.POINTER),"a mouse too");
         InputDevice.devices.remove(InputDevice.devices.size()-2);
         check(ControllerPresence.inputs(c)==(ControllerPresence.MOUSE|ControllerPresence.POINTER),"the mouse alone hides touch");
-        /* captured by the game, Android lists the mouse as a relative one: still a mouse (no 100 ms flapping) */
+        /* captured by the game, Android may list a mouse with other sources: the same device stays a mouse while
+           it is connected (no 100 ms flapping, Retroid Pocket Flip 2) */
+        InputDevice.devices.get(InputDevice.devices.size()-1).sources=InputDevice.SOURCE_KEYBOARD;
+        check(ControllerPresence.inputs(c)==(ControllerPresence.MOUSE|ControllerPresence.POINTER),"a mouse whose sources change stays a mouse");
+        InputDevice.devices.get(InputDevice.devices.size()-1).sources=InputDevice.SOURCE_MOUSE;
+        /* captured by the game, Android lists the mouse as a relative one: still a mouse */
         InputDevice.devices.add(new InputDevice("Retro Station Virtual Mouse",InputDevice.SOURCE_MOUSE_RELATIVE,false).plugged());
         InputDevice.devices.remove(InputDevice.devices.size()-2);
         check(ControllerPresence.inputs(c)==(ControllerPresence.MOUSE|ControllerPresence.POINTER),"a captured mouse is still a mouse");

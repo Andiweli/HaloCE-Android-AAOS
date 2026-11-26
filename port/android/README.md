@@ -413,8 +413,9 @@ folder: first make a copy of `maps/` and `save/`.
   Turned off, the list is as before; levels played only because they were
   unlocked do not count as completed.
 - The mouse is no longer let go and taken again every 100 ms (1.1.3): while
-  the game captures it, Android lists it as a relative mouse, which now
-  counts as a mouse too (seen with a Retroid Pocket Flip 2's virtual mouse).
+  the game captures it, Android lists it with other sources (a relative
+  mouse, or none of a mouse's); a device seen as a mouse now stays one while
+  it is connected (seen with a Retroid Pocket Flip 2's virtual mouse).
 
 ### Changes in 1.1.3
 
